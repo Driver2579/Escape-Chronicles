@@ -103,7 +103,7 @@ void AEscapeChroniclesCharacter::NotifyControllerChanged()
 	const APlayerController* PlayerController = Cast<APlayerController>(Controller);
 
 	// Add Input Mapping Context
-	if (ensureAlways(PlayerController))
+	if (PlayerController)
 	{
 		UEnhancedInputLocalPlayerSubsystem* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<
 			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
