@@ -11,6 +11,7 @@
 #include "InputActionValue.h"
 #include "Components/ArrowComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "DefaultMovementSet/NavMoverComponent.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 {
@@ -35,7 +36,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->bCastDynamicShadow = true;
 	MeshComponent->bAffectDynamicIndirectLighting = true;
 	MeshComponent->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	MeshComponent->SetCollisionProfileName(TEXT("CharacterMesh"));
+	MeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
 
@@ -96,6 +97,13 @@ void AEscapeChroniclesCharacter::PostLoad()
 #endif
 }
 
+void AEscapeChroniclesCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
+}
+
 void AEscapeChroniclesCharacter::NotifyControllerChanged()
 {
 	Super::NotifyControllerChanged();
@@ -117,46 +125,240 @@ void AEscapeChroniclesCharacter::NotifyControllerChanged()
 
 void AEscapeChroniclesCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
 
 	// Set up action bindings
 	if (ensureAlways(EnhancedInputComponent))
 	{
+		// Looking
+		EnhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+
 		// TODO: Move to ability
 		// Moving
-		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
+		EnhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
+		EnhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Completed, this,
+			&ThisClass::StopMoving);
 
-		// Looking
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
+		// TODO: Move to ability
+		// Jumping
+		EnhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Started, this, &ThisClass::Jump);
+		EnhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Completed, this,
+			&ThisClass::StopJumping);
 	}
+}
+
+FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
+{
+	// The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method
+
+	FVector AgentLocation = FNavigationSystem::InvalidLocation;
+
+	const USceneComponent* UpdatedComponent =
+		CharacterMoverComponent ? CharacterMoverComponent->GetUpdatedComponent() : nullptr;
+
+	if (NavMoverComponent)
+	{
+		AgentLocation = NavMoverComponent->GetFeetLocation();
+	}
+
+	if (FNavigationSystem::IsValidLocation(AgentLocation) == false && UpdatedComponent != nullptr)
+	{
+		AgentLocation = UpdatedComponent->GetComponentLocation() -
+			FVector(0, 0, UpdatedComponent->Bounds.BoxExtent.Z);
+	}
+
+	return AgentLocation;
+}
+
+void AEscapeChroniclesCharacter::UpdateNavigationRelevance()
+{
+	// The code below was copied from the MoverExamplesCharacter::UpdateNavigationRelevance method
+
+	if (CharacterMoverComponent)
+	{
+		if (USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent())
+		{
+			UpdatedComponent->SetCanEverAffectNavigation(bCanAffectNavigationGeneration);
+		}
+	}
+}
+
+void AEscapeChroniclesCharacter::AddMovementInput(const FVector WorldDirection, const float ScaleValue,
+	const bool bForce)
+{
+	if (bForce || !IsMoveInputIgnored())
+	{
+		ControlInputVector = WorldDirection * ScaleValue;
+	}
+}
+
+FVector AEscapeChroniclesCharacter::ConsumeMovementInputVector()
+{
+	return Internal_ConsumeMovementInputVector();
 }
 
 void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	FMoverInputCmdContext& InputCmdResult)
 {
-	// TODO: Do something with it (implement or remove)
-}
+	// The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications
 
-void AEscapeChroniclesCharacter::Move(const FInputActionValue& Value)
-{
-	// Input is a Vector2D
-	const FVector2D MovementVector = Value.Get<FVector2D>();
+	FCharacterDefaultInputs& CharacterInputs = InputCmdResult.InputCollection.FindOrAddMutableDataByType<
+		FCharacterDefaultInputs>();
 
-	if (Controller != nullptr)
+	if (!Controller)
 	{
-		// Find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
+		if (GetLocalRole() == ROLE_Authority && GetRemoteRole() == ROLE_SimulatedProxy)
+		{
+			static const FCharacterDefaultInputs DoNothingInput;
 
-		// Get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
-		// Get the right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+			/**
+			 * If we get here, that means this pawn is not currently possessed, and we're choosing to provide default
+			 * do-nothing input
+			 */
+			CharacterInputs = DoNothingInput;
+		}
 
-		// Gdd movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+		/**
+		 * We don't have a local controller, so we can't run the code below. This is ok. Simulated proxies will just use
+		 * previous input when extrapolating.
+		 */
+		return;
+	}
+
+	CharacterInputs.ControlRotation = GetControlRotation();
+
+	bool bRequestedNavMovement = false;
+
+	if (NavMoverComponent)
+	{
+		bRequestedNavMovement = NavMoverComponent->bRequestedNavMovement;
+
+		if (bRequestedNavMovement)
+		{
+			ControlInputVector = NavMoverComponent->CachedNavMoveInputIntent;
+			CachedMoveInputVelocity = NavMoverComponent->CachedNavMoveInputVelocity;
+
+			NavMoverComponent->bRequestedNavMovement = false;
+			NavMoverComponent->CachedNavMoveInputIntent = FVector::ZeroVector;
+			NavMoverComponent->CachedNavMoveInputVelocity = FVector::ZeroVector;
+		}
+	}
+
+	// Favor velocity input
+	const bool bUsingInputIntentForMove = CachedMoveInputVelocity.IsZero();
+
+	if (bUsingInputIntentForMove)
+	{
+		FRotator Rotator = CharacterInputs.ControlRotation;
+		FVector FinalDirectionalIntent;
+
+		if (CharacterMoverComponent)
+		{
+			if (CharacterMoverComponent->IsOnGround() || CharacterMoverComponent->IsFalling())
+			{
+				const FVector RotationProjectedOntoUpDirection = FVector::VectorPlaneProject(Rotator.Vector(),
+					CharacterMoverComponent->GetUpDirection()).GetSafeNormal();
+
+				Rotator = RotationProjectedOntoUpDirection.Rotation();
+			}
+
+			FinalDirectionalIntent = Rotator.RotateVector(ControlInputVector);
+		}
+
+		CharacterInputs.SetMoveInput(EMoveInputType::DirectionalIntent, FinalDirectionalIntent);
+	}
+	else
+	{
+		CharacterInputs.SetMoveInput(EMoveInputType::Velocity, CachedMoveInputVelocity);
+	}
+
+	/**
+	 * Normally, cached input is cleared by OnMoveCompleted input event, but that won't be called if movement came from
+	 * nav movement
+	 */
+	if (bRequestedNavMovement)
+	{
+		ControlInputVector = FVector::ZeroVector;
+		CachedMoveInputVelocity = FVector::ZeroVector;
+	}
+
+	constexpr float RotationMagMin(1e-3);
+
+	const bool bHasAffirmativeMoveInput = CharacterInputs.GetMoveInput().Size() >= RotationMagMin;
+
+	// Figure out the intended orientation
+	CharacterInputs.OrientationIntent = FVector::ZeroVector;
+
+	if (bHasAffirmativeMoveInput)
+	{
+		if (bOrientRotationToMovement)
+		{
+			// Set the intent to the actor's movement direction
+			CharacterInputs.OrientationIntent = CharacterInputs.GetMoveInput().GetSafeNormal();
+		}
+		else
+		{
+			// Set intent to the control rotation - often a player's camera rotation
+			CharacterInputs.OrientationIntent = CharacterInputs.ControlRotation.Vector().GetSafeNormal();
+		}
+
+		LastAffirmativeMoveInput = CharacterInputs.GetMoveInput();
+	}
+	else if (bMaintainLastInputOrientation)
+	{
+		// There is no movement intent, so use the last-known affirmative move input
+		CharacterInputs.OrientationIntent = LastAffirmativeMoveInput;
+	}
+
+	if (bShouldRemainVertical)
+	{
+		// Canceling out any z intent if the actor is supposed to remain vertical
+		CharacterInputs.OrientationIntent = CharacterInputs.OrientationIntent.GetSafeNormal2D();
+	}
+
+	CharacterInputs.bIsJumpPressed = bIsJumpPressed;
+	CharacterInputs.bIsJumpJustPressed = bIsJumpJustPressed;
+
+	CharacterInputs.SuggestedMovementMode = NAME_None;
+
+	// Convert inputs to be relative to the current movement base (depending on options and state)
+	CharacterInputs.bUsingMovementBase = false;
+
+	if (bUseBaseRelativeMovement && CharacterMoverComponent)
+	{
+		if (UPrimitiveComponent* MovementBase = CharacterMoverComponent->GetMovementBase())
+		{
+			const FName MovementBaseBoneName = CharacterMoverComponent->GetMovementBaseBoneName();
+
+			FVector RelativeMoveInput, RelativeOrientDir;
+
+			UBasedMovementUtils::TransformWorldDirectionToBased(MovementBase, MovementBaseBoneName,
+				CharacterInputs.GetMoveInput(), RelativeMoveInput);
+
+			UBasedMovementUtils::TransformWorldDirectionToBased(MovementBase, MovementBaseBoneName,
+				CharacterInputs.OrientationIntent, RelativeOrientDir);
+
+			CharacterInputs.SetMoveInput(CharacterInputs.GetMoveInputType(), RelativeMoveInput);
+			CharacterInputs.OrientationIntent = RelativeOrientDir;
+
+			CharacterInputs.bUsingMovementBase = true;
+			CharacterInputs.MovementBase = MovementBase;
+			CharacterInputs.MovementBaseBoneName = MovementBaseBoneName;
+		}
+	}
+
+	// Don't stop jumping if we allow auto-jump. It will be disabled only when we stop jumping then.
+	if (!bAllowAutoJump)
+	{
+		// The next comment was left by Epic. I have no idea what it means.
+		/**
+		 * Clear/consume temporal movement inputs. We are not consuming others in the event that the game world is
+		 * ticking at a lower rate than the Mover simulation. In that case, we want most input to carry over between
+		 * simulation frames.
+		 */
+		bIsJumpJustPressed = false;
 	}
 }
 
@@ -165,10 +367,45 @@ void AEscapeChroniclesCharacter::Look(const FInputActionValue& Value)
 	// Input is a Vector2D
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	// Add yaw and pitch input to controller
+	if (Controller)
 	{
-		// Add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void AEscapeChroniclesCharacter::Move(const FInputActionValue& Value)
+{
+	// Input is a Vector
+	FVector MovementVector = Value.Get<FVector>();
+
+	// Make sure the movement vector is clamped between -1 and 1
+	MovementVector.X = FMath::Clamp(MovementVector.X, -1.0f, 1.0f);
+	MovementVector.Y = FMath::Clamp(MovementVector.Y, -1.0f, 1.0f);
+	MovementVector.Z = FMath::Clamp(MovementVector.Z, -1.0f, 1.0f);
+
+	// Add movement
+	AddMovementInput(MovementVector);
+}
+
+void AEscapeChroniclesCharacter::StopMoving()
+{
+	ConsumeMovementInputVector();
+}
+
+void AEscapeChroniclesCharacter::Jump()
+{
+	// The code below was copied from the MoverExamplesCharacter::OnJumpStarted method
+
+	bIsJumpJustPressed = !bIsJumpPressed;
+	bIsJumpPressed = true;
+}
+
+void AEscapeChroniclesCharacter::StopJumping()
+{
+	// The code below was copied from the MoverExamplesCharacter::OnJumpReleased method
+
+	bIsJumpPressed = false;
+	bIsJumpJustPressed = false;
 }
