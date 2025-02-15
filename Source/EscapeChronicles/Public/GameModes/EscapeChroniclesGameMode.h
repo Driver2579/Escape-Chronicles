@@ -6,7 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "EscapeChroniclesGameMode.generated.h"
 
-UCLASS(minimalapi)
+UCLASS(MinimalAPI)
 class AEscapeChroniclesGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
@@ -14,6 +14,3 @@ class AEscapeChroniclesGameMode : public AGameModeBase
 public:
 	AEscapeChroniclesGameMode();
 };
-
-
-

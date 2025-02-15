@@ -16,7 +16,7 @@ class UInputAction;
 
 struct FInputActionValue;
 
-UCLASS(config=Game)
+UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface
 {
 	GENERATED_BODY()
