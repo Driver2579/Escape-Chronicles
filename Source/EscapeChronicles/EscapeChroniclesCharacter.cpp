@@ -81,6 +81,11 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	CharacterMoverComponent = CreateDefaultSubobject<UCharacterMoverComponent>(TEXT("Mover Component"));
 
+	if (USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent())
+	{
+		UpdatedComponent->SetCanEverAffectNavigation(bCanAffectNavigationGeneration);
+	}
+
 	// Disable Actor-level movement replication, since our Mover component will handle it
 	SetReplicatingMovement(false);
 }
