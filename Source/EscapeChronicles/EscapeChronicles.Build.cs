@@ -14,12 +14,16 @@ public class EscapeChronicles : ModuleRules
 			"CoreUObject",
 			"Engine",
 			"InputCore",
-			"EnhancedInput"
+			"EnhancedInput",
+			"Mover",
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"Mover"
+			
 		});
 	}
 }
