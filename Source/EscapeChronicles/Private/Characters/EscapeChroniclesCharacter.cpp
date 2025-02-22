@@ -12,6 +12,7 @@
 #include "Components/ArrowComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
+#include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 {
@@ -125,6 +126,19 @@ void AEscapeChroniclesCharacter::NotifyControllerChanged()
 		{
 			EnhancedInputSubsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+	}
+}
+
+void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
+{
+	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
+
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	// InitAbilityActorInfo on server and client
+	if (ensureAlways(IsValid(AbilitySystemComponent)))
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
 	}
 }
 
@@ -413,4 +427,14 @@ void AEscapeChroniclesCharacter::StopJumping()
 
 	bIsJumpPressed = false;
 	bIsJumpJustPressed = false;
+}
+
+UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
+{
+	return GetPlayerStateChecked<AEscapeChroniclesPlayerState>()->GetAbilitySystemComponent();
+}
+
+UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
+{
+	return GetPlayerStateChecked<AEscapeChroniclesPlayerState>()->GetEscapeChroniclesAbilitySystemComponent();
 }

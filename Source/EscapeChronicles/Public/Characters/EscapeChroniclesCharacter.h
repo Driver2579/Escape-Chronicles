@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "MoverSimulationTypes.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
@@ -17,7 +18,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS(Config=Game)
-class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface
+class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -29,6 +30,8 @@ public:
 	virtual void BeginPlay() override;
 
 	virtual void NotifyControllerChanged() override;
+
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	virtual FVector GetNavAgentLocation() const override;
 
@@ -60,6 +63,9 @@ public:
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
+	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
 protected:
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
