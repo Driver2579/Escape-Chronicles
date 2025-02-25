@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
+
+#include "AbilitySystemComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -136,7 +138,7 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	// InitAbilityActorInfo on server and client
-	if (ensureAlways(IsValid(AbilitySystemComponent)))
+	if (IsValid(AbilitySystemComponent))
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
 	}
@@ -153,12 +155,6 @@ void AEscapeChroniclesCharacter::SetupPlayerInputComponent(UInputComponent* Play
 	{
 		// Looking
 		EnhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
-
-		// TODO: Move to ability
-		// Moving
-		EnhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &ThisClass::Move);
-		EnhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Completed, this,
-			&ThisClass::StopMoving);
 
 		// TODO: Move to ability
 		// Jumping
@@ -387,18 +383,12 @@ void AEscapeChroniclesCharacter::Look(const FInputActionValue& Value)
 	const FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	// Add yaw and pitch input to controller
-	if (Controller)
-	{
-		AddControllerYawInput(LookAxisVector.X);
-		AddControllerPitchInput(LookAxisVector.Y);
-	}
+	AddControllerYawInput(LookAxisVector.X);
+	AddControllerPitchInput(LookAxisVector.Y);
 }
 
-void AEscapeChroniclesCharacter::Move(const FInputActionValue& Value)
+void AEscapeChroniclesCharacter::Move(FVector MovementVector)
 {
-	// Input is a Vector
-	FVector MovementVector = Value.Get<FVector>();
-
 	// Make sure the movement vector is clamped between -1 and 1
 	MovementVector.X = FMath::Clamp(MovementVector.X, -1.0f, 1.0f);
 	MovementVector.Y = FMath::Clamp(MovementVector.Y, -1.0f, 1.0f);
@@ -431,10 +421,17 @@ void AEscapeChroniclesCharacter::StopJumping()
 
 UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
 {
-	return GetPlayerStateChecked<AEscapeChroniclesPlayerState>()->GetAbilitySystemComponent();
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ? EscapeChroniclesPlayerState->GetAbilitySystemComponent() : nullptr;
 }
 
 UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
 {
-	return GetPlayerStateChecked<AEscapeChroniclesPlayerState>()->GetEscapeChroniclesAbilitySystemComponent();
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ?
+		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
 }

@@ -2,8 +2,7 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-#include "AbilitySystem/AbilitySystemSet.h"
-#include "AbilitySystem/EscapeChroniclesAbilitySystemComponent.h"
+#include "Common/DataAssets/AbilitySystemSet.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
@@ -14,11 +13,14 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 }
 
-void AEscapeChroniclesPlayerState::BeginPlay()
+void AEscapeChroniclesPlayerState::PostInitializeComponents()
 {
-	Super::BeginPlay();
+	Super::PostInitializeComponents();
 
-	// Give AbilitySystemSets to the AbilitySystemComponent
+	/**
+	 * Give AbilitySystemSets to the AbilitySystemComponent. We do this here because SetupInputComponent is called
+	 * before BeginPlay.
+	 */
 	for (const UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
 	{
 		if (AbilitySystemSet)

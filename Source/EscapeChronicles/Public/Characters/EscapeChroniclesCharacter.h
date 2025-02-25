@@ -38,8 +38,22 @@ public:
 	virtual void UpdateNavigationRelevance() override;
 
 	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1.0f, bool bForce = false) override;
-
 	virtual FVector ConsumeMovementInputVector() override;
+
+	// Should be called for looking input trigger
+	void Look(const FInputActionValue& Value);
+
+	// Should be called for movement input trigger
+	void Move(FVector MovementVector);
+
+	// Should be called for movement input completion
+	void StopMoving();
+
+	// Should be called for jump input trigger
+	void Jump();
+
+	// Should be called for jump input completion
+	void StopJumping();
 
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
@@ -69,15 +83,15 @@ public:
 
 protected:
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
-	UPROPERTY(BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bUseBaseRelativeMovement = true;
 
 	// If true, rotate the Character toward the direction the actor is moving
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bOrientRotationToMovement = true;
 
 	// If true, the actor will remain vertical despite any rotation applied to the actor
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bShouldRemainVertical = true;
 
 	/**
@@ -86,11 +100,11 @@ protected:
 	 * This makes the character finish orienting after a quick stick flick from the player.
 	 * If false, the character will not turn without an input.
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
 	// If true, the actor will jump continuously while the jump input is held
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bAllowAutoJump = false;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -100,21 +114,6 @@ protected:
 	 * simulation frame. Consider also calling Super method.
 	 */
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
-
-	// Called for looking input trigger
-	void Look(const FInputActionValue& Value);
-
-	// Called for movement input trigger
-	void Move(const FInputActionValue& Value);
-
-	// Called for movement input completion
-	void StopMoving();
-
-	// Called for jump input trigger
-	void Jump();
-
-	// Called for jump input completion
-	void StopJumping();
 
 private:
 	/**
@@ -130,7 +129,7 @@ private:
 
 #if WITH_EDITORONLY_DATA
 	// Component shown in the editor only to indicate character facing
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(VisibleAnywhere, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UArrowComponent> ArrowComponent;
 #endif
 
@@ -145,20 +144,20 @@ private:
 	TObjectPtr<UCharacterMoverComponent> CharacterMoverComponent;
 
 	// Holds functionality for nav movement data and functions
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient, Category="Components|Movement|Nav Movement",
-		meta=(AllowPrivateAccess="true"))
+	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta=(AllowPrivateAccess="true"))
+	// TODO: Move to controller
+	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> LookInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> MoveInputAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInputAction> JumpInputAction;
 
 	// Movement input (intent or velocity) the last time we had one that wasn't zero

@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
-#include "AbilitySystem/EscapeChroniclesAbilitySystemComponent.h"
+#include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 #include "EscapeChroniclesPlayerState.generated.h"
 
 class UAbilitySystemSet;
@@ -18,8 +18,6 @@ class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, p
 public:
 	AEscapeChroniclesPlayerState();
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final
 	{
 		return AbilitySystemComponent;
@@ -31,7 +29,7 @@ public:
 	}
 
 protected:
-	virtual void BeginPlay() override;
+	virtual void PostInitializeComponents() override;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")

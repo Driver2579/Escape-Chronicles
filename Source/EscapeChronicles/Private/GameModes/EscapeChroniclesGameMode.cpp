@@ -8,5 +8,6 @@
 AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 {
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
+	PlayerControllerClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
 }
