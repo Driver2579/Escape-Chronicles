@@ -18,8 +18,7 @@ void UEscapeChroniclesAbilitySystemComponent::RegisterInputTag(const FGameplayTa
 	}
 }
 
-void UEscapeChroniclesAbilitySystemComponent::TryActivateAbilitiesByInputTag(const FGameplayTag& InputTag,
-	const FInputActionValue& InputActionValue)
+void UEscapeChroniclesAbilitySystemComponent::TryActivateAbilitiesByInputTag(const FGameplayTag& InputTag)
 {
 	// Find all abilities associated with the input tag
 	TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
@@ -32,7 +31,6 @@ void UEscapeChroniclesAbilitySystemComponent::TryActivateAbilitiesByInputTag(con
 		// Activate the found ability
 		if (ensureAlways(AbilitySpec))
 		{
-			LastInputActionValue = InputActionValue;
 			TryActivateAbility(AbilityToActivate);
 		}
 	}
@@ -69,20 +67,5 @@ void UEscapeChroniclesAbilitySystemComponent::TryEndAbilitiesByInputTag(const FG
 					Ability->GetCurrentActivationInfo(), true, false);
 			}
 		}
-	}
-}
-
-void UEscapeChroniclesAbilitySystemComponent::NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle,
-	UGameplayAbility* Ability)
-{
-	Super::NotifyAbilityActivated(Handle, Ability);
-
-	UEscapeChroniclesGameplayAbility* EscapeChroniclesAbilityInstance = Cast<UEscapeChroniclesGameplayAbility>(Ability);
-
-	// Store the input action value in the ability instance before it gets overriden by the next input action
-	// TODO: This is bullshit. InputActionValue changes every tick.
-	if (ensureAlways(IsValid(EscapeChroniclesAbilityInstance)))
-	{
-		EscapeChroniclesAbilityInstance->SetInputActionValue(LastInputActionValue);
 	}
 }

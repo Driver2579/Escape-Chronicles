@@ -8,9 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
-#include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "InputActionValue.h"
 #include "Components/ArrowComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -141,26 +139,6 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 	if (IsValid(AbilitySystemComponent))
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
-	}
-}
-
-void AEscapeChroniclesCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-
-	// Set up action bindings
-	if (ensureAlways(EnhancedInputComponent))
-	{
-		// Looking
-		EnhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ThisClass::Look);
-
-		// TODO: Move to ability
-		// Jumping
-		EnhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Started, this, &ThisClass::Jump);
-		EnhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Completed, this,
-			&ThisClass::StopJumping);
 	}
 }
 
@@ -364,24 +342,16 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		}
 	}
 
-	// Don't stop jumping if we allow auto-jump. It will be disabled only when we stop jumping then.
-	if (!bAllowAutoJump)
-	{
-		// The next comment was left by Epic. I have no idea what it means.
-		/**
-		 * Clear/consume temporal movement inputs. We are not consuming others in the event that the game world is
-		 * ticking at a lower rate than the Mover simulation. In that case, we want most input to carry over between
-		 * simulation frames.
-		 */
-		bIsJumpJustPressed = false;
-	}
+	/**
+	 * Clear/consume temporal movement inputs. We are not consuming others in the event that the game world is
+	 * ticking at a lower rate than the Mover simulation. In that case, we want most input to carry over between
+	 * simulation frames.
+	 */
+	bIsJumpJustPressed = false;
 }
 
-void AEscapeChroniclesCharacter::Look(const FInputActionValue& Value)
+void AEscapeChroniclesCharacter::Look(const FVector2D& LookAxisVector)
 {
-	// Input is a Vector2D
-	const FVector2D LookAxisVector = Value.Get<FVector2D>();
-
 	// Add yaw and pitch input to controller
 	AddControllerYawInput(LookAxisVector.X);
 	AddControllerPitchInput(LookAxisVector.Y);
@@ -394,7 +364,7 @@ void AEscapeChroniclesCharacter::Move(FVector MovementVector)
 	MovementVector.Y = FMath::Clamp(MovementVector.Y, -1.0f, 1.0f);
 	MovementVector.Z = FMath::Clamp(MovementVector.Z, -1.0f, 1.0f);
 
-	// Add movement
+	// Set the movement vector
 	AddMovementInput(MovementVector);
 }
 

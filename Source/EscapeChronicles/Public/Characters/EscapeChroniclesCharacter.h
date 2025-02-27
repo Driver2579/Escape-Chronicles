@@ -41,7 +41,7 @@ public:
 	virtual FVector ConsumeMovementInputVector() override;
 
 	// Should be called for looking input trigger
-	void Look(const FInputActionValue& Value);
+	void Look(const FVector2D& LookAxisVector);
 
 	// Should be called for movement input trigger
 	void Move(FVector MovementVector);
@@ -103,16 +103,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
-	// If true, the actor will jump continuously while the jump input is held
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
-	bool bAllowAutoJump = false;
-
-	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
-	/**
-	 * Entry point for input production. Override this function in a native class to author input for the next
-	 * simulation frame. Consider also calling Super method.
-	 */
+	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
 private:

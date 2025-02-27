@@ -29,15 +29,13 @@ public:
 	 * Activates all abilities associated with the input tag. These associations should be set in AbilitySystemSet.\n
 	 * Warning: To make this function work, you MUST call RegisterInputTag first.
 	 */
-	void TryActivateAbilitiesByInputTag(const FGameplayTag& InputTag, const FInputActionValue& InputActionValue);
+	void TryActivateAbilitiesByInputTag(const FGameplayTag& InputTag);
 
 	/**
 	 * Ends all abilities associated with the input tag. These associations should be set in AbilitySystemSet.\n
 	 * Warning: To make this function work, you MUST call RegisterInputTag first.
 	 */
 	void TryEndAbilitiesByInputTag(const FGameplayTag& InputTag) const;
-
-	virtual void NotifyAbilityActivated(const FGameplayAbilitySpecHandle Handle, UGameplayAbility* Ability) override;
 
 private:
 	/**
@@ -46,7 +44,4 @@ private:
 	 * @tparam FGameplayAbilitySpecHandle Abilities associated with the input tag.
 	 */
 	TMultiMap<FGameplayTag, FGameplayAbilitySpecHandle> GameplayAbilitiesAssociatedWithInputTags;
-
-	// TODO: This is bullshit. It should be passed to ability every tick or reworked to not use it at all
-	FInputActionValue LastInputActionValue;
 };

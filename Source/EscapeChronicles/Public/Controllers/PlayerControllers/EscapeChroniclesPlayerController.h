@@ -6,10 +6,13 @@
 #include "GameFramework/PlayerController.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
-#include "InputActionValue.h"
 #include "EscapeChroniclesPlayerController.generated.h"
 
+class UEscapeChroniclesAbilitySystemComponent;
+class AEscapeChroniclesCharacter;
 class UInputConfig;
+
+struct FInputActionValue;
 
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerController, public IAbilitySystemInterface
@@ -18,7 +21,9 @@ class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerCon
 
 public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
-	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+	UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+
+	AEscapeChroniclesCharacter* GetEscapeChroniclesCharacter() const;
 
 	// Binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
@@ -26,11 +31,34 @@ public:
 protected:
 	virtual void SetupInputComponent() override;
 
+	virtual void InitPlayerState() override;
+	virtual void OnRep_PlayerState() override;
+
+	/**
+	 * Binds all input configs set up in the InputConfigs array.
+	 * @remark Should be called only when both InputComponent and PlayerState are valid.
+	 */
+	virtual void BindInputConfigs();
+
 private:
+	bool bBindInputConfigsOnPlayerStateInitialized = false;
+
 	// Input configs to bind 
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TArray<TObjectPtr<UInputConfig>> InputConfigs;
 
-	void InputTriggered(const FInputActionValue& InputActionValue, FGameplayTag InputTag);
-	void InputCompleted(FGameplayTag InputTag);
+	void BindNativeInputActions(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
+	void BindAbilityInputActions(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
+
+	void AbilityInputStarted(FGameplayTag InputTag);
+	void AbilityInputCompleted(FGameplayTag InputTag);
+
+	// Calls Move function on the character
+	void MoveActionTriggered(const FInputActionValue& Value);
+
+	// Calls StopMoving function on the character
+	void MoveActionCompleted();
+
+	// Calls Look function on the character
+	void LookActionTriggered(const FInputActionValue& Value);
 };
