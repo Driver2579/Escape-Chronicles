@@ -3,6 +3,8 @@
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 
 #include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "AbilitySystem/EscapeChroniclesGameplayTags.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/InputConfig.h"
@@ -95,8 +97,32 @@ void AEscapeChroniclesPlayerController::BindInputConfigs()
 void AEscapeChroniclesPlayerController::BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent,
 	const UInputConfig* InputConfig)
 {
+	AddMappingContexts(InputConfig);
+
 	BindNativeInputActions(EnhancedInputComponent, InputConfig);
 	BindAbilityInputActions(EnhancedInputComponent, InputConfig);
+}
+
+void AEscapeChroniclesPlayerController::AddMappingContexts(const UInputConfig* InputConfig) const
+{
+#if DO_CHECK
+	check(IsValid(InputConfig));
+#endif
+
+	UEnhancedInputLocalPlayerSubsystem* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<
+		UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+
+	if (!ensureAlways(IsValid(EnhancedInputSubsystem)))
+	{
+		return;
+	}
+
+	const TArray<TObjectPtr<const UInputMappingContext>>& InputMappingContexts = InputConfig->GetInputMappingContexts();
+
+	for (int i = 0; i < InputMappingContexts.Num(); ++i)
+	{
+		EnhancedInputSubsystem->AddMappingContext(InputMappingContexts[i], i);
+	}
 }
 
 void AEscapeChroniclesPlayerController::BindNativeInputActions(UEnhancedInputComponent* EnhancedInputComponent,
@@ -203,7 +229,7 @@ void AEscapeChroniclesPlayerController::MoveActionTriggered(const FInputActionVa
 
 	AEscapeChroniclesCharacter* EscapeChroniclesCharacter = GetEscapeChroniclesCharacter();
 
-	if (ensureAlways(EscapeChroniclesCharacter))
+	if (ensureAlways(IsValid(EscapeChroniclesCharacter)))
 	{
 		EscapeChroniclesCharacter->Move(Value.Get<FVector>());
 	}
@@ -213,7 +239,7 @@ void AEscapeChroniclesPlayerController::MoveActionCompleted()
 {
 	AEscapeChroniclesCharacter* EscapeChroniclesCharacter = GetEscapeChroniclesCharacter();
 
-	if (ensureAlways(EscapeChroniclesCharacter))
+	if (ensureAlways(IsValid(EscapeChroniclesCharacter)))
 	{
 		EscapeChroniclesCharacter->StopMoving();
 	}
@@ -227,7 +253,7 @@ void AEscapeChroniclesPlayerController::LookActionTriggered(const FInputActionVa
 
 	AEscapeChroniclesCharacter* EscapeChroniclesCharacter = GetEscapeChroniclesCharacter();
 
-	if (ensureAlways(EscapeChroniclesCharacter))
+	if (ensureAlways(IsValid(EscapeChroniclesCharacter)))
 	{
 		EscapeChroniclesCharacter->Look(Value.Get<FVector2D>());
 	}

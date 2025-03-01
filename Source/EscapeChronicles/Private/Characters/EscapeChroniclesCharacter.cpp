@@ -8,7 +8,6 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/Controller.h"
-#include "EnhancedInputSubsystems.h"
 #include "Components/ArrowComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -108,25 +107,6 @@ void AEscapeChroniclesCharacter::BeginPlay()
 	Super::BeginPlay();
 	
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
-}
-
-void AEscapeChroniclesCharacter::NotifyControllerChanged()
-{
-	Super::NotifyControllerChanged();
-
-	const APlayerController* PlayerController = Cast<APlayerController>(Controller);
-
-	// Add Input Mapping Context
-	if (PlayerController)
-	{
-		UEnhancedInputLocalPlayerSubsystem* EnhancedInputSubsystem = ULocalPlayer::GetSubsystem<
-			UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer());
-
-		if (EnhancedInputSubsystem)
-		{
-			EnhancedInputSubsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-	}
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)

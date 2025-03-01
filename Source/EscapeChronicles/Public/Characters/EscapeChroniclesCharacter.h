@@ -12,10 +12,6 @@ class USpringArmComponent;
 class UCameraComponent;
 class UCharacterMoverComponent;
 class UNavMoverComponent;
-class UInputMappingContext;
-class UInputAction;
-
-struct FInputActionValue;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
@@ -28,8 +24,6 @@ public:
 	virtual void PostLoad() override;
 
 	virtual void BeginPlay() override;
-
-	virtual void NotifyControllerChanged() override;
 
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
@@ -120,7 +114,7 @@ private:
 
 #if WITH_EDITORONLY_DATA
 	// Component shown in the editor only to indicate character facing
-	UPROPERTY(VisibleAnywhere, Category="Components", meta=(AllowPrivateAccess="true"))
+	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UArrowComponent> ArrowComponent;
 #endif
 
@@ -137,19 +131,6 @@ private:
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
-
-	// TODO: Move to controller
-	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInputMappingContext> DefaultMappingContext;
-
-	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInputAction> LookInputAction;
-
-	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInputAction> MoveInputAction;
-
-	UPROPERTY(EditAnywhere, Category="Input", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInputAction> JumpInputAction;
 
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;

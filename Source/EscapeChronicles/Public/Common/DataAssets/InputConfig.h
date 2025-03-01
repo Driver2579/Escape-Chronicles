@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "InputConfig.generated.h"
 
+class UInputMappingContext;
 class UInputAction;
 
 // Struct used to map an input action to a gameplay input tag and to store additional settings for the input action
@@ -35,10 +36,19 @@ class ESCAPECHRONICLES_API UInputConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
+	const auto& GetInputMappingContexts() const { return InputMappingContexts; }
+
 	const auto& GetNativeInputActions() const { return NativeInputActions; }
 	const auto& GetAbilityInputActions() const { return AbilityInputActions; }
 
 private:
+	/**
+	 * List of input mapping contexts used by the owner. These input mapping contexts should contain all input actions
+	 * from NativeInputActions and AbilityInputActions.
+	 */
+	UPROPERTY(EditAnywhere)
+	TArray<TObjectPtr<const UInputMappingContext>> InputMappingContexts;
+
 	/**
 	 * List of input actions used by the owner. These input actions are mapped to a gameplay tag and must be manually
 	 * bound.

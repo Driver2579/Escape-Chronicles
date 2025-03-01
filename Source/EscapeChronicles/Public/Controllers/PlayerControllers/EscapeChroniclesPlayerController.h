@@ -25,7 +25,7 @@ public:
 
 	AEscapeChroniclesCharacter* GetEscapeChroniclesCharacter() const;
 
-	// Binds all input actions in the given input config
+	// Adds all input mapping contexts and binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
 
 protected:
@@ -43,9 +43,11 @@ protected:
 private:
 	bool bBindInputConfigsOnPlayerStateInitialized = false;
 
-	// Input configs to bind 
+	// Input configs to bind at the start of the game
 	UPROPERTY(EditDefaultsOnly, Category="Input")
 	TArray<TObjectPtr<UInputConfig>> InputConfigs;
+
+	void AddMappingContexts(const UInputConfig* InputConfig) const;
 
 	void BindNativeInputActions(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
 	void BindAbilityInputActions(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
