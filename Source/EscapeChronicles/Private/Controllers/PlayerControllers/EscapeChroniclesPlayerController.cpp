@@ -133,10 +133,12 @@ void AEscapeChroniclesPlayerController::BindNativeInputActions(UEnhancedInputCom
 	check(IsValid(InputConfig));
 #endif
 
-	const TObjectPtr<const UInputAction>* MoveInputAction = InputConfig->GetNativeInputActions().FindKey(
+	const TMap<TObjectPtr<const UInputAction>, FGameplayTag>& NativeInputActions = InputConfig->GetNativeInputActions();
+
+	const TObjectPtr<const UInputAction>* MoveInputAction = NativeInputActions.FindKey(
 		EscapeChroniclesGameplayTags::InputTag_Move);
 
-	const TObjectPtr<const UInputAction>* LookInputAction = InputConfig->GetNativeInputActions().FindKey(
+	const TObjectPtr<const UInputAction>* LookInputAction = NativeInputActions.FindKey(
 		EscapeChroniclesGameplayTags::InputTag_Look);
 
 	if (ensureAlways(MoveInputAction))

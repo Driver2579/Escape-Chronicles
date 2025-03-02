@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
-#include "InputActionValue.h"
 #include "EscapeChroniclesAbilitySystemComponent.generated.h"
 
 struct FInputActionValue;
