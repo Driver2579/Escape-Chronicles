@@ -5,7 +5,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "AbilitySystem/EscapeChroniclesGameplayTags.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/InputConfig.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
