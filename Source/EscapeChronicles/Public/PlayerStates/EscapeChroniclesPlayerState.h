@@ -34,6 +34,11 @@ protected:
 	UFUNCTION()
 	virtual void OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn);
 
+	/**
+	 * Called when the new pawn is set (except of the situation when you switch between spectator pawns), but before the
+	 * gameplay effects from AbilitySystemSets are applied. This should be overriden in child classes to initialize
+	 * attributes with custom data if any.
+	 */
 	virtual void InitializeAttributes();
 
 private:
@@ -43,6 +48,8 @@ private:
 	// Ability system sets to grant to this pawn's ability system
 	UPROPERTY(EditDefaultsOnly, Category = "Ability System|Abilities")
 	TArray<TObjectPtr<UAbilitySystemSet>> AbilitySystemSets;
+
+	TWeakObjectPtr<APawn> LastNotSpectatorPawn;
 
 	/**
 	 * Initializes the MovementAttributeSet if it exists on the AbilitySystemComponent with CharacterMoverComponent's

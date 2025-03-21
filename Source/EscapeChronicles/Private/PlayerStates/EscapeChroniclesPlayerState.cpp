@@ -7,6 +7,7 @@
 #include "Common/DataAssets/AbilitySystemSet.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
+#include "GameFramework/SpectatorPawn.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
@@ -46,6 +47,24 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 		return;
 	}
 
+	// Don't reapply effects if the new pawn is a spectator
+	if (NewPawn->IsA<ASpectatorPawn>())
+	{
+		// Remember the last pawn that wasn't a spectator
+		LastNotSpectatorPawn = OldPawn;
+
+		return;
+	}
+
+	/**
+	 * Don't reapply effects if the new pawn is the same as the last pawn that wasn't a spectator (for example, if we
+	 * had the pawn, then switched to a spectator, then switched back to the pawn).
+	 */
+	if (LastNotSpectatorPawn.IsValid() && NewPawn == LastNotSpectatorPawn)
+	{
+		return;
+	}
+
 	// Initialize attributes BEFORE the gameplay effects are applied. They may want to use attributes.
 	InitializeAttributes();
 
@@ -70,8 +89,13 @@ void AEscapeChroniclesPlayerState::InitializeAttributes()
 
 void AEscapeChroniclesPlayerState::TryInitializeMovementAttributeSet()
 {
-	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = CastChecked<AEscapeChroniclesCharacter>(
-		GetPawn());
+	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = Cast<AEscapeChroniclesCharacter>(GetPawn());
+
+	// Might also be a SpectatorPawn
+	if (!IsValid(EscapeChroniclesCharacter))
+	{
+		return;
+	}
 
 	const UMovementAttributeSet* MovementAttributeSet = AbilitySystemComponent->GetSet<UMovementAttributeSet>();
 
@@ -99,8 +123,13 @@ void AEscapeChroniclesPlayerState::OnMaxGroundSpeedChanged(AActor* EffectInstiga
 	const FGameplayEffectSpec* EffectSpec, const float EffectMagnitude, const float OldValue,
 	const float NewValue) const
 {
-	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = CastChecked<AEscapeChroniclesCharacter>(
-		GetPawn());
+	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = Cast<AEscapeChroniclesCharacter>(GetPawn());
+
+	// Might also be a SpectatorPawn
+	if (!IsValid(EscapeChroniclesCharacter))
+	{
+		return;
+	}
 
 	UCommonLegacyMovementSettings* CommonLegacyMovementSettings =
 		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings_Mutable<

@@ -118,20 +118,16 @@ public:
 
 private:
 	// Attribute sets to grant when this ability set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty="AttributeSet"))
+	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty="Attribute Set"))
 	TArray<FAbilitySystemSet_AttributeSet> AttributeSetsToGrant;
 
 	// Gameplay abilities to grant when this ability set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty="GameplayAbility"))
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty="Gameplay Ability"))
 	TArray<FAbilitySystemSet_GameplayAbility> GameplayAbilitiesToGrant;
 
 	// Gameplay effects to grant when this ability set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects", meta=(TitleProperty="GameplayEffect"))
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects", meta=(TitleProperty="Gameplay Effect"))
 	TArray<FAbilitySystemSet_GameplayEffect> GameplayEffectsToGrant;
-
-	TArray<TWeakObjectPtr<UAttributeSet>> GrantedAttributeSets;
-	TArray<FGameplayAbilitySpecHandle> GrantedGameplayAbilities;
-	TArray<FActiveGameplayEffectHandle> GrantedGameplayEffects;
 
 	/**
 	 * Actual implementation of the GiveAttributesToAbilitySystem function. Doesn't check if an owner actor is
@@ -169,4 +165,8 @@ private:
 	 * authoritative.
 	 */
 	void TakeEffectsFromAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	TArray<TWeakObjectPtr<UAttributeSet>> GrantedAttributeSets;
+	TArray<FGameplayAbilitySpecHandle> GrantedGameplayAbilities;
+	TArray<FActiveGameplayEffectHandle> GrantedGameplayEffects;
 };
