@@ -31,6 +31,11 @@ public:
 protected:
 	virtual void PostInitializeComponents() override;
 
+	UFUNCTION()
+	virtual void OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn);
+
+	virtual void InitializeAttributes();
+
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")
 	TObjectPtr<UEscapeChroniclesAbilitySystemComponent> AbilitySystemComponent;
@@ -38,4 +43,13 @@ private:
 	// Ability system sets to grant to this pawn's ability system
 	UPROPERTY(EditDefaultsOnly, Category = "Ability System|Abilities")
 	TArray<TObjectPtr<UAbilitySystemSet>> AbilitySystemSets;
+
+	/**
+	 * Initializes the MovementAttributeSet if it exists on the AbilitySystemComponent with CharacterMoverComponent's
+	 * default values.
+	 */
+	void TryInitializeMovementAttributeSet();
+
+	void OnMaxGroundSpeedChanged(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* EffectSpec,
+		const float EffectMagnitude, const float OldValue, const float NewValue) const;
 };

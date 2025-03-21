@@ -5,15 +5,12 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "Abilities/GameplayAbilityTypes.h"
+#include "GameplayEffectTypes.h"
 #include "AbilitySystemSet.generated.h"
 
 class UEscapeChroniclesAbilitySystemComponent;
 class UEscapeChroniclesGameplayAbility;
-class UGameplayEffect;
-class UAttributeSet;
-
-struct FGameplayAbilitySpecHandle;
-struct FActiveGameplayEffectHandle;
 
 // Data used by the ability set to grant gameplay abilities
 USTRUCT(BlueprintType)
@@ -42,7 +39,7 @@ struct FAbilitySystemSet_GameplayEffect
 
 	// Gameplay effect to grant
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UEscapeChroniclesGameplayAbility> GameplayEffect;
+	TSubclassOf<UGameplayEffect> GameplayEffect;
 
 	// Level of gameplay effect to grant
 	UPROPERTY(EditDefaultsOnly)
@@ -55,7 +52,7 @@ struct FAbilitySystemSet_AttributeSet
 {
 	GENERATED_BODY()
 
-	// Gameplay effect to grant
+	// Attribute set to grant
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UAttributeSet> AttributeSet;
 };
@@ -69,21 +66,107 @@ class ESCAPECHRONICLES_API UAbilitySystemSet : public UPrimaryDataAsset
 public:
 	/**
 	 * Grants the ability set to the specified ability system component.
-	 * @param AbilitySystemComponent Ability system component to grant the abilities to.
+	 * @param AbilitySystemComponent Ability system component to grant the set to.
 	 * @param SourceObject Optional source object to add to the abilities.
 	 */
 	void GiveToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent,
-		UObject* SourceObject = nullptr) const;
+		UObject* SourceObject = nullptr);
+
+	/**
+	 * Takes the ability set from the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to take the set from.
+	 */
+	void TakeFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Grants only attributes of this ability set to the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to grant the attributes to.
+	 */
+	void GiveAttributesToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Takes only attributes of this ability set from the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to take the attributes from.
+	 */
+	void TakeAttributesFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Grants only abilities of this ability set to the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to grant the abilities to.
+	 * @param SourceObject Optional source object to add to the abilities.
+	 */
+	void GiveAbilitiesToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent,
+		UObject* SourceObject = nullptr);
+
+	/**
+	 * Takes only abilities of this ability set from the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to take the attributes from.
+	 */
+	void TakeAbilitiesFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Grants only effects of this ability set to the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to apply the effects to.
+	 */
+	void GiveEffectsToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Takes only effects of this ability set from the specified ability system component.
+	 * @param AbilitySystemComponent Ability system component to remove the effects from.
+	 */
+	void TakeEffectsFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+private:
+	// Attribute sets to grant when this ability set is granted
+	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty="AttributeSet"))
+	TArray<FAbilitySystemSet_AttributeSet> AttributeSetsToGrant;
 
 	// Gameplay abilities to grant when this ability set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty="Ability"))
-	TArray<FAbilitySystemSet_GameplayAbility> GrantedGameplayAbilities;
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty="GameplayAbility"))
+	TArray<FAbilitySystemSet_GameplayAbility> GameplayAbilitiesToGrant;
 
 	// Gameplay effects to grant when this ability set is granted
 	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects", meta=(TitleProperty="GameplayEffect"))
-	TArray<FAbilitySystemSet_GameplayEffect> GrantedGameplayEffects;
+	TArray<FAbilitySystemSet_GameplayEffect> GameplayEffectsToGrant;
 
-	// Attribute sets to grant when this ability set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty="AttributeSet"))
-	TArray<FAbilitySystemSet_AttributeSet> GrantedAttributes;
+	TArray<TWeakObjectPtr<UAttributeSet>> GrantedAttributeSets;
+	TArray<FGameplayAbilitySpecHandle> GrantedGameplayAbilities;
+	TArray<FActiveGameplayEffectHandle> GrantedGameplayEffects;
+
+	/**
+	 * Actual implementation of the GiveAttributesToAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void GiveAttributesToAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Actual implementation of the TakeAttributesFromAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void TakeAttributesFromAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Actual implementation of the GiveAbilitiesToAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void GiveAbilitiesToAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent,
+		UObject* SourceObject);
+
+	/**
+	 * Actual implementation of the TakeAbilitiesFromAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void TakeAbilitiesFromAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Actual implementation of the GiveEffectsToAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void GiveEffectsToAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
+
+	/**
+	 * Actual implementation of the TakeEffectsFromAbilitySystem function. Doesn't check if an owner actor is
+	 * authoritative.
+	 */
+	void TakeEffectsFromAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent);
 };

@@ -2,7 +2,11 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
+#include "AbilitySystem/AttributeSets/MovementAttributeSet.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
@@ -19,13 +23,92 @@ void AEscapeChroniclesPlayerState::PostInitializeComponents()
 
 	/**
 	 * Give AbilitySystemSets to the AbilitySystemComponent. We do this here because SetupInputComponent is called
-	 * before BeginPlay.
+	 * before BeginPlay. Except we don't want to apply gameplay effects before the pawn is set to be able to initialize
+	 * attributes with data from the pawn.
 	 */
-	for (const UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
+	for (UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
 	{
 		if (AbilitySystemSet)
 		{
-			AbilitySystemSet->GiveToAbilitySystem(AbilitySystemComponent);
+			AbilitySystemSet->GiveAttributesToAbilitySystem(AbilitySystemComponent);
+			AbilitySystemSet->GiveAbilitiesToAbilitySystem(AbilitySystemComponent);
 		}
+	}
+
+	OnPawnSet.AddDynamic(this, &ThisClass::OnPawnChanged);
+}
+
+void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn)
+{
+	// Don't do anything if the new pawn is invalid (for example, if it was removed instead of being set)
+	if (!IsValid(NewPawn))
+	{
+		return;
+	}
+
+	// Initialize attributes BEFORE the gameplay effects are applied. They may want to use attributes.
+	InitializeAttributes();
+
+	/**
+	 * Reapply (or apply for the first time) effects from AbilitySystemSets to the AbilitySystemComponent when the new
+	 * pawn is set.
+	 */
+	for (UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
+	{
+		if (AbilitySystemSet)
+		{
+			AbilitySystemSet->TakeEffectsFromAbilitySystem(AbilitySystemComponent);
+			AbilitySystemSet->GiveEffectsToAbilitySystem(AbilitySystemComponent);
+		}
+	}
+}
+
+void AEscapeChroniclesPlayerState::InitializeAttributes()
+{
+	TryInitializeMovementAttributeSet();
+}
+
+void AEscapeChroniclesPlayerState::TryInitializeMovementAttributeSet()
+{
+	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = CastChecked<AEscapeChroniclesCharacter>(
+		GetPawn());
+
+	const UMovementAttributeSet* MovementAttributeSet = AbilitySystemComponent->GetSet<UMovementAttributeSet>();
+
+	if (!IsValid(MovementAttributeSet))
+	{
+		return;
+	}
+
+	const UCommonLegacyMovementSettings* CommonLegacyMovementSettings =
+		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings<UCommonLegacyMovementSettings>();
+
+	if (!ensureAlways(IsValid(CommonLegacyMovementSettings)))
+	{
+		return;
+	}
+
+	// Set the MaxGroundSpeed attribute to the default max speed of the CharacterMoverComponent
+	AbilitySystemComponent->ApplyModToAttribute(MovementAttributeSet->GetMaxGroundSpeedAttribute(),
+		EGameplayModOp::Override, CommonLegacyMovementSettings->MaxSpeed);
+
+	MovementAttributeSet->OnMaxGroundSpeedChanged.AddUObject(this, &ThisClass::OnMaxGroundSpeedChanged);
+}
+
+void AEscapeChroniclesPlayerState::OnMaxGroundSpeedChanged(AActor* EffectInstigator, AActor* EffectCauser,
+	const FGameplayEffectSpec* EffectSpec, const float EffectMagnitude, const float OldValue,
+	const float NewValue) const
+{
+	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = CastChecked<AEscapeChroniclesCharacter>(
+		GetPawn());
+
+	UCommonLegacyMovementSettings* CommonLegacyMovementSettings =
+		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings_Mutable<
+			UCommonLegacyMovementSettings>();
+
+	if (ensureAlways(IsValid(CommonLegacyMovementSettings)))
+	{
+		// Update the MaxSpeed value in CharacterMoverComponent when the MaxGroundSpeed attribute changes
+		CommonLegacyMovementSettings->MaxSpeed = NewValue;
 	}
 }

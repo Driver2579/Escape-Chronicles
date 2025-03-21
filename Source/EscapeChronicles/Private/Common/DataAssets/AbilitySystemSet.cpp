@@ -6,22 +6,62 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 
 void UAbilitySystemSet::GiveToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent,
-	UObject* SourceObject) const
+	UObject* SourceObject)
 {
 #if DO_CHECK
-	check(AbilitySystemComponent);
+	check(IsValid(AbilitySystemComponent));
 #endif
 
+	// Must be authoritative to give or take ability sets
 	if (!AbilitySystemComponent->IsOwnerActorAuthoritative())
 	{
-		// Must be authoritative to give or take ability sets
 		return;
 	}
 
-	// Grant the attribute sets
-	for (int32 SetIndex = 0; SetIndex < GrantedAttributes.Num(); ++SetIndex)
+	GiveAttributesToAbilitySystem_Internal(AbilitySystemComponent);
+	GiveAbilitiesToAbilitySystem_Internal(AbilitySystemComponent, SourceObject);
+	GiveEffectsToAbilitySystem_Internal(AbilitySystemComponent);
+}
+
+void UAbilitySystemSet::TakeFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (!AbilitySystemComponent->IsOwnerActorAuthoritative())
 	{
-		const FAbilitySystemSet_AttributeSet& SetToGrant = GrantedAttributes[SetIndex];
+		return;
+	}
+
+	TakeEffectsFromAbilitySystem_Internal(AbilitySystemComponent);
+	TakeAbilitiesFromAbilitySystem_Internal(AbilitySystemComponent);
+	TakeAttributesFromAbilitySystem_Internal(AbilitySystemComponent);
+}
+
+void UAbilitySystemSet::GiveAttributesToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		GiveAttributesToAbilitySystem_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::GiveAttributesToAbilitySystem_Internal(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 SetIndex = 0; SetIndex < AttributeSetsToGrant.Num(); ++SetIndex)
+	{
+		const FAbilitySystemSet_AttributeSet& SetToGrant = AttributeSetsToGrant[SetIndex];
 
 		if (!ensureAlways(IsValid(SetToGrant.AttributeSet)))
 		{
@@ -32,12 +72,67 @@ void UAbilitySystemSet::GiveToAbilitySystem(UEscapeChroniclesAbilitySystemCompon
 			SetToGrant.AttributeSet);
 
 		AbilitySystemComponent->AddAttributeSetSubobject(NewSet);
+		GrantedAttributeSets.Add(NewSet);
+	}
+}
+
+void UAbilitySystemSet::TakeAttributesFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		TakeAttributesFromAbilitySystem_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::TakeAttributesFromAbilitySystem_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 SetIndex = GrantedAttributeSets.Num() - 1; SetIndex >= 0; --SetIndex)
+	{
+		TWeakObjectPtr<UAttributeSet> SetToRemove = GrantedAttributeSets[SetIndex];
+
+		if (SetToRemove.IsValid())
+		{
+			AbilitySystemComponent->RemoveSpawnedAttribute(SetToRemove.Get());
+		}
 	}
 
-	// Grant the gameplay abilities
-	for (int32 AbilityIndex = 0; AbilityIndex < GrantedGameplayAbilities.Num(); ++AbilityIndex)
+	GrantedAttributeSets.Empty();
+}
+
+void UAbilitySystemSet::GiveAbilitiesToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent,
+	UObject* SourceObject)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
 	{
-		const FAbilitySystemSet_GameplayAbility& AbilityToGrant = GrantedGameplayAbilities[AbilityIndex];
+		GiveAbilitiesToAbilitySystem_Internal(AbilitySystemComponent, SourceObject);
+	}
+}
+
+void UAbilitySystemSet::GiveAbilitiesToAbilitySystem_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent, UObject* SourceObject)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 AbilityIndex = 0; AbilityIndex < GameplayAbilitiesToGrant.Num(); ++AbilityIndex)
+	{
+		const FAbilitySystemSet_GameplayAbility& AbilityToGrant = GameplayAbilitiesToGrant[AbilityIndex];
 
 		if (!ensureAlways(IsValid(AbilityToGrant.Ability)))
 		{
@@ -50,22 +145,109 @@ void UAbilitySystemSet::GiveToAbilitySystem(UEscapeChroniclesAbilitySystemCompon
 		AbilitySpec.SourceObject = SourceObject;
 		AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
 
-		AbilitySystemComponent->GiveAbility(AbilitySpec);
+		GrantedGameplayAbilities.Add(AbilitySystemComponent->GiveAbility(AbilitySpec));
+	}
+}
+
+void UAbilitySystemSet::TakeAbilitiesFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		TakeAbilitiesFromAbilitySystem_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::TakeAbilitiesFromAbilitySystem_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 AbilityIndex = GrantedGameplayAbilities.Num() - 1; AbilityIndex >= 0; --AbilityIndex)
+	{
+		const FGameplayAbilitySpecHandle& AbilityToRemove = GrantedGameplayAbilities[AbilityIndex];
+
+		if (AbilityToRemove.IsValid())
+		{
+			AbilitySystemComponent->ClearAbility(AbilityToRemove);
+		}
 	}
 
-	// Grant the gameplay effects
-	for (int32 EffectIndex = 0; EffectIndex < GrantedGameplayEffects.Num(); ++EffectIndex)
+	GrantedGameplayAbilities.Empty();
+}
+
+void UAbilitySystemSet::GiveEffectsToAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
 	{
-		const FAbilitySystemSet_GameplayEffect& EffectToGrant = GrantedGameplayEffects[EffectIndex];
+		GiveEffectsToAbilitySystem_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::GiveEffectsToAbilitySystem_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 EffectIndex = 0; EffectIndex < GameplayEffectsToGrant.Num(); ++EffectIndex)
+	{
+		const FAbilitySystemSet_GameplayEffect& EffectToGrant = GameplayEffectsToGrant[EffectIndex];
 
 		if (!ensureAlways(IsValid(EffectToGrant.GameplayEffect)))
 		{
 			continue;
 		}
 
-		const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect->GetDefaultObject<UGameplayEffect>();
+		const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect.GetDefaultObject();
 
 		AbilitySystemComponent->ApplyGameplayEffectToSelf(GameplayEffect, EffectToGrant.EffectLevel,
 			AbilitySystemComponent->MakeEffectContext());
 	}
+}
+
+void UAbilitySystemSet::TakeEffectsFromAbilitySystem(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to give or take ability sets
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		TakeEffectsFromAbilitySystem_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::TakeEffectsFromAbilitySystem_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (int32 EffectIndex = GrantedGameplayEffects.Num() - 1; EffectIndex >= 0; --EffectIndex)
+	{
+		const FActiveGameplayEffectHandle& EffectToRemove = GrantedGameplayEffects[EffectIndex];
+
+		if (EffectToRemove.IsValid())
+		{
+			AbilitySystemComponent->RemoveActiveGameplayEffect(EffectToRemove);
+		}
+	}
+
+	GrantedGameplayEffects.Empty();
 }

@@ -23,10 +23,6 @@ public:
 
 	virtual void PostLoad() override;
 
-	virtual void BeginPlay() override;
-
-	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
-
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void UpdateNavigationRelevance() override;
@@ -76,6 +72,10 @@ public:
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
 protected:
+	virtual void BeginPlay() override;
+
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
+
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bUseBaseRelativeMovement = true;
