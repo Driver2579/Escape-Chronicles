@@ -25,10 +25,6 @@
 		{
 			"Name": "GameplayAbilities",
 			"Enabled": true
-		},
-		{
-			"Name": "NetCore",
-			"Enabled": true
 		}
 	]
 }
