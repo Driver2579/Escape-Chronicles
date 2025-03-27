@@ -13,7 +13,7 @@ class UInteractableComponent;
 /**
  * Handles interaction logic: checking conditions, calling events.
  */
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS()
 class INTERACTIONSYSTEM_API UInteractionManagerComponent : public UBoxComponent
 {
 	GENERATED_BODY()
@@ -36,6 +36,7 @@ public:
 		FActorComponentTickFunction* ThisTickFunction) override;
 
 	// Sends a request to attempt to interact with the server
+	bool TryInteract();
 	bool TryInteract(UInteractableComponent* Interactable);
 	
 protected:

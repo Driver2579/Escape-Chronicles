@@ -115,6 +115,11 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	}
 }
 
+bool UInteractionManagerComponent::TryInteract()
+{
+	return TryInteract(SelectedInteractableComponent.Get());
+}
+
 bool UInteractionManagerComponent::TryInteract(UInteractableComponent* Interactable)
 {
 #if DO_ENSURE

@@ -11,9 +11,9 @@ class UInteractionManagerComponent;
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent*);
 
 /**
- * Added to objects that can react to interaction (doors, objects, items, etc).
+ * Added to objects that can react to interaction (doors, objects, items, etc.).
  */
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
