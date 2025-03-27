@@ -15,6 +15,7 @@ public class InteractionSystem : ModuleRules
 				"NetCore",
 				"GameplayAbilities",
 				"GameplayTags",
+				"UMG"
 			}
 			);
 		
