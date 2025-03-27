@@ -35,28 +35,33 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
+	// Sends a request to attempt to interact with the server
 	bool TryInteract(UInteractableComponent* Interactable);
 	
 protected:
 	virtual void BeginPlay() override;
 
-private:	
-	void TraceForInteractables();
+private:
+	// Selects the InteractableComponent that is closest to the direction of the view from InteractableComponentsPool
+	void SelectInteractableComponent();
 
+	// Add InteractableComponents to InteractableComponentsPool
 	UFUNCTION()
-	void OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+	// Delete InteractableComponents to InteractableComponentsPool
 	UFUNCTION()
-	void OnDeleteFromInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex);
+	void OnDeleteFromInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_TryInteract(UInteractableComponent* Interactable);
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction", meta=(AllowPrivateAccess = "true"))
-	float InteractionDistance = 500.0f;
 
+	// The maximum distance the server handles for interaction
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction", meta=(AllowPrivateAccess = "true"))
+	float MaxInteractionDistance = 500.0f;
+	
 	TWeakObjectPtr<AController> OwnerController;
 	TWeakObjectPtr<UInteractableComponent> SelectedInteractableComponent;
 	TArray<TWeakObjectPtr<UInteractableComponent>> InteractableComponentsPool;

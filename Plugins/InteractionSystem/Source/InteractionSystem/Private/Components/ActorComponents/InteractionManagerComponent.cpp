@@ -67,10 +67,10 @@ void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
-	TraceForInteractables();
+	SelectInteractableComponent();
 }
 
-void UInteractionManagerComponent::TraceForInteractables()
+void UInteractionManagerComponent::SelectInteractableComponent()
 {
 	if (InteractableComponentsPool.Num() == 0)
 	{
@@ -88,7 +88,8 @@ void UInteractionManagerComponent::TraceForInteractables()
 	FRotator ViewRotation;
 	OwnerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
 	const FVector ViewDirection = ViewRotation.Vector();
-	
+
+	// Select InteractableComponent
 	float BestDotProduct = -1.0f;
 	for (TWeakObjectPtr<UInteractableComponent> InteractableComponent : InteractableComponentsPool)
 	{
@@ -107,7 +108,7 @@ void UInteractionManagerComponent::TraceForInteractables()
 			SelectedInteractableComponent = InteractableComponent;
 		}
 	}
-
+	
 	if (SelectedInteractableComponent != nullptr)
 	{
 		SelectedInteractableComponent->ShowInteractionHint();
@@ -142,5 +143,5 @@ void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractab
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* Interactable)
 {
-	return GetDistanceToSelectedInteractableComponent() <= InteractionDistance;
+	return GetDistanceToSelectedInteractableComponent() <= MaxInteractionDistance;
 }
