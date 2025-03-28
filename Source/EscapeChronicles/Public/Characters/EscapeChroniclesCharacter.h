@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -13,6 +13,8 @@ class UCameraComponent;
 class UCharacterMoverComponent;
 class UNavMoverComponent;
 
+enum class EStanceMode : uint8;
+
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
 {
@@ -20,30 +22,6 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 
 public:
 	AEscapeChroniclesCharacter();
-
-	virtual void PostLoad() override;
-
-	virtual FVector GetNavAgentLocation() const override;
-
-	virtual void UpdateNavigationRelevance() override;
-
-	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1.0f, bool bForce = false) override;
-	virtual FVector ConsumeMovementInputVector() override;
-
-	// Should be called for looking input trigger
-	void Look(const FVector2D& LookAxisVector);
-
-	// Should be called for movement input trigger
-	void Move(FVector MovementVector);
-
-	// Should be called for movement input completion
-	void StopMoving();
-
-	// Should be called for jump input trigger
-	void Jump();
-
-	// Should be called for jump input completion
-	void StopJumping();
 
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
@@ -70,6 +48,36 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+
+	virtual void PostLoad() override;
+
+	virtual FVector GetNavAgentLocation() const override;
+
+	virtual void UpdateNavigationRelevance() override;
+
+	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1.0f, bool bForce = false) override;
+	virtual FVector ConsumeMovementInputVector() override;
+
+	// Should be called for looking input trigger
+	void Look(const FVector2D& LookAxisVector);
+
+	// Should be called for movement input trigger
+	void Move(FVector MovementVector);
+
+	// Should be called for movement input completion
+	void StopMoving();
+
+	// Should be called for jump input trigger
+	void Jump();
+
+	// Should be called for jump input completion
+	void StopJumping();
+
+	// Should be called for crouch input trigger
+	void Crouch();
+
+	// Should be called for crouch input completion
+	void UnCrouch();
 
 protected:
 	virtual void BeginPlay() override;
@@ -99,6 +107,9 @@ protected:
 
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
+
+	UFUNCTION()
+	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep, const FMoverInputCmdContext& InputCmd);
 
 private:
 	/**
@@ -139,4 +150,9 @@ private:
 
 	bool bIsJumpJustPressed = false;
 	bool bIsJumpPressed = false;
+
+	bool bWantsToBeCrouched = false;
+
+	UFUNCTION()
+	void OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance);
 };

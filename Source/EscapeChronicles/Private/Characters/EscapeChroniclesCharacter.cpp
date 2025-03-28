@@ -1,16 +1,15 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
 
 #include "AbilitySystemComponent.h"
-#include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "GameFramework/Controller.h"
 #include "Components/ArrowComponent.h"
 #include "DefaultMovementSet/CharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
+#include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -90,6 +89,23 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	SetReplicatingMovement(false);
 }
 
+UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
+{
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ? EscapeChroniclesPlayerState->GetAbilitySystemComponent() : nullptr;
+}
+
+UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
+{
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ?
+		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
+}
+
 void AEscapeChroniclesCharacter::PostLoad()
 {
 	Super::PostLoad();
@@ -105,8 +121,13 @@ void AEscapeChroniclesCharacter::PostLoad()
 void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
+
+	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
+
+	CharacterMoverComponent->OnStanceChanged.AddDynamic(this, &ThisClass::OnStanceChanged);
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
@@ -175,7 +196,7 @@ FVector AEscapeChroniclesCharacter::ConsumeMovementInputVector()
 void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	FMoverInputCmdContext& InputCmdResult)
 {
-	// The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications
+	// === The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications ===
 
 	FCharacterDefaultInputs& CharacterInputs = InputCmdResult.InputCollection.FindOrAddMutableDataByType<
 		FCharacterDefaultInputs>();
@@ -328,6 +349,34 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	 * simulation frames.
 	 */
 	bIsJumpJustPressed = false;
+
+	// === The code below is completely custom and wasn't copied from anywhere ===
+
+	FEscapeChroniclesCharacterExtendedDefaultInputs& ExtendedCharacterInputs =
+		InputCmdResult.InputCollection.FindOrAddMutableDataByType<FEscapeChroniclesCharacterExtendedDefaultInputs>();
+
+	ExtendedCharacterInputs.bWantsToBeCrouched = bWantsToBeCrouched;
+}
+
+void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
+	const FMoverInputCmdContext& InputCmd)
+{
+	const FEscapeChroniclesCharacterExtendedDefaultInputs* ExtendedCharacterInputs =
+		InputCmd.InputCollection.FindDataByType<FEscapeChroniclesCharacterExtendedDefaultInputs>();
+
+	if (!ExtendedCharacterInputs)
+	{
+		return;
+	}
+
+	if (ExtendedCharacterInputs->bWantsToBeCrouched)
+	{
+		CharacterMoverComponent->Crouch();
+	}
+	else
+	{
+		CharacterMoverComponent->UnCrouch();
+	}
 }
 
 void AEscapeChroniclesCharacter::Look(const FVector2D& LookAxisVector)
@@ -369,19 +418,17 @@ void AEscapeChroniclesCharacter::StopJumping()
 	bIsJumpJustPressed = false;
 }
 
-UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
+void AEscapeChroniclesCharacter::Crouch()
 {
-	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
-		GetPlayerState(), ECastCheckedType::NullAllowed);
-
-	return IsValid(EscapeChroniclesPlayerState) ? EscapeChroniclesPlayerState->GetAbilitySystemComponent() : nullptr;
+	bWantsToBeCrouched = true;
 }
 
-UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
+void AEscapeChroniclesCharacter::UnCrouch()
 {
-	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
-		GetPlayerState(), ECastCheckedType::NullAllowed);
+	bWantsToBeCrouched = false;
+}
 
-	return IsValid(EscapeChroniclesPlayerState) ?
-		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
+void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
+{
+	bWantsToBeCrouched = NewStance == EStanceMode::Crouch;
 }

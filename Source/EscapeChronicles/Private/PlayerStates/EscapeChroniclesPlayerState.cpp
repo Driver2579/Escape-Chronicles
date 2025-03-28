@@ -62,6 +62,9 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 	 */
 	if (LastNotSpectatorPawn.IsValid() && NewPawn == LastNotSpectatorPawn)
 	{
+		// Forget about the last pawn that wasn't a spectator
+		LastNotSpectatorPawn.Reset();
+
 		return;
 	}
 
@@ -135,6 +138,8 @@ void AEscapeChroniclesPlayerState::OnMaxGroundSpeedChanged(AActor* EffectInstiga
 		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings_Mutable<
 			UCommonLegacyMovementSettings>();
 
+	// TODO: Скорее всего, это неправильно. С этим система предсказаний на клиенте ломается и получаются лаги при смене скорости
+	// TODO: Нужно использовать MovementModifier
 	if (ensureAlways(IsValid(CommonLegacyMovementSettings)))
 	{
 		// Update the MaxSpeed value in CharacterMoverComponent when the MaxGroundSpeed attribute changes
