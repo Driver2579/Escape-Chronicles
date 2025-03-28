@@ -3,19 +3,19 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Abilities/GameplayAbility.h"
-#include "UInteractGameplayAbility.generated.h"
+#include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
+#include "InteractGameplayAbility.generated.h"
 
 /**
  * Allows you to interact with AActor that have UInteractableComponent through own UInteractionManagerComponent
  */
-UCLASS() 
-class INTERACTIONSYSTEM_API UUInteractGameplayAbility : public UGameplayAbility
+UCLASS()
+class ESCAPECHRONICLES_API UInteractGameplayAbility : public UEscapeChroniclesGameplayAbility
 {
 	GENERATED_BODY()
-
+	
 public:
-	UUInteractGameplayAbility();
+	UInteractGameplayAbility();
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

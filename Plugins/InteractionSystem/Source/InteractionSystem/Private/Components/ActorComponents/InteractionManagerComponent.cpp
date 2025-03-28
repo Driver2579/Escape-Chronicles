@@ -72,7 +72,7 @@ void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 
 void UInteractionManagerComponent::SelectInteractableComponent()
 {
-	if (InteractableComponentsPool.Num() == 0)
+	if (!OwnerController.IsValid() || InteractableComponentsPool.Num() == 0)
 	{
 		return;
 	}
@@ -120,7 +120,7 @@ bool UInteractionManagerComponent::TryInteract()
 	return TryInteract(SelectedInteractableComponent.Get());
 }
 
-bool UInteractionManagerComponent::TryInteract(UInteractableComponent* Interactable)
+bool UInteractionManagerComponent::TryInteract(UInteractableComponent* InteractableComponent)
 {
 #if DO_ENSURE
 	const APawn* OwningPawn = GetOwner<APawn>();
@@ -131,9 +131,9 @@ bool UInteractionManagerComponent::TryInteract(UInteractableComponent* Interacta
 	}
 #endif
 
-	if (SelectedInteractableComponent.IsValid())
+	if (IsValid(InteractableComponent))
 	{
-		Server_TryInteract(Interactable);
+		Server_TryInteract(InteractableComponent);
 
 		return true;
 	}
@@ -141,12 +141,22 @@ bool UInteractionManagerComponent::TryInteract(UInteractableComponent* Interacta
 	return false;
 }
 
-void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractableComponent* Interactable)
+void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractableComponent* InteractableComponent)
 {
-	Interactable->Interact(this);
+	InteractableComponent->Interact(this);
 }
 
-bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* Interactable)
+bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	return GetDistanceToSelectedInteractableComponent() <= MaxInteractionDistance;
+	if (!IsValid(InteractableComponent))
+	{
+		return false;
+	}
+
+	const FVector InteractableComponentLocation = InteractableComponent->GetOwner()->GetActorLocation();
+	const FVector OwnerLocation = GetOwner()->GetActorLocation();
+
+	const float DistanceToInteractableComponent = FVector::Distance(InteractableComponentLocation, OwnerLocation);
+
+	return DistanceToInteractableComponent <= MaxInteractionDistance;
 }

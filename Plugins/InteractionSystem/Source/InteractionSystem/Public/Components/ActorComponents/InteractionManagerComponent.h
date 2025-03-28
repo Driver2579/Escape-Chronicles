@@ -23,12 +23,6 @@ public:
 	{
 		return SelectedInteractableComponent.Get();
 	}
-	
-	float GetDistanceToSelectedInteractableComponent() const
-	{
-		return FVector::Distance(SelectedInteractableComponent.Get()->GetOwner()->GetActorLocation(),
-			OwnerController->GetOwner()->GetActorLocation());
-	}
 
 	UInteractionManagerComponent();
 
@@ -37,7 +31,7 @@ public:
 
 	// Sends a request to attempt to interact with the server
 	bool TryInteract();
-	bool TryInteract(UInteractableComponent* Interactable);
+	bool TryInteract(UInteractableComponent* InteractableComponent);
 	
 protected:
 	virtual void BeginPlay() override;
@@ -57,7 +51,7 @@ private:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_TryInteract(UInteractableComponent* Interactable);
+	void Server_TryInteract(UInteractableComponent* InteractableComponent);
 
 	// The maximum distance the server handles for interaction
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction", meta=(AllowPrivateAccess = "true"))
