@@ -81,7 +81,7 @@ void UInteractableComponent::SetInteractionHintVisible(const bool Value)
 {
 	if (HintWidget.IsValid())
 	{
-		Value ? HintWidget->OnPopupShow() : HintWidget->OnPopupHide();
+		Value ? HintWidget->ShowPopup() : HintWidget->HidePopup();
 	}
 	
 	if (!ensureAlways(IsValid(HintOverlayMaterial)))

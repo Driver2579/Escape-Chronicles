@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "InteractPopupWidget.generated.h"
 
+
 /**
  * Can be used in InteractableComponent with a component to show a tooltip
  */
@@ -15,9 +16,13 @@ class INTERACTIONSYSTEM_API UInteractPopupWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintImplementableEvent, Category = "Popup Show Events")
-	void OnPopupShow();
+	void ShowPopup();
+	void HidePopup();
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "Popup Hide Events")
-	void OnPopupHide();
+protected:
+	virtual void NativeConstruct() override;
+
+private:
+	UPROPERTY(Transient, meta=(BindWidgetAnim))
+	TObjectPtr<UWidgetAnimation> PopupAnimation;
 };
