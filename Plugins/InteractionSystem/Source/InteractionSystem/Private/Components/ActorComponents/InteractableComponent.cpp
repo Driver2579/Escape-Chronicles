@@ -3,6 +3,7 @@
 #include "InteractionSystem/Public/Components/ActorComponents/InteractableComponent.h"
 
 #include "Components/WidgetComponent.h"
+#include "Widgets/InteractPopupWidget.h"
 
 UInteractableComponent::UInteractableComponent()
 {
@@ -27,7 +28,7 @@ void UInteractableComponent::BeginPlay()
 		}
 
 		ensureAlwaysMsgf(CastedMesh->GetGenerateOverlapEvents(),
-			TEXT("CastedMesh must set GenerateOverlapEvents to true, otherwise it will not be included in "
+			TEXT("CastedMesh must be set GenerateOverlapEvents to true, otherwise it will not be included in "
 			"UInteractionManagerComponent::InteractableComponentsPool."));
 #endif
 		
@@ -35,28 +36,35 @@ void UInteractableComponent::BeginPlay()
 	}
 
 	// Find widget
-	UActorComponent* TaggedWidget = GetOwner()->FindComponentByTag(UWidgetComponent::StaticClass(), HintWidgetTag);
+	UActorComponent* TaggedWidgetComponent = GetOwner()->FindComponentByTag(UWidgetComponent::StaticClass(), HintWidgetTag);
 
-	if (!IsValid(TaggedWidget))
+	if (!IsValid(TaggedWidgetComponent))
 	{
 		return;
 	}
 
-	UWidgetComponent* CastedWidget = Cast<UWidgetComponent>(TaggedWidget);
+	UWidgetComponent* CastedWidgetComponent = Cast<UWidgetComponent>(TaggedWidgetComponent);
 
-	if (!ensureAlways(IsValid(CastedWidget)))
+	if (!ensureAlways(IsValid(CastedWidgetComponent)))
+	{
+		return;
+	}
+
+	UWidget* Widget = CastedWidgetComponent->GetWidget();
+	
+	if (!ensureAlways(IsValid(Widget)))
+	{
+		return;
+	}
+	
+	UInteractPopupWidget* CastedWidget = Cast<UInteractPopupWidget>(Widget);
+
+	if (!ensureAlways(CastedWidget))
 	{
 		return;
 	}
 
 	HintWidget = CastedWidget;
-
-	if (!ensureAlways(IsValid(HintWidget->GetWidget())))
-	{
-		return;
-	}
-	
-	HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
@@ -69,8 +77,13 @@ void UInteractableComponent::AddInteractHandler(const FOnInteractDelegate::FDele
 	OnInteract.Add(Callback);
 }
 
-void UInteractableComponent::SetHintOverlayMaterialForHintMeshes(const bool Value)
+void UInteractableComponent::SetInteractionHintVisible(const bool Value)
 {
+	if (HintWidget.IsValid())
+	{
+		Value ? HintWidget->OnPopupShow() : HintWidget->OnPopupHide();
+	}
+	
 	if (!ensureAlways(IsValid(HintOverlayMaterial)))
 	{
 		return;
@@ -87,24 +100,4 @@ void UInteractableComponent::SetHintOverlayMaterialForHintMeshes(const bool Valu
 		
 		Mesh->SetOverlayMaterial(CurrentOverlayMaterial);
 	}
-}
-
-void UInteractableComponent::ShowInteractionHint()
-{
-	if (HintWidget.IsValid())
-	{
-		HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Visible);
-	}
-	
-	SetHintOverlayMaterialForHintMeshes(true);
-}
-
-void UInteractableComponent::HideInteractionHint()
-{
-	if (HintWidget.IsValid())
-	{
-		HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Hidden);
-	}
-	
-	SetHintOverlayMaterialForHintMeshes(false);
 }

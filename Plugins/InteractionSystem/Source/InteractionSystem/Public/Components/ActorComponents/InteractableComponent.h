@@ -6,7 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
-class UWidgetComponent;
+class UInteractPopupWidget;
 class UInteractionManagerComponent;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent*);
@@ -25,8 +25,7 @@ public:
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 	void AddInteractHandler(const FOnInteractDelegate::FDelegate& Callback);
 
-	virtual void ShowInteractionHint();
-	virtual void HideInteractionHint();
+	virtual void SetInteractionHintVisible(bool Value);
 	
 protected:
 	virtual void BeginPlay() override;
@@ -48,11 +47,8 @@ private:
 	TObjectPtr<UMaterialInterface> HintOverlayMaterial;
 
 	// Widget that has the visible parameter set when showing a hint
-	TWeakObjectPtr<UWidgetComponent> HintWidget;
+	TWeakObjectPtr<UInteractPopupWidget> HintWidget;
 	
 	// Mesh to which HintOverlayMaterial is set when showing a hint
 	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;
-
-	// Adds or removes overlay material for showing a hint
-	void SetHintOverlayMaterialForHintMeshes(bool Value);
 };

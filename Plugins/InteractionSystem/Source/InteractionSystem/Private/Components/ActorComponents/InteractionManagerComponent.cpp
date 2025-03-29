@@ -55,7 +55,7 @@ void UInteractionManagerComponent::OnDeleteFromInteractableComponentsPool(UPrimi
 	// Remove hint if item was selected
 	if (SelectedInteractableComponent == InteractableComponent)
 	{
-		SelectedInteractableComponent->HideInteractionHint();
+		SelectedInteractableComponent->SetInteractionHintVisible(false);
 		SelectedInteractableComponent = nullptr;
 	}
 		
@@ -111,12 +111,12 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 
 	if (SelectedInteractableComponent.IsValid())
 	{
-		SelectedInteractableComponent->HideInteractionHint();
+		SelectedInteractableComponent->SetInteractionHintVisible(false);
 		SelectedInteractableComponent = nullptr;
 	}
-
+	
 	SelectedInteractableComponent = InteractableComponentToSelected;
-	SelectedInteractableComponent->ShowInteractionHint();
+	SelectedInteractableComponent->SetInteractionHintVisible(true);
 }
 
 bool UInteractionManagerComponent::TryInteract()
