@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
+class UWidgetComponent;
 class UInteractionManagerComponent;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent*);
@@ -33,16 +34,25 @@ protected:
 private:
 	// Called every time the item is interacted with
 	FOnInteractDelegate OnInteract;
+
+	// Meshes with this tag will be a hint
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
+	FName HintMeshesTag = "HintMesh";
+
+	// Widgets with this tag will be a hint
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
+	FName HintWidgetTag = "HintWidget";
 	
 	// Set as overlay material when showing hint
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<UMaterialInterface> HintOverlayMaterial;
 
-	// Displayed when showing hint
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<class UWidget> HintWidget;
-
+	// Widget that has the visible parameter set when showing a hint
+	TWeakObjectPtr<UWidgetComponent> HintWidget;
+	
 	// Mesh to which HintOverlayMaterial is set when showing a hint
-	UPROPERTY()
-	TWeakObjectPtr<UMeshComponent> HintMesh;
+	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;
+
+	// Adds or removes overlay material for showing a hint
+	void SetHintOverlayMaterialForHintMeshes(bool Value);
 };

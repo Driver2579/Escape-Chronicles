@@ -2,7 +2,7 @@
 
 #include "InteractionSystem/Public/Components/ActorComponents/InteractableComponent.h"
 
-#include "Components/Widget.h"
+#include "Components/WidgetComponent.h"
 
 UInteractableComponent::UInteractableComponent()
 {
@@ -13,13 +13,50 @@ void UInteractableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	const AActor* Owner = GetOwner();
-	
-	HintMesh = Owner->FindComponentByClass<UMeshComponent>();
+	// Filling HintMeshes array
+	TArray<UActorComponent*> TaggedMeshes = GetOwner()->GetComponentsByTag(UMeshComponent::StaticClass(), HintMeshesTag);
 
-	ensureAlwaysMsgf(HintMesh->GetGenerateOverlapEvents(),
-		TEXT("The owner of this class must set GenerateOverlapEvents to true, otherwise it will not be "
-	   "included in UInteractionManagerComponent::InteractableComponentsPool."));
+	for (UActorComponent* TaggedMesh : TaggedMeshes)
+	{
+		UMeshComponent* CastedMesh = Cast<UMeshComponent>(TaggedMesh);
+
+#if DO_ENSURE
+		if (!ensureAlways(IsValid(CastedMesh)))
+		{
+			continue;
+		}
+
+		ensureAlwaysMsgf(CastedMesh->GetGenerateOverlapEvents(),
+			TEXT("CastedMesh must set GenerateOverlapEvents to true, otherwise it will not be included in "
+			"UInteractionManagerComponent::InteractableComponentsPool."));
+#endif
+		
+		HintMeshes.Add(CastedMesh);
+	}
+
+	// Find widget
+	UActorComponent* TaggedWidget = GetOwner()->FindComponentByTag(UWidgetComponent::StaticClass(), HintWidgetTag);
+
+	if (!IsValid(TaggedWidget))
+	{
+		return;
+	}
+
+	UWidgetComponent* CastedWidget = Cast<UWidgetComponent>(TaggedWidget);
+
+	if (!ensureAlways(IsValid(CastedWidget)))
+	{
+		return;
+	}
+
+	HintWidget = CastedWidget;
+
+	if (!ensureAlways(IsValid(HintWidget->GetWidget())))
+	{
+		return;
+	}
+	
+	HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Hidden);
 }
 
 void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
@@ -32,28 +69,42 @@ void UInteractableComponent::AddInteractHandler(const FOnInteractDelegate::FDele
 	OnInteract.Add(Callback);
 }
 
-void UInteractableComponent::ShowInteractionHint()
+void UInteractableComponent::SetHintOverlayMaterialForHintMeshes(const bool Value)
 {
-	if (IsValid(HintWidget))
+	if (!ensureAlways(IsValid(HintOverlayMaterial)))
 	{
-		HintWidget->SetVisibility(ESlateVisibility::Visible);
+		return;
 	}
 	
-	if (ensureAlways(HintMesh.IsValid()) && IsValid(HintOverlayMaterial))
+	UMaterialInterface* CurrentOverlayMaterial = Value ? HintOverlayMaterial : nullptr;
+	
+	for (TWeakObjectPtr<UMeshComponent> Mesh : HintMeshes)
 	{
-		HintMesh->SetOverlayMaterial(HintOverlayMaterial);
+		if (!ensureAlways(Mesh.IsValid()))
+		{
+			continue;
+		}
+		
+		Mesh->SetOverlayMaterial(CurrentOverlayMaterial);
 	}
+}
+
+void UInteractableComponent::ShowInteractionHint()
+{
+	if (HintWidget.IsValid())
+	{
+		HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Visible);
+	}
+	
+	SetHintOverlayMaterialForHintMeshes(true);
 }
 
 void UInteractableComponent::HideInteractionHint()
 {
-	if (IsValid(HintWidget))
+	if (HintWidget.IsValid())
 	{
-		HintWidget->SetVisibility(ESlateVisibility::Hidden);
+		HintWidget->GetWidget()->SetVisibility(ESlateVisibility::Hidden);
 	}
 	
-	if (ensureAlways(HintMesh.IsValid()))
-	{
-		HintMesh->SetOverlayMaterial(nullptr);
-	}
+	SetHintOverlayMaterialForHintMeshes(false);
 }

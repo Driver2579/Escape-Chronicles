@@ -76,12 +76,6 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	{
 		return;
 	}
-
-	if (SelectedInteractableComponent.IsValid())
-	{
-		SelectedInteractableComponent->HideInteractionHint();
-		SelectedInteractableComponent = nullptr;
-	}
 	
 	// Find the view location and view direction where the pawn is looking
 	FVector ViewLocation;
@@ -90,6 +84,7 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	const FVector ViewDirection = ViewRotation.Vector();
 
 	// Select InteractableComponent
+	UInteractableComponent* InteractableComponentToSelected = nullptr;
 	float BestDotProduct = -1.0f;
 	for (TWeakObjectPtr<UInteractableComponent> InteractableComponent : InteractableComponentsPool)
 	{
@@ -105,14 +100,23 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 		{
 			BestDotProduct = DotProduct;
 
-			SelectedInteractableComponent = InteractableComponent;
+			InteractableComponentToSelected = InteractableComponent.Get();
 		}
 	}
 	
-	if (SelectedInteractableComponent != nullptr)
+	if (InteractableComponentToSelected == nullptr || InteractableComponentToSelected == SelectedInteractableComponent)
 	{
-		SelectedInteractableComponent->ShowInteractionHint();
+		return;
 	}
+
+	if (SelectedInteractableComponent.IsValid())
+	{
+		SelectedInteractableComponent->HideInteractionHint();
+		SelectedInteractableComponent = nullptr;
+	}
+
+	SelectedInteractableComponent = InteractableComponentToSelected;
+	SelectedInteractableComponent->ShowInteractionHint();
 }
 
 bool UInteractionManagerComponent::TryInteract()
