@@ -32,6 +32,10 @@
 		{
 			"Name": "MoverExamples",
 			"Enabled": true
+		},
+		{
+			"Name": "Scythe",
+			"Enabled": true
 		}
 	]
 }
