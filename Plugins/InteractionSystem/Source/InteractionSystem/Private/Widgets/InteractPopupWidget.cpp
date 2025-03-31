@@ -6,7 +6,8 @@
 void UInteractPopupWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
+	// Initially show the first frame
 	PlayAnimationForward(PopupAnimation);
 	PauseAnimation(PopupAnimation);
 }

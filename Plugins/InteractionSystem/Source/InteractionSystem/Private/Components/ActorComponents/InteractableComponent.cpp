@@ -14,28 +14,42 @@ void UInteractableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Filling HintMeshes array
+	MeshesHintInitialize();
+	WidgetHintInitialize();
+}
+
+void UInteractableComponent::MeshesHintInitialize()
+{
 	TArray<UActorComponent*> TaggedMeshes = GetOwner()->GetComponentsByTag(UMeshComponent::StaticClass(), HintMeshesTag);
 
+	if (!ensureAlways(TaggedMeshes.Num() != 0))
+	{
+		return;
+	}
+
+	bool HasMeshWithGenerateOverlapEvents = false;
+	
 	for (UActorComponent* TaggedMesh : TaggedMeshes)
 	{
 		UMeshComponent* CastedMesh = Cast<UMeshComponent>(TaggedMesh);
 
-#if DO_ENSURE
-		if (!ensureAlways(IsValid(CastedMesh)))
+		if (CastedMesh->GetGenerateOverlapEvents())
 		{
-			continue;
+			HasMeshWithGenerateOverlapEvents = true;
 		}
-
-		ensureAlwaysMsgf(CastedMesh->GetGenerateOverlapEvents(),
-			TEXT("CastedMesh must be set GenerateOverlapEvents to true, otherwise it will not be included in "
-			"UInteractionManagerComponent::InteractableComponentsPool."));
-#endif
 		
 		HintMeshes.Add(CastedMesh);
 	}
 
-	// Find widget
+#if DO_ENSURE
+	ensureAlwaysMsgf(HasMeshWithGenerateOverlapEvents,
+		TEXT("CastedMesh must be set GenerateOverlapEvents to true, otherwise it will not be included in "
+		"UInteractionManagerComponent::InteractableComponentsPool."));
+#endif
+}
+
+void UInteractableComponent::WidgetHintInitialize()
+{
 	UActorComponent* TaggedWidgetComponent = GetOwner()->FindComponentByTag(UWidgetComponent::StaticClass(), HintWidgetTag);
 
 	if (!IsValid(TaggedWidgetComponent))
@@ -43,7 +57,7 @@ void UInteractableComponent::BeginPlay()
 		return;
 	}
 
-	UWidgetComponent* CastedWidgetComponent = Cast<UWidgetComponent>(TaggedWidgetComponent);
+	const UWidgetComponent* CastedWidgetComponent = Cast<UWidgetComponent>(TaggedWidgetComponent);
 
 	if (!ensureAlways(IsValid(CastedWidgetComponent)))
 	{
@@ -79,9 +93,16 @@ void UInteractableComponent::AddInteractHandler(const FOnInteractDelegate::FDele
 
 void UInteractableComponent::SetInteractionHintVisible(const bool Value)
 {
+	// Set widget hint
 	if (HintWidget.IsValid())
 	{
 		Value ? HintWidget->ShowPopup() : HintWidget->HidePopup();
+	}
+
+	//Set mesh hint
+	if (HintMeshes.Num() == 0)
+	{
+		return;
 	}
 	
 	if (!ensureAlways(IsValid(HintOverlayMaterial)))

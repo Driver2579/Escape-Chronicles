@@ -30,13 +30,16 @@ public:
 		FActorComponentTickFunction* ThisTickFunction) override;
 
 	// Sends a request to attempt to interact with the server
-	bool TryInteract();
-	bool TryInteract(UInteractableComponent* InteractableComponent);
+	bool Interact();
+	bool Interact(UInteractableComponent* InteractableComponent);
 	
 protected:
 	virtual void BeginPlay() override;
 
 private:
+	// Checking if there are obstacles to the InteractableComponent 
+	bool IsThereObstacle(const UInteractableComponent* InteractableComponent) const;
+	
 	// Selects the InteractableComponent that is closest to the direction of the view from InteractableComponentsPool
 	void SelectInteractableComponent();
 
@@ -49,7 +52,8 @@ private:
 	UFUNCTION()
 	void OnDeleteFromInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
+
+	// Try to interact with an item on the server
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_TryInteract(UInteractableComponent* InteractableComponent);
 

@@ -8,7 +8,7 @@
 
 
 /**
- * Can be used in InteractableComponent with a component to show a tooltip
+ * Can be used in InteractableComponent with a component to show a hint
  */
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractPopupWidget : public UUserWidget

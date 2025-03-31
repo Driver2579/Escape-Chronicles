@@ -22,6 +22,7 @@ void UInteractionManagerComponent::BeginPlay()
 		&UInteractionManagerComponent::OnDeleteFromInteractableComponentsPool);
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
@@ -38,6 +39,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	}
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void UInteractionManagerComponent::OnDeleteFromInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
@@ -62,12 +64,46 @@ void UInteractionManagerComponent::OnDeleteFromInteractableComponentsPool(UPrimi
 	InteractableComponentsPool.Remove(InteractableComponent);
 }
 
+// ReSharper disable once CppParameterMayBeConst
 void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
 	SelectInteractableComponent();
+}
+
+bool UInteractionManagerComponent::IsThereObstacle(const UInteractableComponent* InteractableComponent) const
+{
+	if (!ensureAlways(IsValid(InteractableComponent)))
+	{
+		return false;
+	}
+
+	const AActor* InteractableActor = InteractableComponent->GetOwner();
+	if (!ensureAlways(IsValid(InteractableActor)))
+	{
+		return false;
+	}
+
+	const FVector Start = GetOwner()->GetActorLocation();
+	const FVector End = InteractableActor->GetActorLocation();
+
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(GetOwner());
+	TraceParams.AddIgnoredActor(InteractableActor);
+	TraceParams.bTraceComplex = true;
+
+	FHitResult HitResult;
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		TraceParams
+	);
+	
+	return bHit;
 }
 
 void UInteractionManagerComponent::SelectInteractableComponent()
@@ -88,8 +124,12 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	float BestDotProduct = -1.0f;
 	for (TWeakObjectPtr<UInteractableComponent> InteractableComponent : InteractableComponentsPool)
 	{
-		if (!IsValid(InteractableComponent.Get())) continue;
-
+		if (!IsValid(InteractableComponent.Get()) || IsThereObstacle(
+			InteractableComponent.Get()))
+		{
+			continue;
+		}
+		
 		FVector DirectionToActor = (InteractableComponent.Get()->GetOwner()->GetActorLocation() - ViewLocation)
 			.GetSafeNormal();
 
@@ -109,6 +149,7 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 		return;
 	}
 
+	// Remove selection from the old selected actor
 	if (SelectedInteractableComponent.IsValid())
 	{
 		SelectedInteractableComponent->SetInteractionHintVisible(false);
@@ -119,12 +160,12 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	SelectedInteractableComponent->SetInteractionHintVisible(true);
 }
 
-bool UInteractionManagerComponent::TryInteract()
+bool UInteractionManagerComponent::Interact()
 {
-	return TryInteract(SelectedInteractableComponent.Get());
+	return Interact(SelectedInteractableComponent.Get());
 }
 
-bool UInteractionManagerComponent::TryInteract(UInteractableComponent* InteractableComponent)
+bool UInteractionManagerComponent::Interact(UInteractableComponent* InteractableComponent)
 {
 #if DO_ENSURE
 	const APawn* OwningPawn = GetOwner<APawn>();
@@ -162,5 +203,5 @@ bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComp
 
 	const float DistanceToInteractableComponent = FVector::Distance(InteractableComponentLocation, OwnerLocation);
 
-	return DistanceToInteractableComponent <= MaxInteractionDistance;
+	return DistanceToInteractableComponent <= MaxInteractionDistance && !IsThereObstacle(InteractableComponent);
 }

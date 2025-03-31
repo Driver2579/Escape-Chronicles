@@ -31,6 +31,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	void MeshesHintInitialize();
+	void WidgetHintInitialize();
+	
 	// Called every time the item is interacted with
 	FOnInteractDelegate OnInteract;
 

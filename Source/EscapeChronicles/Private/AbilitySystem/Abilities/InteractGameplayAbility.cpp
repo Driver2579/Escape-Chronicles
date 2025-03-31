@@ -32,7 +32,7 @@ void UInteractGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	const bool IsInteractionCorrect = InteractionManagerComponent->TryInteract();
+	const bool IsInteractionCorrect = InteractionManagerComponent->Interact();
 
 	if (!IsInteractionCorrect)
 	{
