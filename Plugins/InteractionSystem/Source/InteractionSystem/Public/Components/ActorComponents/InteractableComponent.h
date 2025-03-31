@@ -39,19 +39,19 @@ private:
 
 	// Meshes with this tag will be a hint
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	FName HintMeshesTag = "HintMesh";
+	FName MeshesHintTag = "MeshHint";
 
 	// Widgets with this tag will be a hint
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	FName HintWidgetTag = "HintWidget";
+	FName WidgetHintTag = "WidgetHint";
 	
 	// Set as overlay material when showing hint
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	TObjectPtr<UMaterialInterface> HintOverlayMaterial;
+	TObjectPtr<UMaterialInterface> OverlayMaterialHint;
 
 	// Widget that has the visible parameter set when showing a hint
-	TWeakObjectPtr<UInteractPopupWidget> HintWidget;
+	TWeakObjectPtr<UInteractPopupWidget> WidgetHint;
 	
-	// Mesh to which HintOverlayMaterial is set when showing a hint
-	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;
+	// Mesh to which OverlayMaterialHint is set when showing a hint
+	TArray<TWeakObjectPtr<UMeshComponent>> MeshHints;
 };
