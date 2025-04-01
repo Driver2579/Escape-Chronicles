@@ -49,7 +49,7 @@ void UInteractableComponent::MeshesHintInitialize()
 
 void UInteractableComponent::WidgetHintInitialize()
 {
-	const UWidgetComponent* WidgetComponent = GetOwner()->FindComponentByClass<UWidgetComponent>();
+	const UWidgetComponent* WidgetComponent = GetOwner()->FindComponentByTag<UWidgetComponent>(WidgetHintTag);
 	
 	if (!ensureAlways(IsValid(WidgetComponent)))
 	{
