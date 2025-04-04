@@ -20,11 +20,18 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableComponent->AddInteractHandler(FOnInteractDelegate::FDelegate::CreateUObject(this, &AEscapeChroniclesInventoryPickupItem::Test));
+	InteractableComponent->AddInteractHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
+		&AEscapeChroniclesInventoryPickupItem::InteractHandler));
 }
 
-void AEscapeChroniclesInventoryPickupItem::Test(UInteractionManagerComponent* InteractionManagerComponent)
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
 {
+	if (!ensureAlways(IsValid(InteractableComponent)))
+	{
+		return;
+	}
+	
 	const APawn* Pawn = Cast<APawn>(InteractionManagerComponent->GetOwner());
 
 	if (!ensureAlways(IsValid(Pawn)))
@@ -32,21 +39,14 @@ void AEscapeChroniclesInventoryPickupItem::Test(UInteractionManagerComponent* In
 		return;
 	}
 
-	APlayerState* PlayerState = Pawn->GetPlayerState();
+	const AEscapeChroniclesPlayerState* PlayerState = Pawn->GetPlayerState<AEscapeChroniclesPlayerState>();
 
 	if (!ensureAlways(IsValid(PlayerState)))
 	{
 		return;
 	}
-
-	AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = Cast<AEscapeChroniclesPlayerState>(PlayerState);
-
-	if (!ensureAlways(IsValid(EscapeChroniclesPlayerState)))
-	{
-		return;
-	}
 	
-	UInventoryManagerComponent* InventoryManagerComponent =  EscapeChroniclesPlayerState->GetInventoryManagerComponent();
+	UInventoryManagerComponent* InventoryManagerComponent =  PlayerState->GetInventoryManagerComponent();
 
 	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{

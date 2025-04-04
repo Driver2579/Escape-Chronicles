@@ -27,5 +27,5 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
-	void Test (UInteractionManagerComponent* InteractionManagerComponent);
+	void InteractHandler (UInteractionManagerComponent* InteractionManagerComponent);
 };
