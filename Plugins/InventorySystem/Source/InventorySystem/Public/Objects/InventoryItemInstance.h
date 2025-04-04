@@ -21,6 +21,7 @@ public:
 	{
 		return ItemDefinition;
 	}
+	
 	void SetItemDefinition(const TSubclassOf<UInventoryItemDefinition>& NewItemDefinition)
 	{
 		ItemDefinition = NewItemDefinition;
@@ -50,4 +51,6 @@ public:
 private:
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> ItemDefinition;
+
+	// TODO: Create replicated struct FGameplayTag/TUnion for local data
 };

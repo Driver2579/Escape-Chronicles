@@ -16,10 +16,12 @@ class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FText DisplayName;
-
-	TArray<TObjectPtr<UInventoryItemFragment>> GetFragments() const
+	const FText& GetDisplayName()
+	{
+		return DisplayName;
+	}
+	
+	const TArray<TObjectPtr<UInventoryItemFragment>>& GetFragments() const
 	{
 		return Fragments;
 	}
@@ -40,6 +42,9 @@ public:
 	}
 	
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Instanced)
+	UPROPERTY(EditDefaultsOnly)
+	FText DisplayName;
+	
+	UPROPERTY(EditDefaultsOnly, Instanced)
 	TArray<TObjectPtr<UInventoryItemFragment>> Fragments;
 };

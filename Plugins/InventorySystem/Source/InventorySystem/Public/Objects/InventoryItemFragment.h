@@ -16,6 +16,9 @@ class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 	GENERATED_BODY()
 
 public:
+	// TODO: Call this method
 	virtual void OnInstanceCreated(UInventoryItemInstance* Instance) {}
-	virtual void OnInstanceDestroyed(UInventoryItemInstance* Instance) {} 
+
+	// TODO: Consider whether this method is worth implementing
+	//virtual void OnInstanceDestroyed(UInventoryItemInstance* Instance) {} 
 };

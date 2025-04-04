@@ -125,10 +125,7 @@ void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerCo
 
 	// TODO: Make an addition without explicitly specifying a tag and index
 	FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName("Inventory.SlotTypes.Main"));
-
-	UInventoryItemInstance* DubItemInstance = DuplicateObject(ItemInstance, InventoryManagerComponent);
 	
-	//InventoryManagerComponent->AddItem(ItemInstance, Tag, 0);
 	InventoryManagerComponent->AddItem(ItemInstance, Tag, 0);
 	
 	Destroy();
