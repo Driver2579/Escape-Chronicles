@@ -3,6 +3,7 @@
 
 #include "Actors/InventoryPickupItem.h"
 
+#include "NaniteSceneProxy.h"
 #include "Components/ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
@@ -13,10 +14,36 @@
 AInventoryPickupItem::AInventoryPickupItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	bReplicates = true;
+	SetReplicates(true);
 
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SetRootComponent(StaticMeshComponent);
+}
+
+void AInventoryPickupItem::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ensureAlways(bItemInstanceIsValid);
+}
+
+void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+	
+	// Only update actors on scene
+	if (!IsAsset())
+	{
+		return;
+	}
+
+	bItemInstanceIsValid = ApplyChangesFromItemInstance();
+
+	// Until the valid parameters for installing a personal mesh are selected, install the standard one
+	if (!bItemInstanceIsValid)
+	{
+		SetDefaultStaticMesh();
+	}
 }
 
 void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -26,13 +53,64 @@ void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ThisClass, ItemInstance);
 }
 
-void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
+bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
-	Super::OnConstruction(Transform);
+	if (!IsValid(StaticMeshComponent) || !IsValid(ItemInstance))
+	{
+		return false;
+	}
+	
+	const UPickupInventoryItemFragment* ItemFragment = ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 
-	UpdateMesh();
+	if (!IsValid(ItemFragment))
+	{
+		return false;
+	}
+	
+	UStaticMesh* StaticMesh = ItemFragment->GetStaticMesh();
+	
+	if (!IsValid(StaticMesh))
+	{
+		return false;
+	}
+
+	StaticMeshComponent->SetStaticMesh(StaticMesh);
+
+	return true;
 }
 
+void AInventoryPickupItem::SetDefaultStaticMesh() const
+{
+	if (!IsValid(StaticMeshComponent))
+	{
+		return;
+	}
+
+	const AInventoryPickupItem* CDO = Cast<AInventoryPickupItem>(GetClass()->GetDefaultObject());
+
+	if (!IsValid(CDO))
+	{
+		return;
+	}
+
+	const UStaticMeshComponent* StaticMeshComponentCDO = CDO->GetStaticMeshComponent();
+	
+	if (!IsValid(StaticMeshComponentCDO))
+	{
+		return;
+	}
+	
+	UStaticMesh* StaticMeshCDO = StaticMeshComponentCDO->GetStaticMesh();
+
+	if (!IsValid(StaticMeshCDO))
+	{
+		return;
+	}
+
+	StaticMeshComponent->SetStaticMesh(StaticMeshCDO);
+}
+
+// TODO: Refactor
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
 {
 	if (!ensureAlways(IsValid(InventoryManagerComponent)))
@@ -47,57 +125,11 @@ void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerCo
 
 	// TODO: Make an addition without explicitly specifying a tag and index
 	FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName("Inventory.SlotTypes.Main"));
+
+	UInventoryItemInstance* DubItemInstance = DuplicateObject(ItemInstance, InventoryManagerComponent);
 	
+	//InventoryManagerComponent->AddItem(ItemInstance, Tag, 0);
 	InventoryManagerComponent->AddItem(ItemInstance, Tag, 0);
 	
 	Destroy();
 }
-
-void AInventoryPickupItem::UpdateMesh() const
-{
-	if (!IsValid(StaticMeshComponent))
-	{
-		return;
-	}
-	
-	if (!IsValid(ItemInstance))
-	{
-		StaticMeshComponent->SetStaticMesh(nullptr);
-		return;
-	}
-	
-	TSubclassOf<UInventoryItemDefinition> ItemDefinition = ItemInstance->GetItemDefinition();
-
-	if (!IsValid(ItemDefinition))
-	{
-		StaticMeshComponent->SetStaticMesh(nullptr);
-		return;
-	}
-
-	const UInventoryItemDefinition* ItemDefinitionCDO = ItemDefinition->GetDefaultObject<UInventoryItemDefinition>();
-
-	if (!IsValid(ItemDefinitionCDO))
-	{
-		StaticMeshComponent->SetStaticMesh(nullptr);
-		return;
-	}
-
-	const UPickupInventoryItemFragment* ItemFragment = ItemDefinitionCDO->GetFragmentByClass<UPickupInventoryItemFragment>();
-
-	if (!IsValid(ItemFragment))
-	{
-		StaticMeshComponent->SetStaticMesh(nullptr);
-		return;
-	}
-	
-	UStaticMesh* StaticMesh = ItemFragment->GetStaticMesh();
-	
-	if (!IsValid(StaticMesh))
-	{
-		StaticMeshComponent->SetStaticMesh(nullptr);
-		return;
-	}
-
-	StaticMeshComponent->SetStaticMesh(StaticMesh);
-}
-

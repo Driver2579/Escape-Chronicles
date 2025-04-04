@@ -25,7 +25,7 @@ public:
 	}
 
 	template<typename T>
-	T* GetFragmentByClass() const
+	const T* GetFragmentByClass() const
 	{
 		for (UInventoryItemFragment* Fragment : Fragments)
 		{

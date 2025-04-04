@@ -16,28 +16,35 @@ class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
 {
 	GENERATED_BODY()
 	
-public:	
-	AInventoryPickupItem();
-	
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-protected:
-	virtual void OnConstruction(const FTransform& Transform) override;
-
-	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
-
+public:
 	UStaticMeshComponent* GetStaticMeshComponent() const
 	{
 		return StaticMeshComponent;
 	}
 	
+	AInventoryPickupItem();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnConstruction(const FTransform& Transform) override;
+
+	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
+	
 private:
-	// Sets a mesh to this actor from the specified ItemInstance (ItemInstance must have a UPickupInventoryItemFragment)
-	void UpdateMesh() const;
+	// Set a mesh to this actor from the specified ItemInstance (ItemInstance must have a UPickupInventoryItemFragment)
+	bool ApplyChangesFromItemInstance() const;
+
+	// Set the same mesh as CDO
+	void SetDefaultStaticMesh() const;
 
 	UPROPERTY()
+	bool bItemInstanceIsValid;
+	
+	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 	
-	UPROPERTY(EditAnywhere, Instanced, Replicated)
+	UPROPERTY(EditInstanceOnly, Instanced, Replicated)
 	TObjectPtr<class UInventoryItemInstance> ItemInstance;
 };

@@ -3,9 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InventoryItemDefinition.h"
 #include "InventoryItemInstance.generated.h"
 
-class UInventoryItemDefinition;
+class UInventoryItemFragment;
 
 /**
  * A specific object whose properties are described by a UInventoryItemDefinition
@@ -23,6 +24,24 @@ public:
 	void SetItemDefinition(const TSubclassOf<UInventoryItemDefinition>& NewItemDefinition)
 	{
 		ItemDefinition = NewItemDefinition;
+	}
+
+	template<typename T>
+	const T* GetFragmentByClass() const
+	{
+		if (!IsValid(ItemDefinition))
+		{
+			return nullptr;
+		}
+		
+		const UInventoryItemDefinition* ItemDefinitionCDO = ItemDefinition->GetDefaultObject<UInventoryItemDefinition>();
+
+		if (!ensureAlways(IsValid(ItemDefinitionCDO)))
+		{
+			return nullptr;
+		}
+
+		return ItemDefinitionCDO->GetFragmentByClass<T>();
 	}
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

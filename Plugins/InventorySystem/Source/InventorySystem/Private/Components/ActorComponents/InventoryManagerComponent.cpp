@@ -31,9 +31,9 @@ void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, FGameplay
 {
 	if (GetOwner()->HasAuthority())
 	{
-		UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(this);
+		//UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(this);
 		
-		AddReplicatedSubObject(NewItemInstance);
+		AddReplicatedSubObject(Item);
 		
 		FInventorySlotsTypedArray* InventorySlotsTypedArray = TypedInventorySlotsLists.TypedLists.FindByPredicate(
 			[Type](const FInventorySlotsTypedArray& List)
@@ -59,7 +59,7 @@ void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, FGameplay
 			return;
 		}
 		
-		InventorySlotsTypedArray->List.Slots[SlotIndex].Instance = NewItemInstance;
+		InventorySlotsTypedArray->List.Slots[SlotIndex].Instance = Item;
 
 		InventorySlotsTypedArray->List.MarkItemDirty(InventorySlotsTypedArray->List.Slots[SlotIndex]);
 		TypedInventorySlotsLists.MarkItemDirty(*InventorySlotsTypedArray);
