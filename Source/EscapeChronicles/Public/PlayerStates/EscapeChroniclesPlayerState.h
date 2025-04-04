@@ -8,6 +8,7 @@
 #include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 #include "EscapeChroniclesPlayerState.generated.h"
 
+class UInventoryManagerComponent;
 class UAbilitySystemSet;
 
 UCLASS()
@@ -23,6 +24,11 @@ public:
 		return AbilitySystemComponent;
 	}
 
+	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const
+	{
+		return InventoryManagerComponent;
+	}
+
 	UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const
 	{
 		return AbilitySystemComponent;
@@ -34,6 +40,9 @@ protected:
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")
 	TObjectPtr<UEscapeChroniclesAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY(VisibleAnywhere, Category="Inventory")
+	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 
 	// Ability system sets to grant to this pawn's ability system
 	UPROPERTY(EditDefaultsOnly, Category = "Ability System|Abilities")

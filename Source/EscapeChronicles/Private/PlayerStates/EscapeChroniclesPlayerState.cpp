@@ -3,12 +3,15 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "Components/ActorComponents/InventoryManagerComponent.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
 	AbilitySystemComponent = CreateDefaultSubobject<UEscapeChroniclesAbilitySystemComponent>(
 		TEXT("AbilitySystemComponent"));
 
+	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("InventoryManagerComponent"));
+	
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 }

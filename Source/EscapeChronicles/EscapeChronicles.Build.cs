@@ -19,7 +19,8 @@ public class EscapeChronicles : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
-			"InteractionSystem"
+			"InteractionSystem",
+			"InventorySystem",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

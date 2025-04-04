@@ -51,7 +51,7 @@ void UInteractableComponent::WidgetHintInitialize()
 {
 	const UWidgetComponent* WidgetComponent = GetOwner()->FindComponentByTag<UWidgetComponent>(WidgetHintTag);
 	
-	if (!ensureAlways(IsValid(WidgetComponent)))
+	if (!IsValid(WidgetComponent))
 	{
 		return;
 	}

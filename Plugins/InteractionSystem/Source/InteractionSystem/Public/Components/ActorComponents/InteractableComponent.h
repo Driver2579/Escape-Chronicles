@@ -19,7 +19,17 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
+	FName GetMeshesHintTag() const 
+	{
+		return MeshesHintTag;
+	}
+
+	FName GetWidgetHintTag() const
+	{
+		return WidgetHintTag;
+	}
+	
 	UInteractableComponent();
 
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;

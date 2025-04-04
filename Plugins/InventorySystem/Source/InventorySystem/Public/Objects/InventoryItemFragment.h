@@ -10,7 +10,7 @@ class UInventoryItemInstance;
 /**
  * Base class for creating fragments of an item that can describe various logic for it
  */
-UCLASS(DefaultToInstanced, Abstract)
+UCLASS(EditInlineNew, Abstract)
 class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 {
 	GENERATED_BODY()

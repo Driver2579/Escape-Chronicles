@@ -25,11 +25,11 @@ public:
 	}
 
 	template<typename T>
-	T* GetFragmentByType() const
+	T* GetFragmentByClass() const
 	{
 		for (UInventoryItemFragment* Fragment : Fragments)
 		{
-			const T* CastedFragment = Cast<T>(Fragment);
+			T* CastedFragment = Cast<T>(Fragment);
 			if (IsValid(CastedFragment))
 			{
 				return CastedFragment;

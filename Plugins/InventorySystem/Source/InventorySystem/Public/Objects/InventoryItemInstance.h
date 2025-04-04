@@ -10,7 +10,7 @@ class UInventoryItemDefinition;
 /**
  * A specific object whose properties are described by a UInventoryItemDefinition
  */
-UCLASS()
+UCLASS(EditInlineNew)
 class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 {
 	GENERATED_BODY()

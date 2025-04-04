@@ -8,20 +8,34 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "InventoryManagerComponent.generated.h"
 
-/* A single slot in an inventory */
+class UInventoryItemInstance;
+
+/**
+ * A single slot in an inventory
+ */
 USTRUCT()
 struct FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_USTRUCT_BODY()
 
+	UInventoryItemInstance* GetInstance()
+	{
+		return Instance;
+	}
+	
+	void SetInstance(UInventoryItemInstance* NewInstance)
+	{
+		Instance = NewInstance;
+	}
+	
+//private:
 	UPROPERTY()
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
-
-	/*UPROPERTY()
-	int32 Test = 0;*/
 };
 
-/* List of inventory slots */
+/**
+ * List of inventory slots
+ */
 USTRUCT()
 struct FInventorySlotsArray : public FFastArraySerializer
 {
@@ -30,7 +44,10 @@ struct FInventorySlotsArray : public FFastArraySerializer
 	UPROPERTY()
 	TArray<FInventorySlot> Slots;
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms);
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	{
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>( Slots, DeltaParms, *this );
+	}
 };
 
 template<>
@@ -42,7 +59,9 @@ struct TStructOpsTypeTraits<FInventorySlotsArray> : public TStructOpsTypeTraitsB
 	};
 };
 
-/* A typed list of slots in an inventory */
+/**
+ * A typed list of slots in an inventory
+ */
 USTRUCT()
 struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
@@ -55,7 +74,9 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 	FInventorySlotsArray List;
 };
 
-/* Contain inventory slots by their types */
+/**
+ * Contain inventory slots by their types
+ */
 USTRUCT()
 struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
@@ -64,7 +85,10 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 	UPROPERTY()
 	TArray<FInventorySlotsTypedArray> TypedLists;
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms);
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	{
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>( TypedLists, DeltaParms, *this );
+	}
 };
 
 template<>
@@ -73,7 +97,7 @@ struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer> : public TStruct
 	enum 
 	{
 		WithNetDeltaSerializer = true,
-   };
+	};
 };
 
 /**
@@ -89,8 +113,10 @@ class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
 public:	
 	UInventoryManagerComponent();
 
+	void CallOrRegisterOnInventoryInitialized(const FOnInventoryInitializedDelegate::FDelegate& Callback);
+	
 	// TODO: Implement these methods
-	//void AddItem(UInventoryItemInstance* Item, FGameplayTag Type, int32 SlotIndex);
+	void AddItem(UInventoryItemInstance* Item, FGameplayTag Type, int32 SlotIndex);
 	//void DeleteItem(FGameplayTag Type, int32 SlotIdx);
 
 	// TODO: Delete Tick
@@ -111,7 +137,6 @@ private:
 	*/
 	UPROPERTY(EditAnywhere, Category="Inventory Settings")
 	TMap<FGameplayTag, int32> SlotTypesAndQuantities;
-	
 	
 	UPROPERTY(Replicated)
 	FInventorySlotsTypedArrayContainer TypedInventorySlotsLists;
