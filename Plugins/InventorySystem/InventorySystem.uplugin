@@ -3,7 +3,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "InventorySystem",
-	"Description": "Fragmet-based replicatable inventory system using GameplayTags.",
+	"Description": "Fragment-based replicatable inventory system using GameplayTags.",
 	"Category": "Inventory",
 	"CreatedBy": "The_Sheleng",
 	"CreatedByURL": "",

@@ -2,6 +2,7 @@
 
 #include "Components/ActorComponents/InventoryManagerComponent.h"
 
+#include "InventorySystemGameplayTags.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemInstance.h"
@@ -27,43 +28,23 @@ void UInventoryManagerComponent::CallOrRegisterOnInventoryInitialized(
 	}
 }
 
-void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, FGameplayTag Type, int32 SlotIndex)
+/*
+void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Index)
 {
-	if (GetOwner()->HasAuthority())
-	{
-		//UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(this);
-		
-		AddReplicatedSubObject(Item);
-		
-		FInventorySlotsTypedArray* InventorySlotsTypedArray = TypedInventorySlotsLists.TypedLists.FindByPredicate(
-			[Type](const FInventorySlotsTypedArray& List)
-			{
-				return List.Type == Type;
-			});
+	AddItem(Item, Index, InventorySystemGameplayTags::InventoryTag_MainSlotType);
+}
+*/
 
-		if (!InventorySlotsTypedArray)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Not Found"));
-			return;
-		}
-
-		if (SlotIndex > InventorySlotsTypedArray->List.Slots.Num() - 1 || SlotIndex < 0)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Unavailable slot number"));
-			return;
-		}
-		
-		if (InventorySlotsTypedArray->List.Slots[SlotIndex].Instance != nullptr)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Slot is not empty"));
-			return;
-		}
-		
-		InventorySlotsTypedArray->List.Slots[SlotIndex].Instance = Item;
-
-		InventorySlotsTypedArray->List.MarkItemDirty(InventorySlotsTypedArray->List.Slots[SlotIndex]);
-		TypedInventorySlotsLists.MarkItemDirty(*InventorySlotsTypedArray);
-	}
+void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Index, FGameplayTag Type)
+{
+	check(GetOwner()->HasAuthority());
+  
+	// TODO: UE-127172
+	UInventoryItemInstance* ItemInstanceDuplicate = Item->Duplicate(this);
+	
+	TypedInventorySlotsLists.SetInstanceIntoSlot(ItemInstanceDuplicate, Index, Type);
+	
+	AddReplicatedSubObject(ItemInstanceDuplicate);
 }
 
 
@@ -99,29 +80,7 @@ void UInventoryManagerComponent::InitializeInventory()
 {
 	if (GetOwner()->HasAuthority())
 	{
-		for (const auto& SlotTypeAndQuantity : SlotTypesAndQuantities)
-		{
-			FInventorySlotsTypedArray TypedList;
-
-			TypedList.Type = SlotTypeAndQuantity.Key;
-
-			// Создаем список слотов для данного типа
-			FInventorySlotsArray InventorySlotsList;
-			for (int32 i = 0; i < SlotTypeAndQuantity.Value; ++i)
-			{
-				// Добавляем пустой слот в список
-				FInventorySlot Slot = FInventorySlot();
-				InventorySlotsList.Slots.Add(Slot);
-			}
-
-			// Присваиваем созданный список слотов в FInventorySlotsTypedList
-			TypedList.List = InventorySlotsList;
-
-			// Добавляем типизированный список слотов в контейнер
-			TypedInventorySlotsLists.TypedLists.Add(TypedList);
-		}
-
-		TypedInventorySlotsLists.MarkArrayDirty();
+		TypedInventorySlotsLists.Init(SlotTypesAndQuantities);
 	}
 
 	if (GetOwner()->HasAuthority())
@@ -129,27 +88,39 @@ void UInventoryManagerComponent::InitializeInventory()
 		TObjectPtr<UInventoryItemInstance> NewItemInstance = NewObject<UInventoryItemInstance>(this);
 		NewItemInstance->SetItemDefinition(UInventoryItemDefinition::StaticClass());
 		
-		FGameplayTag WeaponTag = FGameplayTag::RequestGameplayTag(FName("Inventory.SlotTypes.Main"));
-
-		AddItem(NewItemInstance, WeaponTag, 1);
+		AddItem(NewItemInstance, 1);
 	}
 
 	bInventoryInitialized = true;
 	OnInventoryInitialized.Broadcast(this);
 }
 
-
-void UInventoryManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+// ReSharper disable once CppMemberFunctionMayBeConst
+void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	UE_LOG(LogTemp, Log, TEXT("================= UInventoryManagerComponent::OnRep_TypedInventorySlotsLists"));
+	
+	UE_LOG(LogTemp, Log, TEXT("Owner: %s"), *GetOwner()->GetName());
 
-	if (!GetOwner()->HasAuthority())
+	for (const FInventorySlotsTypedArray& TypedInventorySlots : TypedInventorySlotsLists.GetTypedLists())
 	{
-		UE_LOG(LogTemp, Log, TEXT("Tick 1"));
+		UE_LOG(LogTemp, Log, TEXT("--Start: %s"), *TypedInventorySlots.GetType().ToString());
+
+		for (const FInventorySlot& Slot : TypedInventorySlots.GetList().GetSlots())
+		{
+			UInventoryItemInstance* Item = Slot.GetInstance();
+
+			if (!IsValid(Item))
+			{
+				UE_LOG(LogTemp, Log, TEXT("-"));
+				continue;
+			}
+			
+			UE_LOG(LogTemp, Log, TEXT("I:%s (%p)"), *Item->GetName(), Item);
+		}
+		
+		UE_LOG(LogTemp, Log, TEXT("--End: %s"), *TypedInventorySlots.GetType().ToString());
 	}
-	else if (GetOwner()->HasAuthority())
-	{
-		UE_LOG(LogTemp, Log, TEXT("Tick 2"));
-	}
+	
+	UE_LOG(LogTemp, Log, TEXT("================="));
 }
-

@@ -3,6 +3,7 @@
 
 #include "Actors/InventoryPickupItem.h"
 
+#include "InventorySystemGameplayTags.h"
 #include "NaniteSceneProxy.h"
 #include "Components/ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -24,7 +25,7 @@ void AInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	ensureAlways(bItemInstanceIsValid);
+	check(bItemInstanceIsValid);
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
@@ -124,9 +125,8 @@ void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerCo
 	}
 
 	// TODO: Make an addition without explicitly specifying a tag and index
-	FGameplayTag Tag = FGameplayTag::RequestGameplayTag(FName("Inventory.SlotTypes.Main"));
 	
-	InventoryManagerComponent->AddItem(ItemInstance, Tag, 0);
+	InventoryManagerComponent->AddItem(ItemInstance, 0);
 	
 	Destroy();
 }

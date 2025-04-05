@@ -17,11 +17,6 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	TSubclassOf<UInventoryItemDefinition> GetItemDefinition() const
-	{
-		return ItemDefinition;
-	}
-	
 	void SetItemDefinition(const TSubclassOf<UInventoryItemDefinition>& NewItemDefinition)
 	{
 		ItemDefinition = NewItemDefinition;
@@ -48,6 +43,8 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool IsSupportedForNetworking() const override { return true; }
 
+	virtual UInventoryItemInstance* Duplicate(UObject* Outer);
+	
 private:
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> ItemDefinition;

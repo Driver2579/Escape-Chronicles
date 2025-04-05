@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "InventorySystemGameplayTags.h"
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
+#include "Objects/InventoryItemInstance.h"
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryItemInstance;
@@ -18,7 +20,7 @@ struct FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_USTRUCT_BODY()
 
-	UInventoryItemInstance* GetInstance()
+	UInventoryItemInstance* GetInstance() const
 	{
 		return Instance;
 	}
@@ -28,7 +30,7 @@ struct FInventorySlot : public FFastArraySerializerItem
 		Instance = NewInstance;
 	}
 	
-//private:
+private:
 	UPROPERTY()
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
 };
@@ -40,14 +42,47 @@ USTRUCT()
 struct FInventorySlotsArray : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
+	
+	const TArray<FInventorySlot>& GetSlots() const
+	{
+		return Slots;
+	}
 
-	UPROPERTY()
-	TArray<FInventorySlot> Slots;
+	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index)
+	{
+		if (!ensureAlways(IsValid(Instance)))
+		{
+			return;
+		}
+		
+		if (!ensureAlwaysMsgf(Index <= Slots.Num() - 1 && Index >= 0, TEXT("Unavailable slot number")))
+		{
+			return;
+		}
+		
+		if (!ensureAlwaysMsgf(Slots[Index].GetInstance() == nullptr, TEXT("Slot is not empty")))
+		{
+			return;
+		}
+		
+		Slots[Index].SetInstance(Instance);
+		MarkItemDirty(Slots[Index]);
+	}
 
+	void Init(const int32 InSlotsNumber)
+	{
+		Slots.Init(FInventorySlot(), InSlotsNumber);
+		MarkArrayDirty();
+	}
+	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
 		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>( Slots, DeltaParms, *this );
 	}
+	
+private:
+	UPROPERTY()
+	TArray<FInventorySlot> Slots;
 };
 
 template<>
@@ -59,6 +94,15 @@ struct TStructOpsTypeTraits<FInventorySlotsArray> : public TStructOpsTypeTraitsB
 	};
 };
 
+
+
+
+
+
+
+
+
+
 /**
  * A typed list of slots in an inventory
  */
@@ -67,9 +111,31 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
-	FGameplayTag Type;	
+	FGameplayTag GetType() const
+	{
+		return Type;
+	}
+	
+	const FInventorySlotsArray& GetList() const
+	{
+		return List;
+	}
 
+	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index)
+	{
+		List.SetInstanceIntoSlot(Instance, Index);
+	}
+	
+	void Init(const FGameplayTag InType, const int32 InSlotsNumber)
+	{
+		Type = InType;
+		List.Init(InSlotsNumber);
+	}
+
+private:
+	UPROPERTY()
+	FGameplayTag Type;
+	
 	UPROPERTY()
 	FInventorySlotsArray List;
 };
@@ -82,13 +148,49 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
-	TArray<FInventorySlotsTypedArray> TypedLists;
+	const TArray<FInventorySlotsTypedArray>& GetTypedLists() const
+	{
+		return Lists;
+	}
 
+	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index, FGameplayTag Type)
+	{
+		FInventorySlotsTypedArray* SlotsTypedArray = Lists.FindByPredicate(
+			[Type](const FInventorySlotsTypedArray& List)
+			{
+				return List.GetType() == Type;
+			});
+
+		if (!ensureAlwaysMsgf(SlotsTypedArray, TEXT("Array not found by tag")))
+		{
+			return;
+		}
+
+		SlotsTypedArray->SetInstanceIntoSlot(Instance, Index);
+		
+		MarkItemDirty(*SlotsTypedArray);
+	}
+
+	void Init(const TMap<FGameplayTag, int32>& InitializationData)
+	{
+		for (const auto& Pair : InitializationData)
+		{
+			auto SlotsTypedArray = FInventorySlotsTypedArray();
+			SlotsTypedArray.Init(Pair.Key, Pair.Value);
+			Lists.Add(SlotsTypedArray);
+		}
+
+		MarkArrayDirty();
+	}
+	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>( TypedLists, DeltaParms, *this );
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>( Lists, DeltaParms, *this );
 	}
+
+private:
+	UPROPERTY()
+	TArray<FInventorySlotsTypedArray> Lists;
 };
 
 template<>
@@ -99,6 +201,15 @@ struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer> : public TStruct
 		WithNetDeltaSerializer = true,
 	};
 };
+
+
+
+
+
+
+
+
+
 
 /**
  * Adds a custom inventory to an actor
@@ -116,12 +227,9 @@ public:
 	void CallOrRegisterOnInventoryInitialized(const FOnInventoryInitializedDelegate::FDelegate& Callback);
 	
 	// TODO: Implement these methods
-	void AddItem(UInventoryItemInstance* Item, FGameplayTag Type, int32 SlotIndex);
-	//void DeleteItem(FGameplayTag Type, int32 SlotIdx);
+	//void AddItem(UInventoryItemInstance* Item, int32 Index);
+	void AddItem(UInventoryItemInstance* Item, int32 Index, FGameplayTag Type = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
-	// TODO: Delete Tick
-	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	
 protected:
 	virtual void BeginPlay() override;
 
@@ -138,11 +246,13 @@ private:
 	UPROPERTY(EditAnywhere, Category="Inventory Settings")
 	TMap<FGameplayTag, int32> SlotTypesAndQuantities;
 	
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing=OnRep_TypedInventorySlotsLists)
 	FInventorySlotsTypedArrayContainer TypedInventorySlotsLists;
+
+	UFUNCTION()
+	void OnRep_TypedInventorySlotsLists();
 	
 	FOnInventoryInitializedDelegate OnInventoryInitialized;
 	void InitializeInventory();
-
 	bool bInventoryInitialized = false;
 };
