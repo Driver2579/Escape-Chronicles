@@ -4,10 +4,9 @@
 
 #include "InventorySystemGameplayTags.h"
 #include "Net/UnrealNetwork.h"
-#include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemInstance.h"
 
-UInventoryManagerComponent::UInventoryManagerComponent()
+UInventoryManagerComponent::UInventoryManagerComponent(): TypedInventorySlotsLists(TypedInventorySlotsLists)
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
@@ -15,57 +14,29 @@ UInventoryManagerComponent::UInventoryManagerComponent()
 	SetIsReplicatedByDefault(true);
 }
 
-void UInventoryManagerComponent::CallOrRegisterOnInventoryInitialized(
-	const FOnInventoryInitializedDelegate::FDelegate& Callback)
+void UInventoryManagerComponent::AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback)
 {
-	if (bInventoryInitialized)
-	{
-		Callback.Execute(this);
-	}
-	else
-	{
-		OnInventoryInitialized.Add(Callback);
-	}
+	OnInventoryContentChanged.Add(Callback);
 }
 
-/*
-void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Index)
-{
-	AddItem(Item, Index, InventorySystemGameplayTags::InventoryTag_MainSlotType);
-}
-*/
-
-void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Index, FGameplayTag Type)
-{
-	check(GetOwner()->HasAuthority());
-  
-	// TODO: UE-127172
-	UInventoryItemInstance* ItemInstanceDuplicate = Item->Duplicate(this);
-	
-	TypedInventorySlotsLists.SetInstanceIntoSlot(ItemInstanceDuplicate, Index, Type);
-	
-	AddReplicatedSubObject(ItemInstanceDuplicate);
-}
-
-
-// Called when the game starts
 void UInventoryManagerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!bInventoryInitialized && IsReadyForReplication())
+	if (bLogInventoryContentWhenChanges)
 	{
-		InitializeInventory();
+		FOnInventoryContentChanged::FDelegate Delegate;
+		Delegate.BindLambda([&](UInventoryManagerComponent* Inventory)
+		{
+			LogInventoryContent();
+		});
+    
+		AddOnInventoryContentChanged(Delegate);
 	}
-}
-
-void UInventoryManagerComponent::ReadyForReplication()
-{
-	Super::ReadyForReplication();
-
-	if (!bInventoryInitialized)
+	
+	if (GetOwner()->HasAuthority())
 	{
-		InitializeInventory();
+		TypedInventorySlotsLists = FInventorySlotsTypedArrayContainer(SlotTypesAndQuantities);
 	}
 }
 
@@ -76,37 +47,74 @@ void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<class FLifeti
 	DOREPLIFETIME(ThisClass, TypedInventorySlotsLists);
 }
 
-void UInventoryManagerComponent::InitializeInventory()
+void UInventoryManagerComponent::ForEachInventoryItemInstance(
+	const TFunctionRef<void(UInventoryItemInstance*)>& Action) const
 {
-	if (GetOwner()->HasAuthority())
+	for (const auto& TypedArray : TypedInventorySlotsLists.GetArrays())
 	{
-		TypedInventorySlotsLists.Init(SlotTypesAndQuantities);
+		for (const auto& Slot : TypedArray.GetArray().GetSlots())
+		{
+			UInventoryItemInstance* Instance = Slot.GetInstance();
+			if (IsValid(Instance))
+			{
+				Action(Instance);
+			}
+		}
+	}
+}
+
+void UInventoryManagerComponent::ReadyForReplication()
+{
+	Super::ReadyForReplication();
+
+	if (IsUsingRegisteredSubObjectList())
+	{
+		ForEachInventoryItemInstance([&](UInventoryItemInstance* Instance)
+		{
+			AddReplicatedSubObject(Instance);
+		});
+	}
+}
+
+void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, const int32 Index, const FGameplayTag Type)
+{
+	check(GetOwner()->HasAuthority());
+
+	if (!ensureAlways(IsValid(Item)))
+	{
+		return;
+	}
+	
+	// NOTE: There are suspicions of memory leaks if you install the Outer component due to bug UE-127172
+	// (In Lyra, this is circumvented by setting the Outer component owner. You can also create a subsystem that will
+	// control the life cycle of the object, which is more difficult but better from an architectural point of view)
+	UInventoryItemInstance* ItemInstanceDuplicate = Item->Duplicate(this);
+	
+	TypedInventorySlotsLists.SetInstanceIntoSlot(ItemInstanceDuplicate, Index, Type);
+	if (IsUsingRegisteredSubObjectList() && IsReadyForReplication() && ItemInstanceDuplicate)
+	{
+		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
-	if (GetOwner()->HasAuthority())
-	{
-		TObjectPtr<UInventoryItemInstance> NewItemInstance = NewObject<UInventoryItemInstance>(this);
-		NewItemInstance->SetItemDefinition(UInventoryItemDefinition::StaticClass());
-		
-		AddItem(NewItemInstance, 1);
-	}
-
-	bInventoryInitialized = true;
-	OnInventoryInitialized.Broadcast(this);
+	OnInventoryContentChanged.Broadcast(this);
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
 void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 {
+	OnInventoryContentChanged.Broadcast(this);
+}
+
+void UInventoryManagerComponent::LogInventoryContent() const
+{
 	UE_LOG(LogTemp, Log, TEXT("================= UInventoryManagerComponent::OnRep_TypedInventorySlotsLists"));
-	
 	UE_LOG(LogTemp, Log, TEXT("Owner: %s"), *GetOwner()->GetName());
 
-	for (const FInventorySlotsTypedArray& TypedInventorySlots : TypedInventorySlotsLists.GetTypedLists())
+	for (const FInventorySlotsTypedArray& TypedInventorySlots : TypedInventorySlotsLists.GetArrays())
 	{
 		UE_LOG(LogTemp, Log, TEXT("--Start: %s"), *TypedInventorySlots.GetType().ToString());
 
-		for (const FInventorySlot& Slot : TypedInventorySlots.GetList().GetSlots())
+		for (const FInventorySlot& Slot : TypedInventorySlots.GetArray().GetSlots())
 		{
 			UInventoryItemInstance* Item = Slot.GetInstance();
 
@@ -116,7 +124,7 @@ void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 				continue;
 			}
 			
-			UE_LOG(LogTemp, Log, TEXT("I:%s (%p)"), *Item->GetName(), Item);
+			UE_LOG(LogTemp, Log, TEXT("+ %s (%p)"), *Item->GetName(), Item);
 		}
 		
 		UE_LOG(LogTemp, Log, TEXT("--End: %s"), *TypedInventorySlots.GetType().ToString());

@@ -36,7 +36,7 @@ private:
 };
 
 /**
- * List of inventory slots
+ * Array of inventory slots
  */
 USTRUCT()
 struct FInventorySlotsArray : public FFastArraySerializer
@@ -69,7 +69,7 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		MarkItemDirty(Slots[Index]);
 	}
 
-	void Init(const int32 InSlotsNumber)
+	FInventorySlotsArray(const int32 InSlotsNumber)
 	{
 		Slots.Init(FInventorySlot(), InSlotsNumber);
 		MarkArrayDirty();
@@ -77,7 +77,8 @@ struct FInventorySlotsArray : public FFastArraySerializer
 	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>( Slots, DeltaParms, *this );
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>( Slots,
+			DeltaParms, *this );
 	}
 	
 private:
@@ -104,7 +105,7 @@ struct TStructOpsTypeTraits<FInventorySlotsArray> : public TStructOpsTypeTraitsB
 
 
 /**
- * A typed list of slots in an inventory
+ * Array of inventory slots with type
  */
 USTRUCT()
 struct FInventorySlotsTypedArray : public FFastArraySerializerItem
@@ -116,46 +117,44 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 		return Type;
 	}
 	
-	const FInventorySlotsArray& GetList() const
+	const FInventorySlotsArray& GetArray() const
 	{
-		return List;
+		return Array;
 	}
 
 	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index)
 	{
-		List.SetInstanceIntoSlot(Instance, Index);
+		Array.SetInstanceIntoSlot(Instance, Index);
 	}
 	
-	void Init(const FGameplayTag InType, const int32 InSlotsNumber)
-	{
-		Type = InType;
-		List.Init(InSlotsNumber);
-	}
+	FInventorySlotsTypedArray(const FGameplayTag InType, const int32 InSlotsNumber)
+		: Type(InType), Array(InSlotsNumber){}
 
 private:
 	UPROPERTY()
 	FGameplayTag Type;
 	
 	UPROPERTY()
-	FInventorySlotsArray List;
+	FInventorySlotsArray Array;
 };
 
 /**
- * Contain inventory slots by their types
+ * Contain arrays of slots by their types
  */
 USTRUCT()
 struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
 
-	const TArray<FInventorySlotsTypedArray>& GetTypedLists() const
+	const TArray<FInventorySlotsTypedArray>& GetArrays() const
 	{
-		return Lists;
+		return Arrays;
 	}
 
 	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index, FGameplayTag Type)
 	{
-		FInventorySlotsTypedArray* SlotsTypedArray = Lists.FindByPredicate(
+		// Search for an array that is marked with the corresponding tag
+		FInventorySlotsTypedArray* SlotsTypedArray = Arrays.FindByPredicate(
 			[Type](const FInventorySlotsTypedArray& List)
 			{
 				return List.GetType() == Type;
@@ -170,31 +169,33 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 		
 		MarkItemDirty(*SlotsTypedArray);
 	}
-
-	void Init(const TMap<FGameplayTag, int32>& InitializationData)
+	
+	/**
+	* @tparam FGameplayTag Inventory slots type;
+	* @tparam int32 Number of slots;
+	 */
+	explicit FInventorySlotsTypedArrayContainer(const TMap<FGameplayTag, int32>& InitializationData)
 	{
 		for (const auto& Pair : InitializationData)
 		{
-			auto SlotsTypedArray = FInventorySlotsTypedArray();
-			SlotsTypedArray.Init(Pair.Key, Pair.Value);
-			Lists.Add(SlotsTypedArray);
+			Arrays.Add(FInventorySlotsTypedArray(Pair.Key, Pair.Value));
 		}
-
-		MarkArrayDirty();
 	}
 	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>( Lists, DeltaParms, *this );
+		return FFastArraySerializer::FastArrayDeltaSerialize<FInventorySlotsTypedArray,
+			FInventorySlotsTypedArrayContainer>( Arrays, DeltaParms, *this );
 	}
 
 private:
 	UPROPERTY()
-	TArray<FInventorySlotsTypedArray> Lists;
+	TArray<FInventorySlotsTypedArray> Arrays;
 };
 
 template<>
-struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer> : public TStructOpsTypeTraitsBase2<FInventorySlotsTypedArrayContainer>
+struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer>
+	: public TStructOpsTypeTraitsBase2<FInventorySlotsTypedArrayContainer>
 {
 	enum 
 	{
@@ -209,7 +210,7 @@ struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer> : public TStruct
 
 
 
-
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnInventoryContentChanged, class UInventoryManagerComponent*);
 
 /**
  * Adds a custom inventory to an actor
@@ -218,17 +219,14 @@ UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
 {
 	GENERATED_BODY()
-
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnInventoryInitializedDelegate, UInventoryManagerComponent*);
 	
-public:	
+public:
 	UInventoryManagerComponent();
 
-	void CallOrRegisterOnInventoryInitialized(const FOnInventoryInitializedDelegate::FDelegate& Callback);
+	void AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback);
 	
-	// TODO: Implement these methods
-	//void AddItem(UInventoryItemInstance* Item, int32 Index);
-	void AddItem(UInventoryItemInstance* Item, int32 Index, FGameplayTag Type = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	void AddItem(UInventoryItemInstance* Item, int32 Index,
+		FGameplayTag Type = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
 protected:
 	virtual void BeginPlay() override;
@@ -237,13 +235,22 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// Do an action on each item in the inventory
+	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+
+	void LogInventoryContent() const;
+	
 private:
+	// Called when the contents of inventory slot change
+	FOnInventoryContentChanged OnInventoryContentChanged;
+	
 	/**
-	* Settings for the number of slots in different types of inventory slots.
-	* @tparam FGameplayTag Inventory type.
-	* @tparam int32 Number of slots .
+	* Settings for the number of slots in different types of inventory slots
+	* (Doesn't work dynamically, value must be set before BeginPlay)
+	* @tparam FGameplayTag Inventory slots type;
+	* @tparam int32 Number of slots;
 	*/
-	UPROPERTY(EditAnywhere, Category="Inventory Settings")
+	UPROPERTY(EditAnywhere)
 	TMap<FGameplayTag, int32> SlotTypesAndQuantities;
 	
 	UPROPERTY(ReplicatedUsing=OnRep_TypedInventorySlotsLists)
@@ -251,8 +258,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_TypedInventorySlotsLists();
-	
-	FOnInventoryInitializedDelegate OnInventoryInitialized;
-	void InitializeInventory();
-	bool bInventoryInitialized = false;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bLogInventoryContentWhenChanges = true;
 };
