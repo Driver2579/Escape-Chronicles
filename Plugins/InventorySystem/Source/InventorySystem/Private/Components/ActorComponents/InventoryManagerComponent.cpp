@@ -45,6 +45,7 @@ void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<class FLifeti
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	DOREPLIFETIME(ThisClass, TypedInventorySlotsLists);
+	DOREPLIFETIME(ThisClass, LocalData);
 }
 
 void UInventoryManagerComponent::ForEachInventoryItemInstance(
@@ -124,6 +125,9 @@ bool UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Ind
 
 	OnInventoryContentChanged.Broadcast(this);
 
+	// TODO: remove
+	LocalData.SetData<int32>(InventorySystemGameplayTags::InventoryTag_MainSlotType, 32);
+	
 	return true;
 }
 
@@ -131,6 +135,18 @@ bool UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Ind
 void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 {
 	OnInventoryContentChanged.Broadcast(this);
+}
+
+void UInventoryManagerComponent::OnRep_Test()
+{
+	const FInventoryLocalDataItem* Data = LocalData.FindByName<int32>(InventorySystemGameplayTags::InventoryTag_MainSlotType);
+
+	if (Data != nullptr)
+	{
+		
+	}
+	
+	UE_LOG(LogTemp, Display, TEXT("OnRep_Test: %d"), Data->GetData<int32>());
 }
 
 void UInventoryManagerComponent::LogInventoryContent() const

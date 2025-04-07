@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Components/ActorComponent.h"
+#include "FastArraySerializers/InventoryLocalData.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "Objects/InventoryItemInstance.h"
 #include "InventoryManagerComponent.generated.h"
@@ -223,6 +224,8 @@ struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer>
 
 
 
+
+
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnInventoryContentChanged, class UInventoryManagerComponent*);
 
 /**
@@ -237,7 +240,6 @@ public:
 	UInventoryManagerComponent();
 
 	void AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback);
-
 	
 	/**
 	 * Add item duplicate to inventory
@@ -281,4 +283,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContentWhenChanges = false;
+
+	UPROPERTY(ReplicatedUsing=OnRep_Test)
+	FInventoryLocalData LocalData;
+
+	// TODO: remove
+	UFUNCTION()
+	void OnRep_Test();
 };
