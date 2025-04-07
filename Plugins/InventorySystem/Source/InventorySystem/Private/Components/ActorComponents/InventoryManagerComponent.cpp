@@ -6,7 +6,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemInstance.h"
 
-UInventoryManagerComponent::UInventoryManagerComponent(): TypedInventorySlotsLists(TypedInventorySlotsLists)
+UInventoryManagerComponent::UInventoryManagerComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 
@@ -36,7 +36,7 @@ void UInventoryManagerComponent::BeginPlay()
 	
 	if (GetOwner()->HasAuthority())
 	{
-		TypedInventorySlotsLists = FInventorySlotsTypedArrayContainer(SlotTypesAndQuantities);
+		TypedInventorySlotsLists.Initialize(SlotTypesAndQuantities);
 	}
 }
 
@@ -76,27 +76,55 @@ void UInventoryManagerComponent::ReadyForReplication()
 	}
 }
 
-void UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, const int32 Index, const FGameplayTag Type)
+bool UInventoryManagerComponent::AddItem(UInventoryItemInstance* Item, int32 Index, const FGameplayTag Type)
 {
 	check(GetOwner()->HasAuthority());
 
 	if (!ensureAlways(IsValid(Item)))
 	{
-		return;
+		return false;
 	}
 	
+	FInventorySlotsTypedArray* SlotsTypedArray = TypedInventorySlotsLists.FindArrayByTag(Type);
+	
+	if (!ensureAlwaysMsgf(SlotsTypedArray, TEXT("Array not found by tag")))
+	{
+		return false;
+	}
+
+	const FInventorySlotsArray& SlotsArray = SlotsTypedArray->GetArray();
+	
+	if (Index == -1)
+	{
+		Index = SlotsArray.GetEmptySlotIndex();
+	}
+
+	if (Index == -1 || !ensureAlwaysMsgf(SlotsArray.IsValidSlotIndex(Index), TEXT("Unavailable slot index")) ||
+		!ensureAlwaysMsgf(SlotsArray.IsEmptySlot(Index), TEXT("Slot is not empty")))
+	{
+		return false;
+	}
+
 	// NOTE: There are suspicions of memory leaks if you install the Outer component due to bug UE-127172
 	// (In Lyra, this is circumvented by setting the Outer component owner. You can also create a subsystem that will
 	// control the life cycle of the object, which is more difficult but better from an architectural point of view)
 	UInventoryItemInstance* ItemInstanceDuplicate = Item->Duplicate(this);
+
+	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
+	{
+		return false;
+	}
 	
-	TypedInventorySlotsLists.SetInstanceIntoSlot(ItemInstanceDuplicate, Index, Type);
+	TypedInventorySlotsLists.SetInstanceIntoSlot(ItemInstanceDuplicate, Index, SlotsTypedArray);
+	
 	if (IsUsingRegisteredSubObjectList() && IsReadyForReplication() && ItemInstanceDuplicate)
 	{
 		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
 	OnInventoryContentChanged.Broadcast(this);
+
+	return true;
 }
 
 // ReSharper disable once CppMemberFunctionMayBeConst
@@ -107,28 +135,39 @@ void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 
 void UInventoryManagerComponent::LogInventoryContent() const
 {
-	UE_LOG(LogTemp, Log, TEXT("================= UInventoryManagerComponent::OnRep_TypedInventorySlotsLists"));
-	UE_LOG(LogTemp, Log, TEXT("Owner: %s"), *GetOwner()->GetName());
+	const FString Separator = TEXT("========================================\n");
+    
+	// Header
+	FString Output = "UInventoryManagerComponent::LogInventoryContent:\n";
+	Output += FString::Printf(TEXT("Owner: %s | Component instance: %p\n"), *GetOwner()->GetName(), this);
+	Output += Separator;
 
+	// TypedArray
 	for (const FInventorySlotsTypedArray& TypedInventorySlots : TypedInventorySlotsLists.GetArrays())
 	{
-		UE_LOG(LogTemp, Log, TEXT("--Start: %s"), *TypedInventorySlots.GetType().ToString());
+		const auto& Slots = TypedInventorySlots.GetArray().GetSlots();
 
-		for (const FInventorySlot& Slot : TypedInventorySlots.GetArray().GetSlots())
+		// Type
+		Output += FString::Printf(TEXT("Slot Type: %s (%d slots)\n"), *TypedInventorySlots.GetType().ToString(),
+			Slots.Num());
+
+		// Slots
+		for (int32 i = 0; i < Slots.Num(); ++i)
 		{
-			UInventoryItemInstance* Item = Slot.GetInstance();
+			UInventoryItemInstance* Item = Slots[i].GetInstance();
 
 			if (!IsValid(Item))
 			{
-				UE_LOG(LogTemp, Log, TEXT("-"));
+				Output += FString::Printf(TEXT("%02d: [EMPTY]\n"), i);
 				continue;
 			}
-			
-			UE_LOG(LogTemp, Log, TEXT("+ %s (%p)"), *Item->GetName(), Item);
+            
+			Output += FString::Printf(TEXT("%02d: %s (Class: %s | Instance: %p)\n"), i, *Item->GetName(),
+				*Item->GetClass()->GetName(), Item);
 		}
-		
-		UE_LOG(LogTemp, Log, TEXT("--End: %s"), *TypedInventorySlots.GetType().ToString());
+
+		Output += Separator;
 	}
-	
-	UE_LOG(LogTemp, Log, TEXT("================="));
+
+	UE_LOG(LogTemp, Log, TEXT("%s"), *Output);
 }

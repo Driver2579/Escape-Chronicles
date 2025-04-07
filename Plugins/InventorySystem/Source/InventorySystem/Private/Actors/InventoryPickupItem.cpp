@@ -124,9 +124,8 @@ void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerCo
 		return;
 	}
 
-	// TODO: Make an addition without explicitly specifying a tag and index
-	
-	InventoryManagerComponent->AddItem(ItemInstance, 0);
-	
-	Destroy();
+	if (InventoryManagerComponent->AddItem(ItemInstance))
+	{
+		Destroy();
+	}
 }

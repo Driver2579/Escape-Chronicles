@@ -50,26 +50,34 @@ struct FInventorySlotsArray : public FFastArraySerializer
 
 	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index)
 	{
-		if (!ensureAlways(IsValid(Instance)))
-		{
-			return;
-		}
-		
-		if (!ensureAlwaysMsgf(Index <= Slots.Num() - 1 && Index >= 0, TEXT("Unavailable slot number")))
-		{
-			return;
-		}
-		
-		if (!ensureAlwaysMsgf(Slots[Index].GetInstance() == nullptr, TEXT("Slot is not empty")))
-		{
-			return;
-		}
-		
 		Slots[Index].SetInstance(Instance);
 		MarkItemDirty(Slots[Index]);
 	}
 
-	FInventorySlotsArray(const int32 InSlotsNumber)
+	int32 GetEmptySlotIndex() const
+	{
+		for (int32 i = 0; i < Slots.Num(); ++i)
+		{
+			if (!IsValid(Slots[i].GetInstance()))
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+
+	int32 IsValidSlotIndex(const int32 Index) const
+	{
+		return Index <= Slots.Num() - 1 && Index >= 0;
+	}
+	
+	bool IsEmptySlot(const int32 Index) const
+	{
+		return !IsValid(Slots[Index].GetInstance());
+	}
+	
+	void Initialize(const int32 InSlotsNumber)
 	{
 		Slots.Init(FInventorySlot(), InSlotsNumber);
 		MarkArrayDirty();
@@ -126,9 +134,12 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 	{
 		Array.SetInstanceIntoSlot(Instance, Index);
 	}
-	
-	FInventorySlotsTypedArray(const FGameplayTag InType, const int32 InSlotsNumber)
-		: Type(InType), Array(InSlotsNumber){}
+
+	void Initialize(const FGameplayTag InType, const int32 InSlotsNumber)
+	{
+		Type = InType;
+		Array.Initialize(InSlotsNumber);
+	}
 
 private:
 	UPROPERTY()
@@ -151,35 +162,37 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 		return Arrays;
 	}
 
-	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index, FGameplayTag Type)
+	void SetInstanceIntoSlot(UInventoryItemInstance* Instance, const int32 Index,
+		FInventorySlotsTypedArray* SlotsTypedArray)
 	{
-		// Search for an array that is marked with the corresponding tag
-		FInventorySlotsTypedArray* SlotsTypedArray = Arrays.FindByPredicate(
+		SlotsTypedArray->SetInstanceIntoSlot(Instance, Index);
+		MarkItemDirty(*SlotsTypedArray);
+	}
+
+	// Search for an array that is marked with the corresponding tag
+	FInventorySlotsTypedArray* FindArrayByTag(FGameplayTag Type)
+	{
+		return Arrays.FindByPredicate(
 			[Type](const FInventorySlotsTypedArray& List)
 			{
 				return List.GetType() == Type;
 			});
-
-		if (!ensureAlwaysMsgf(SlotsTypedArray, TEXT("Array not found by tag")))
-		{
-			return;
-		}
-
-		SlotsTypedArray->SetInstanceIntoSlot(Instance, Index);
-		
-		MarkItemDirty(*SlotsTypedArray);
 	}
 	
 	/**
 	* @tparam FGameplayTag Inventory slots type;
 	* @tparam int32 Number of slots;
 	 */
-	explicit FInventorySlotsTypedArrayContainer(const TMap<FGameplayTag, int32>& InitializationData)
+	void Initialize(const TMap<FGameplayTag, int32>& InitializationData)
 	{
 		for (const auto& Pair : InitializationData)
 		{
-			Arrays.Add(FInventorySlotsTypedArray(Pair.Key, Pair.Value));
+			FInventorySlotsTypedArray InventorySlotsTypedArray = FInventorySlotsTypedArray();
+			InventorySlotsTypedArray.Initialize(Pair.Key, Pair.Value);
+			Arrays.Add(InventorySlotsTypedArray);
 		}
+
+		MarkArrayDirty();
 	}
 	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
@@ -224,8 +237,15 @@ public:
 	UInventoryManagerComponent();
 
 	void AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback);
+
 	
-	void AddItem(UInventoryItemInstance* Item, int32 Index,
+	/**
+	 * Add item duplicate to inventory
+	 * @param Item The item being copied;
+	 * @param Index Index of the slot (if -1 searches for a free slot)
+	 * @param Type Slot type tag
+	 */
+	bool AddItem(UInventoryItemInstance* Item, int32 Index = -1,
 		FGameplayTag Type = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
 protected:
@@ -260,5 +280,5 @@ private:
 	void OnRep_TypedInventorySlotsLists();
 
 	UPROPERTY(EditDefaultsOnly)
-	bool bLogInventoryContentWhenChanges = true;
+	bool bLogInventoryContentWhenChanges = false;
 };
