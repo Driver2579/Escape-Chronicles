@@ -145,7 +145,7 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
 {
-	// The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method
+	// === The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method ===
 
 	FVector AgentLocation = FNavigationSystem::InvalidLocation;
 
@@ -168,7 +168,7 @@ FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
 
 void AEscapeChroniclesCharacter::UpdateNavigationRelevance()
 {
-	// The code below was copied from the MoverExamplesCharacter::UpdateNavigationRelevance method
+	// === The code below was copied from the MoverExamplesCharacter::UpdateNavigationRelevance method ===
 
 	if (CharacterMoverComponent)
 	{
@@ -278,7 +278,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		CachedMoveInputVelocity = FVector::ZeroVector;
 	}
 
-	constexpr float RotationMagMin(1e-3);
+	static float RotationMagMin(1e-3);
 
 	const bool bHasAffirmativeMoveInput = CharacterInputs.GetMoveInput().Size() >= RotationMagMin;
 
@@ -320,7 +320,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	// Convert inputs to be relative to the current movement base (depending on options and state)
 	CharacterInputs.bUsingMovementBase = false;
 
-	if (bUseBaseRelativeMovement && CharacterMoverComponent)
+	if (bUseBaseRelativeMovement)
 	{
 		if (UPrimitiveComponent* MovementBase = CharacterMoverComponent->GetMovementBase())
 		{
@@ -404,7 +404,7 @@ void AEscapeChroniclesCharacter::StopMoving()
 
 void AEscapeChroniclesCharacter::Jump()
 {
-	// The code below was copied from the MoverExamplesCharacter::OnJumpStarted method
+	// === The code below was copied from the MoverExamplesCharacter::OnJumpStarted method ===
 
 	bIsJumpJustPressed = !bIsJumpPressed;
 	bIsJumpPressed = true;
@@ -412,7 +412,7 @@ void AEscapeChroniclesCharacter::Jump()
 
 void AEscapeChroniclesCharacter::StopJumping()
 {
-	// The code below was copied from the MoverExamplesCharacter::OnJumpReleased method
+	// === The code below was copied from the MoverExamplesCharacter::OnJumpReleased method ===
 
 	bIsJumpPressed = false;
 	bIsJumpJustPressed = false;
