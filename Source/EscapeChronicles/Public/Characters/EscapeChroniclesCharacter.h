@@ -111,6 +111,24 @@ protected:
 	UFUNCTION()
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep, const FMoverInputCmdContext& InputCmd);
 
+	UFUNCTION()
+	virtual void OnMovementModeChanged(const FName& PreviousMovementModeName, const FName& NewMovementModeName);
+
+	UFUNCTION()
+	virtual void OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance);
+
+	/**
+	 * Calls SyncMovementModesTagsWithAbilitySystem and SyncStanceTagsWithAbilitySystem. Could be overriden by child
+	 * classes to add more similar functions.
+	 */
+	virtual void SyncCharacterMoverComponentTagsWithAbilitySystem() const;
+
+	// Synchronizes all movement modes' tags from CharacterMoverComponent with an ability system component
+	virtual void SyncMovementModesTagsWithAbilitySystem() const;
+
+	// Synchronizes all stances' tags from CharacterMoverComponent with an ability system component
+	virtual void SyncStancesTagsWithAbilitySystem() const;
+
 private:
 	/**
 	 * The CapsuleComponent being used for movement collision (by CharacterMovement). Always treated as being vertically
@@ -152,7 +170,4 @@ private:
 	bool bIsJumpPressed = false;
 
 	bool bWantsToBeCrouched = false;
-
-	UFUNCTION()
-	void OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance);
 };

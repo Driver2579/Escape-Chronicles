@@ -3,6 +3,7 @@
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -127,6 +128,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
+	CharacterMoverComponent->OnMovementModeChanged.AddDynamic(this, &ThisClass::OnMovementModeChanged);
 	CharacterMoverComponent->OnStanceChanged.AddDynamic(this, &ThisClass::OnStanceChanged);
 }
 
@@ -136,11 +138,16 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	// InitAbilityActorInfo on server and client
-	if (IsValid(AbilitySystemComponent))
+	if (!IsValid(AbilitySystemComponent))
 	{
-		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+		return;
 	}
+
+	// InitAbilityActorInfo on server and client
+	AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+
+	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
+	SyncCharacterMoverComponentTagsWithAbilitySystem();
 }
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
@@ -428,7 +435,100 @@ void AEscapeChroniclesCharacter::UnCrouch()
 	bWantsToBeCrouched = false;
 }
 
+void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
+	const FName& NewMovementModeName)
+{
+	/**
+	 * Even though the movement mode is changed, we need to wait for the next tick because gameplay tags in the
+	 * CharacterMoverComponent are updated only in the next tick.
+	 */
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
+		&ThisClass::SyncMovementModesTagsWithAbilitySystem));
+}
+
 void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
 {
 	bWantsToBeCrouched = NewStance == EStanceMode::Crouch;
+
+	/**
+	 * Even though the stance is is changed, we need to wait for the next tick because gameplay tags in the
+	 * CharacterMoverComponent are updated only in the next tick.
+	 */
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
+		&ThisClass::SyncStancesTagsWithAbilitySystem));
+}
+
+void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySystem() const
+{
+	SyncMovementModesTagsWithAbilitySystem();
+	SyncStancesTagsWithAbilitySystem();
+}
+
+void AEscapeChroniclesCharacter::SyncMovementModesTagsWithAbilitySystem() const
+{
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsFalling())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Falling);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_Falling);
+	}
+
+	if (CharacterMoverComponent->IsAirborne())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_InAir);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(EscapeChroniclesGameplayTags::Status_Movement_InAir);
+	}
+
+	if (CharacterMoverComponent->HasGameplayTag(Mover_IsNavWalking, true))
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_NavWalking);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_NavWalking, false);
+	}
+
+	if (CharacterMoverComponent->IsOnGround())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_OnGround);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_OnGround);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem() const
+{
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsCrouching())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Crouching);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_Crouching);
+	}
 }

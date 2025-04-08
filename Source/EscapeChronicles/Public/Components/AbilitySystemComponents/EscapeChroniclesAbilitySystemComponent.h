@@ -36,6 +36,12 @@ public:
 	 */
 	void TryEndAbilitiesByInputTag(const FGameplayTag& InputTag) const;
 
+	// Adds a loose gameplay tag but only if the exactly matching tag is not already present
+	void AddUniqueLooseGameplayTag(const FGameplayTag& GameplayTagToAdd, const bool bReplicated = false);
+
+	// Removes all loose gameplay tags that exactly match the specified tag
+	void RemoveMatchingLooseGameplayTags(const FGameplayTag& GameplayTagToRemove, const bool bReplicated = false);
+
 private:
 	/**
 	 * Cached associations between input tags and abilities.
