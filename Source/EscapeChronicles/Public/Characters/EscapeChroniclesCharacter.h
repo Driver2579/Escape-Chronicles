@@ -7,10 +7,10 @@
 #include "MoverSimulationTypes.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
 class UCameraComponent;
-class UCharacterMoverComponent;
 class UNavMoverComponent;
 
 enum class EStanceMode : uint8;
@@ -41,7 +41,7 @@ public:
 	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
 
 	// Returns CharacterMoverComponent subobject
-	UCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
+	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
@@ -155,7 +155,7 @@ private:
 	TObjectPtr<UCameraComponent> FollowCameraComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UCharacterMoverComponent> CharacterMoverComponent;
+	TObjectPtr<UEscapeChroniclesCharacterMoverComponent> CharacterMoverComponent;
 
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))

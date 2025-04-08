@@ -8,7 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
-#include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
@@ -79,7 +79,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	CharacterMoverComponent = CreateDefaultSubobject<UCharacterMoverComponent>(TEXT("Mover Component"));
+	CharacterMoverComponent = CreateDefaultSubobject<UEscapeChroniclesCharacterMoverComponent>(TEXT("Mover Component"));
 
 	if (USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent())
 	{
@@ -448,8 +448,6 @@ void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMove
 
 void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
 {
-	bWantsToBeCrouched = NewStance == EStanceMode::Crouch;
-
 	/**
 	 * Even though the stance is is changed, we need to wait for the next tick because gameplay tags in the
 	 * CharacterMoverComponent are updated only in the next tick.
