@@ -63,8 +63,4 @@ void UMovementAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, 
 void UMovementAttributeSet::OnRep_MaxGroundSpeed(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, MaxGroundSpeed, OldValue);
-
-	// Always broadcast the event when the MaxGroundSpeed changes due to replication
-	OnMaxGroundSpeedChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxGroundSpeed() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetMaxGroundSpeed());
 }
