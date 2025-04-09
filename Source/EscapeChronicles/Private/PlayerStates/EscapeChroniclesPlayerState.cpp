@@ -5,7 +5,7 @@
 #include "AbilitySystem/AttributeSets/MovementAttributeSet.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
-#include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
 #include "GameFramework/SpectatorPawn.h"
 
