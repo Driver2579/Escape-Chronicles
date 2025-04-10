@@ -1,19 +1,21 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "AbilitySystem/Abilities/JumpGameplayAbility.h"
+#include "AbilitySystem/Abilities/OverrideGroundSpeedModeGameplayAbility.h"
 
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Common/Enums/Mover/GroundSpeedMode.h"
 
-UJumpGameplayAbility::UJumpGameplayAbility()
+UOverrideGroundSpeedModeGameplayAbility::UOverrideGroundSpeedModeGameplayAbility()
+	: GroundSpeedMode(EGroundSpeedMode::None)
 {
 	/**
-	 * Jumping is replicated through the character and CharacterMoverComponent. We don't need to replicate it through
+	 * Overrid is replicated through the character and CharacterMoverComponent. We don't need to replicate it through
 	 * the ability system.
 	 */
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly;
 }
 
-void UJumpGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+void UOverrideGroundSpeedModeGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
@@ -31,11 +33,11 @@ void UJumpGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 	if (ensureAlways(IsValid(Character)))
 	{
-		Character->Jump();
+		Character->OverrideGroundSpeedMode(GroundSpeedMode);
 	}
 }
 
-void UJumpGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
+void UOverrideGroundSpeedModeGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
@@ -44,7 +46,7 @@ void UJumpGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 
 	if (IsValid(Character))
 	{
-		Character->StopJumping();
+		Character->ResetGroundSpeedMode(GroundSpeedMode);
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "Camera/CameraComponent.h"
+#include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
@@ -14,6 +15,7 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
+	: DesiredGroundSpeedModeOverride(EGroundSpeedMode::None)
 {
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("Capsule Component");
 	RootComponent = CapsuleComponent;
@@ -363,6 +365,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		InputCmdResult.InputCollection.FindOrAddMutableDataByType<FEscapeChroniclesCharacterExtendedDefaultInputs>();
 
 	ExtendedCharacterInputs.bWantsToBeCrouched = bWantsToBeCrouched;
+	ExtendedCharacterInputs.DesiredGroundSpeedModeOverride = DesiredGroundSpeedModeOverride;
 }
 
 void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
@@ -383,6 +386,15 @@ void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& 
 	else
 	{
 		CharacterMoverComponent->UnCrouch();
+	}
+
+	if (ExtendedCharacterInputs->DesiredGroundSpeedModeOverride != EGroundSpeedMode::None)
+	{
+		CharacterMoverComponent->SetGroundSpeedMode(ExtendedCharacterInputs->DesiredGroundSpeedModeOverride);
+	}
+	else
+	{
+		CharacterMoverComponent->ResetGroundSpeedMode();
 	}
 }
 
@@ -435,6 +447,25 @@ void AEscapeChroniclesCharacter::UnCrouch()
 	bWantsToBeCrouched = false;
 }
 
+void AEscapeChroniclesCharacter::OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride)
+{
+#if DO_ENSURE
+	ensureAlwaysMsgf(GroundSpeedModeOverride < EGroundSpeedMode::NumberOfModes,
+		TEXT("Invalid GroundSpeedModeOverride was passed!"));
+#endif
+
+	DesiredGroundSpeedModeOverride = GroundSpeedModeOverride;
+}
+
+void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset)
+{
+	// Don't reset the override if the one we want to reset isn't the one that is currently set
+	if (GroundSpeedModeOverrideToReset == DesiredGroundSpeedModeOverride)
+	{
+		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
+	}
+}
+
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
 	const FName& NewMovementModeName)
 {
@@ -449,11 +480,22 @@ void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMove
 void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
 {
 	/**
-	 * Even though the stance is is changed, we need to wait for the next tick because gameplay tags in the
+	 * Even though the stance is changed, we need to wait for the next tick because gameplay tags in the
 	 * CharacterMoverComponent are updated only in the next tick.
 	 */
 	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
 		&ThisClass::SyncStancesTagsWithAbilitySystem));
+}
+
+void AEscapeChroniclesCharacter::OnGroundSpeedModeChanged(const EGroundSpeedMode OldGroundSpeedMode,
+	const EGroundSpeedMode NewGroundSpeedMode)
+{
+	/**
+	 * Even though the ground speed mode is changed, we need to wait for the next tick because gameplay tags in the
+	 * CharacterMoverComponent are updated only in the next tick.
+	 */
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
+		&ThisClass::SyncGroundSpeedModeTagsWithAbilitySystem));
 }
 
 void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySystem() const
@@ -528,5 +570,45 @@ void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem() const
 	{
 		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
 			EscapeChroniclesGameplayTags::Status_Movement_Crouching);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() const
+{
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsWalkGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Walking);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_Walking);
+	}
+
+	if (CharacterMoverComponent->IsJogGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Jogging);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_Jogging);
+	}
+
+	if (CharacterMoverComponent->IsRunGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Running);
+	}
+	else
+	{
+		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
+			EscapeChroniclesGameplayTags::Status_Movement_Running);
 	}
 }

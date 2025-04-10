@@ -50,13 +50,4 @@ private:
 	TArray<TObjectPtr<UAbilitySystemSet>> AbilitySystemSets;
 
 	TWeakObjectPtr<APawn> LastNotSpectatorPawn;
-
-	/**
-	 * Initializes the MovementAttributeSet if it exists on the AbilitySystemComponent with CharacterMoverComponent's
-	 * default values.
-	 */
-	void TryInitializeMovementAttributeSet();
-
-	void OnMaxGroundSpeedChanged(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* EffectSpec,
-		const float EffectMagnitude, const float OldValue, const float NewValue) const;
 };

@@ -2,11 +2,7 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-#include "AbilitySystem/AttributeSets/MovementAttributeSet.h"
-#include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
-#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
-#include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
 #include "GameFramework/SpectatorPawn.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
@@ -87,62 +83,5 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 
 void AEscapeChroniclesPlayerState::InitializeAttributes()
 {
-	TryInitializeMovementAttributeSet();
-}
-
-void AEscapeChroniclesPlayerState::TryInitializeMovementAttributeSet()
-{
-	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = Cast<AEscapeChroniclesCharacter>(GetPawn());
-
-	// Might also be a SpectatorPawn
-	if (!IsValid(EscapeChroniclesCharacter))
-	{
-		return;
-	}
-
-	const UMovementAttributeSet* MovementAttributeSet = AbilitySystemComponent->GetSet<UMovementAttributeSet>();
-
-	if (!IsValid(MovementAttributeSet))
-	{
-		return;
-	}
-
-	const UCommonLegacyMovementSettings* CommonLegacyMovementSettings =
-		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings<UCommonLegacyMovementSettings>();
-
-	if (!ensureAlways(IsValid(CommonLegacyMovementSettings)))
-	{
-		return;
-	}
-
-	// Set the MaxGroundSpeed attribute to the default max speed of the CharacterMoverComponent
-	AbilitySystemComponent->ApplyModToAttribute(MovementAttributeSet->GetMaxGroundSpeedAttribute(),
-		EGameplayModOp::Override, CommonLegacyMovementSettings->MaxSpeed);
-
-	MovementAttributeSet->OnMaxGroundSpeedChanged.AddUObject(this, &ThisClass::OnMaxGroundSpeedChanged);
-}
-
-void AEscapeChroniclesPlayerState::OnMaxGroundSpeedChanged(AActor* EffectInstigator, AActor* EffectCauser,
-	const FGameplayEffectSpec* EffectSpec, const float EffectMagnitude, const float OldValue,
-	const float NewValue) const
-{
-	const AEscapeChroniclesCharacter* EscapeChroniclesCharacter = Cast<AEscapeChroniclesCharacter>(GetPawn());
-
-	// Might also be a SpectatorPawn
-	if (!IsValid(EscapeChroniclesCharacter))
-	{
-		return;
-	}
-
-	UCommonLegacyMovementSettings* CommonLegacyMovementSettings =
-		EscapeChroniclesCharacter->GetCharacterMoverComponent()->FindSharedSettings_Mutable<
-			UCommonLegacyMovementSettings>();
-
-	// TODO: Скорее всего, это неправильно. С этим система предсказаний на клиенте ломается и получаются лаги при смене скорости
-	// TODO: Нужно использовать MovementModifier
-	if (ensureAlways(IsValid(CommonLegacyMovementSettings)))
-	{
-		// Update the MaxSpeed value in CharacterMoverComponent when the MaxGroundSpeed attribute changes
-		CommonLegacyMovementSettings->MaxSpeed = NewValue;
-	}
+	// TODO: Add attributes initializations here
 }

@@ -9,6 +9,17 @@ namespace EscapeChroniclesGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Move, "InputTag.Move", "Move input");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InputTag_Look, "InputTag.Look", "Look input");
 
+	// === Extended Mover tags ===
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Mover_IsWalkGroundSpeedModeActive, "Mover.IsWalkGroundSpeedModeActive",
+		"Mover state flag indicating character is walking (could be set even if walking movement mode isn't active).");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Mover_IsJogGroundSpeedModeActive, "Mover.IsJogGroundSpeedModeActive",
+		"Mover state flag indicating character is jogging (could be set even if walking movement mode isn't active).");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Mover_IsRunGroundSpeedModeActive, "Mover.IsRunGroundSpeedModeActive",
+		"Mover state flag indicating character is running (could be set even if walking movement mode isn't active).");
+
 	// === Movement tags ===
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Falling, "Status.Movement.Falling", "The character is falling");
@@ -21,13 +32,13 @@ namespace EscapeChroniclesGameplayTags
 		"The character is on the ground");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Walking, "Status.Movement.Walking",
-		"The character is walking (low speed)");
+		"The character is walking (low speed, isn't necessarily on the ground)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Jogging, "Status.Movement.Jogging",
-		"The character is jogging (medium speed)");
+		"The character is jogging (medium speed, isn't necessarily on the ground)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Running, "Status.Movement.Running",
-		"The character is running (high speed)");
+		"The character is running (high speed, isn't necessarily on the ground)");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Crouching, "Status.Movement.Crouching",
 		"The character is crouching");

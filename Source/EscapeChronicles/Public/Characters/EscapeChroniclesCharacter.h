@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "MoverSimulationTypes.h"
+#include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UEscapeChroniclesCharacterMoverComponent;
@@ -14,6 +15,7 @@ class UCameraComponent;
 class UNavMoverComponent;
 
 enum class EStanceMode : uint8;
+enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
@@ -79,6 +81,15 @@ public:
 	// Should be called for crouch input completion
 	void UnCrouch();
 
+	// Should be called for any input trigger that wants to override the ground speed mode (e.g., walk, jog, run)
+	void OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride);
+
+	/**
+	 * Should be called for any input completion that wants to reset the ground speed mode after overriding it.
+	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
+	 */
+	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -117,9 +128,12 @@ protected:
 	UFUNCTION()
 	virtual void OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance);
 
+	virtual void OnGroundSpeedModeChanged(const EGroundSpeedMode OldGroundSpeedMode,
+		const EGroundSpeedMode NewGroundSpeedMode);
+
 	/**
-	 * Calls SyncMovementModesTagsWithAbilitySystem and SyncStanceTagsWithAbilitySystem. Could be overriden by child
-	 * classes to add more similar functions.
+	 * Calls SyncMovementModesTagsWithAbilitySystem, SyncStanceTagsWithAbilitySystem and
+	 * SyncGroundSpeedModeTagsWithAbilitySystem. Could be overriden by child classes to add more similar functions.
 	 */
 	virtual void SyncCharacterMoverComponentTagsWithAbilitySystem() const;
 
@@ -128,6 +142,9 @@ protected:
 
 	// Synchronizes all stances' tags from CharacterMoverComponent with an ability system component
 	virtual void SyncStancesTagsWithAbilitySystem() const;
+
+	// Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component
+	virtual void SyncGroundSpeedModeTagsWithAbilitySystem() const;
 
 private:
 	/**
@@ -170,4 +187,6 @@ private:
 	bool bIsJumpPressed = false;
 
 	bool bWantsToBeCrouched = false;
+
+	EGroundSpeedMode DesiredGroundSpeedModeOverride;
 };
