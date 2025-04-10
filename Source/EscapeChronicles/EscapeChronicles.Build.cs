@@ -21,6 +21,7 @@ public class EscapeChronicles : ModuleRules
 			"GameplayTasks",
 			"InteractionSystem",
 			"InventorySystem",
+			"FragmentationSystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

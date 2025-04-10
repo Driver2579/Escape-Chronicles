@@ -7,8 +7,7 @@
 #include "NaniteSceneProxy.h"
 #include "Components/ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "Objects/InventoryItemDefinition.h"
-#include "Objects/InventoryItemInstance.h"
+#include "Objects/FragmentationInstances/InventoryItemInstance.h"
 #include "Objects/InventoryItemFragments/PickupInventoryItemFragment.h"
 
 // Sets default values
@@ -44,6 +43,10 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 	if (!bItemInstanceIsValid)
 	{
 		SetDefaultStaticMesh();
+	}
+	else
+	{
+		
 	}
 }
 
@@ -111,15 +114,9 @@ void AInventoryPickupItem::SetDefaultStaticMesh() const
 	StaticMeshComponent->SetStaticMesh(StaticMeshCDO);
 }
 
-// TODO: Refactor
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
 {
-	if (!ensureAlways(IsValid(InventoryManagerComponent)))
-	{
-		return;
-	}
-
-	if (!ensureAlways(IsValid(ItemInstance)))
+	if (!ensureAlways(IsValid(InventoryManagerComponent) && IsValid(ItemInstance)))
 	{
 		return;
 	}

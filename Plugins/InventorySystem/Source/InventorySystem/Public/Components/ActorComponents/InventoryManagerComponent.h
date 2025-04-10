@@ -6,9 +6,8 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Components/ActorComponent.h"
-#include "FastArraySerializers/InventoryLocalData.h"
 #include "Net/Serialization/FastArraySerializer.h"
-#include "Objects/InventoryItemInstance.h"
+#include "Objects/FragmentationInstances/InventoryItemInstance.h"
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryItemInstance;
@@ -272,7 +271,7 @@ private:
 	* @tparam FGameplayTag Inventory slots type;
 	* @tparam int32 Number of slots;
 	*/
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, int32> SlotTypesAndQuantities;
 	
 	UPROPERTY(ReplicatedUsing=OnRep_TypedInventorySlotsLists)
@@ -283,11 +282,4 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContentWhenChanges = false;
-
-	UPROPERTY(ReplicatedUsing=OnRep_Test)
-	FInventoryLocalData LocalData;
-
-	// TODO: remove
-	UFUNCTION()
-	void OnRep_Test();
 };

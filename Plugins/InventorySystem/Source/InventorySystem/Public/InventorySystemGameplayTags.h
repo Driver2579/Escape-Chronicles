@@ -6,5 +6,13 @@
 
 namespace InventorySystemGameplayTags
 {
+	// SlotTypes
 	UE_DECLARE_GAMEPLAY_TAG_EXTERN(InventoryTag_MainSlotType);
+	
+	// InventoryManagerComponentFragments
+	
+	
+	// InventoryItemInstanceFragments
+	
+
 }

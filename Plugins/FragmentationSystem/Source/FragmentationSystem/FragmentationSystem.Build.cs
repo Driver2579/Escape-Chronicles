@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class InventorySystem : ModuleRules
+public class FragmentationSystem : ModuleRules
 {
-	public InventorySystem(ReadOnlyTargetRules Target) : base(Target)
+	public FragmentationSystem(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -13,10 +13,10 @@ public class InventorySystem : ModuleRules
 			{
 				"Core",
 				"NetCore",
-				"GameplayTags",
-				"FragmentationSystem"
+				"GameplayTags"
 			}
 			);
+			
 		
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
