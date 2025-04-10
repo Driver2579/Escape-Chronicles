@@ -23,11 +23,17 @@ void UGameplayAbilityWithGameplayEffects::ActivateAbility(const FGameplayAbility
 
 	for (const TSoftClassPtr<UGameplayEffect>& GameplayEffect : GameplayEffectsToApplyWhileActive)
 	{
-		GameplayEffectsToLoad.Add(GameplayEffect.ToSoftObjectPath());
+		if (ensureAlways(!GameplayEffect.IsNull()))
+		{
+			GameplayEffectsToLoad.Add(GameplayEffect.ToSoftObjectPath());
+		}
 	}
 
-	UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(GameplayEffectsToLoad,
-		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectsLoaded));
+	if (GameplayEffectsToApplyWhileActive.Num() > 0)
+	{
+		UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(GameplayEffectsToLoad,
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectsLoaded));
+	}
 }
 
 void UGameplayAbilityWithGameplayEffects::OnGameplayEffectsLoaded()
