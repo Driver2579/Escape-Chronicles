@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class FFragmentsSystemModule : public IModuleInterface
+class FObjectComponentsSystemModule : public IModuleInterface
 {
 public:
 

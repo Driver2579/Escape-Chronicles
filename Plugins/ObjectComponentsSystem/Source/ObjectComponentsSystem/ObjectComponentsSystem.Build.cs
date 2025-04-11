@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class FragmentsSystem : ModuleRules
+public class ObjectComponentsSystem : ModuleRules
 {
-	public FragmentsSystem(ReadOnlyTargetRules Target) : base(Target)
+	public ObjectComponentsSystem(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		

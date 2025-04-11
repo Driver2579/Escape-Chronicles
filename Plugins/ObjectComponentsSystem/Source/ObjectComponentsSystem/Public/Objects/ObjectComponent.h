@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Fragment.generated.h"
+#include "ObjectComponent.generated.h"
 
 // Base class for fragments
 UCLASS(EditInlineNew, Abstract)
-class FRAGMENTATIONSYSTEM_API UFragment : public UObject
+class OBJECTCOMPONENTSSYSTEM_API UObjectComponent : public UObject
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
