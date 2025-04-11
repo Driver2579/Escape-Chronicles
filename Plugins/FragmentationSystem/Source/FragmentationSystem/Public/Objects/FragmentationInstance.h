@@ -59,40 +59,51 @@ public:
 		return DefinitionCDO->GetFragmentByClass<T>();
 	}
 
-	void SetDefinitionClass(const TSubclassOf<UFragmentationDefinition>& NewDefinition)
+	void Initialize(const TSubclassOf<UFragmentationDefinition>& InDefinition = nullptr)
 	{
-		Definition = NewDefinition;
-
+		if (!ensureAlwaysMsgf(!bInitialized, TEXT("The instance must only be initialized once!")))
+		{
+			return;
+		}
+		
+		if (InDefinition != nullptr && ensureAlways(IsValid(InDefinition)))
+		{
+			Definition = InDefinition;
+		}
+		else if (!ensureAlways(IsValid(Definition)))
+		{
+			return;
+		}
+		
+		bInitialized = true;
+		
 		ForEachFragment([this](const UFragmentationFragment* Fragment)
 		{
-			Fragment->OnInstanceDefinitionSet(this);
+			Fragment->OnInstanceInitialized(this);
 		});
 	}
-
-	UFragmentationInstance();
 	
 	template<typename T>
 	T* Duplicate(UObject* Outer)
 	{
 		static_assert(std::is_base_of_v<UFragmentationInstance, T>, "T must inherit from UFragmentationInstance!");
-		
+
 		T* NewItemInstance = NewObject<T>(Outer);
+		NewItemInstance->Initialize(Definition);
 
 		if (!ensureAlways(IsValid(NewItemInstance)))
 		{
 			return nullptr;
 		}
-	
-		NewItemInstance->SetDefinitionClass(Definition);
 
-		for (FFragmentationLocalDataItem Data : LocalData.GetArray())
+		for (FFragmentationLocalDataItem Data : LocalData.GetAllData())
 		{
 			NewItemInstance->GetLocalData().SetData(Data);
 		}
 
 		return NewItemInstance;
 	}
-
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool IsSupportedForNetworking() const override { return true; }
 
@@ -105,4 +116,6 @@ private:
 
 	UPROPERTY(Replicated)
 	FFragmentationLocalData LocalData;
+
+	bool bInitialized = false;
 };

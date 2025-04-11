@@ -60,19 +60,19 @@ struct FFragmentationLocalData : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
 
-	const TArray<FFragmentationLocalDataItem>& GetArray() const
+	const TArray<FFragmentationLocalDataItem>& GetAllData() const
 	{
 		return Array;
 	}
 	
-	FFragmentationLocalDataItem* FindByName(const FGameplayTag InName)
+	FFragmentationLocalDataItem* GetData(const FGameplayTag InName)
 	{
 		return Array.FindByKey(InName);
 	}
 	
 	void SetData(const FFragmentationLocalDataItem& InData)
 	{
-		if (FFragmentationLocalDataItem* Data = FindByName(InData.Name); Data == nullptr)
+		if (FFragmentationLocalDataItem* Data = GetData(InData.Name); Data == nullptr)
 		{
 			const int32 Index = Array.Add(InData);
 			MarkItemDirty(Array[Index]);
@@ -98,7 +98,7 @@ struct FFragmentationLocalData : public FFastArraySerializer
 	
 	bool HasData(const FGameplayTag InName)
 	{
-		return FindByName(InName) != nullptr;
+		return GetData(InName) != nullptr;
 	}
 	
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)

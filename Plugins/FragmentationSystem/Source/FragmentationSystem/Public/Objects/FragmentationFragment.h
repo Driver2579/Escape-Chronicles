@@ -16,6 +16,5 @@ class FRAGMENTATIONSYSTEM_API UFragmentationFragment : public UObject
 	GENERATED_BODY()
 
 public:
-	virtual void OnInstanceCreated(const UFragmentationInstance* Instance) const {};
-	virtual void OnInstanceDefinitionSet(const UFragmentationInstance* Instance) const {};
+	virtual void OnInstanceInitialized(const UFragmentationInstance* Instance) const {};
 };

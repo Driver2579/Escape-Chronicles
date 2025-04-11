@@ -2,16 +2,7 @@
 
 
 #include "Objects/FragmentationInstance.h"
-
 #include "Net/UnrealNetwork.h"
-
-UFragmentationInstance::UFragmentationInstance()
-{
-	ForEachFragment([this](const UFragmentationFragment* Fragment)
-	{
-		Fragment->OnInstanceCreated(this);
-	});
-}
 
 void UFragmentationInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

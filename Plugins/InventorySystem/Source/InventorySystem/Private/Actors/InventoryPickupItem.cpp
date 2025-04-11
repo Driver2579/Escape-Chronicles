@@ -25,6 +25,8 @@ void AInventoryPickupItem::BeginPlay()
 	Super::BeginPlay();
 
 	check(bItemInstanceIsValid);
+
+	ItemInstance->Initialize();
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
@@ -43,10 +45,6 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 	if (!bItemInstanceIsValid)
 	{
 		SetDefaultStaticMesh();
-	}
-	else
-	{
-		
 	}
 }
 
