@@ -23,7 +23,8 @@ public:
 	template<typename T>
 	const T* GetFragmentByClass() const
 	{
-		static_assert(std::is_base_of_v<UFragmentationFragment, T>, "T must inherit from UFragmentationFragment!");
+		static_assert(TIsDerivedFrom<T, UFragmentationFragment>::Value,
+			"T must be inherited from UFragmentationFragment!");
 		
 		const TArray<TObjectPtr<UFragmentationFragment>>* Fragments = GetFragments();
 

@@ -29,7 +29,8 @@ public:
 	template<typename T>
 	T* GetDefinitionObject() const
 	{
-		static_assert(std::is_base_of_v<UFragmentationDefinition, T>, "T must inherit from UFragmentationDefinition!");
+		static_assert(TIsDerivedFrom<T, UFragmentationDefinition>::Value,
+			"T must be inherited from UFragmentationDefinition!");
 		
 		if (!IsValid(Definition))
 		{
@@ -42,8 +43,9 @@ public:
 	template<typename T>
 	const T* GetFragmentByClass() const
 	{
-		static_assert(std::is_base_of_v<UFragmentationFragment, T>, "T must inherit from UFragmentationDefinition!");
-		
+		static_assert(TIsDerivedFrom<T, UFragmentationFragment>::Value,
+			"T must be inherited from UFragmentationFragment!");
+
 		if (!IsValid(Definition))
 		{
 			return nullptr;
@@ -86,8 +88,9 @@ public:
 	template<typename T>
 	T* Duplicate(UObject* Outer)
 	{
-		static_assert(std::is_base_of_v<UFragmentationInstance, T>, "T must inherit from UFragmentationInstance!");
-
+		static_assert(TIsDerivedFrom<T, UFragmentationInstance>::Value,
+			"T must be inherited from UFragmentationInstance!");
+		
 		T* NewItemInstance = NewObject<T>(Outer);
 		NewItemInstance->Initialize(Definition);
 
