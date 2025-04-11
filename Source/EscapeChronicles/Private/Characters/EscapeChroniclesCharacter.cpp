@@ -502,6 +502,7 @@ void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySyste
 {
 	SyncMovementModesTagsWithAbilitySystem();
 	SyncStancesTagsWithAbilitySystem();
+	SyncGroundSpeedModeTagsWithAbilitySystem();
 }
 
 void AEscapeChroniclesCharacter::SyncMovementModesTagsWithAbilitySystem() const
