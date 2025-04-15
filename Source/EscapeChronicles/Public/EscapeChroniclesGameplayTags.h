@@ -30,4 +30,9 @@ namespace EscapeChroniclesGameplayTags
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Movement_Running);
 
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Movement_Crouching);
+
+	// === Character Type tags ===
+
+	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(CharacterType_Prisoner);
+	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(CharacterType_Guard);
 }

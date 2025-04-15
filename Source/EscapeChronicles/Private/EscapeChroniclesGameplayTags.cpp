@@ -42,4 +42,9 @@ namespace EscapeChroniclesGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Crouching, "Status.Movement.Crouching",
 		"The character is crouching");
+
+	// === Character Type tags ===
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(CharacterType_Prisoner, "CharacterType.Prisoner", "The character is a prisoner");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(CharacterType_Guard, "CharacterType.Guard", "The character is a guard");
 }
