@@ -18,6 +18,12 @@ class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, p
 public:
 	AEscapeChroniclesPlayerState();
 
+	// The same as AController::InitPlayerState() but with a custom PlayerState class
+	static void InitPlayerStateForController(AController* OwnerController,
+		const TSubclassOf<AEscapeChroniclesPlayerState>& PlayerStateClass);
+
+	virtual void PostInitializeComponents() override;
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final
 	{
 		return AbilitySystemComponent;
@@ -29,8 +35,6 @@ public:
 	}
 
 protected:
-	virtual void PostInitializeComponents() override;
-
 	UFUNCTION()
 	virtual void OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn);
 
