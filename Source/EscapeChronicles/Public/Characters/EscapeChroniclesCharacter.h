@@ -141,10 +141,10 @@ protected:
 	virtual void SyncMovementModesTagsWithAbilitySystem() const;
 
 	// Synchronizes all stances' tags from CharacterMoverComponent with an ability system component
-	virtual void SyncStancesTagsWithAbilitySystem() const;
+	void SyncStancesTagsWithAbilitySystem() const;
 
 	// Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component
-	virtual void SyncGroundSpeedModeTagsWithAbilitySystem() const;
+	void SyncGroundSpeedModeTagsWithAbilitySystem() const;
 
 private:
 	/**
@@ -188,5 +188,18 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
+	/**
+	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
+	 * values that should be gotten when OnStanceChanged is called.
+	 */
+	void SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance, const EStanceMode NewStance) const;
+
 	EGroundSpeedMode DesiredGroundSpeedModeOverride;
+
+	/**
+	 * Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component based on
+	 * the passed values that should be gotten when OnGroundSpeedMode is called.
+	 */
+	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
+		const EGroundSpeedMode NewGroundSpeedMode) const;
 };

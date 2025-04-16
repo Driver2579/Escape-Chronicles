@@ -480,23 +480,13 @@ void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMove
 
 void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
 {
-	/**
-	 * Even though the stance is changed, we need to wait for the next tick because gameplay tags in the
-	 * CharacterMoverComponent are updated only in the next tick.
-	 */
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
-		&ThisClass::SyncStancesTagsWithAbilitySystem));
+	SyncStancesTagsWithAbilitySystem(OldStance, NewStance);
 }
 
 void AEscapeChroniclesCharacter::OnGroundSpeedModeChanged(const EGroundSpeedMode OldGroundSpeedMode,
 	const EGroundSpeedMode NewGroundSpeedMode)
 {
-	/**
-	 * Even though the ground speed mode is changed, we need to wait for the next tick because gameplay tags in the
-	 * CharacterMoverComponent are updated only in the next tick.
-	 */
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
-		&ThisClass::SyncGroundSpeedModeTagsWithAbilitySystem));
+	SyncGroundSpeedModeTagsWithAbilitySystem(OldGroundSpeedMode, NewGroundSpeedMode);
 }
 
 void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySystem() const
@@ -621,5 +611,71 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 	{
 		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
 			0);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
+	const EStanceMode NewStance) const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	{
+		return;
+	}
+
+	if (OldStance == EStanceMode::Crouch)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			0);
+	}
+
+	if (NewStance == EStanceMode::Crouch)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			1);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
+	const EGroundSpeedMode NewGroundSpeedMode) const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	{
+		return;
+	}
+
+	if (OldGroundSpeedMode == EGroundSpeedMode::Walking)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			0);
+	}
+	else if (OldGroundSpeedMode == EGroundSpeedMode::Jogging)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			0);
+	}
+	else if (OldGroundSpeedMode == EGroundSpeedMode::Running)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			0);
+	}
+
+	if (NewGroundSpeedMode == EGroundSpeedMode::Walking)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			1);
+	}
+	else if (NewGroundSpeedMode == EGroundSpeedMode::Jogging)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			1);
+	}
+	else if (NewGroundSpeedMode == EGroundSpeedMode::Running)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			1);
 	}
 }
