@@ -3,8 +3,12 @@
 
 #include "AbilitySystem/Abilities/SelectNextItemGameplayAbility.h"
 
-#include "Components/ActorComponents/InventoryManagerComponent.h"
+#include "ActorComponents/InventoryManagerComponent.h"
+#include "Characters/EscapeChroniclesCharacter.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
+
+class UInventoryManagerSelectorFragment;
 
 USelectNextItemGameplayAbility::USelectNextItemGameplayAbility()
 {
@@ -24,7 +28,17 @@ void USelectNextItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	const AEscapeChroniclesPlayerState* PlayerState = Cast<AEscapeChroniclesPlayerState>(ActorInfo->AvatarActor);
+	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(ActorInfo->AvatarActor);
+
+	if (!IsValid(Character))
+	{
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+
+		return;
+	}
+
+	const AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
+
 	if (!IsValid(PlayerState))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
@@ -32,16 +46,26 @@ void USelectNextItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	const UInventoryManagerComponent* InteractionManagerComponent = PlayerState->GetInventoryManagerComponent();
+	const UInventoryManagerComponent* InventoryManagerComponent = PlayerState->GetInventoryManagerComponent();
 	
-	if (!IsValid(InteractionManagerComponent))
+	if (!IsValid(InventoryManagerComponent))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
 		return;
 	}
 
-	//InteractionManagerComponent
+	UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment = 
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (!IsValid(InventoryManagerSelectorFragment))
+	{
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+
+		return;
+	}
+
+	InventoryManagerSelectorFragment->SelectNextItem();
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

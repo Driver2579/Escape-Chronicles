@@ -6,9 +6,7 @@
 #include "Objects/InventoryItemFragments/InventoryItemFragment.h"
 #include "PickupInventoryItemFragment.generated.h"
 
-/**
- * Adds a representation of an item to the world
- */
+// Adds a representation of an item to the world
 UCLASS()
 class INVENTORYSYSTEM_API UPickupInventoryItemFragment : public UInventoryItemFragment
 {

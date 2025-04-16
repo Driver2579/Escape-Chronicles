@@ -6,11 +6,5 @@ namespace InventorySystemGameplayTags
 {
 	// SlotTypes
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InventoryTag_MainSlotType, "Inventory.SlotType.Main", "Main slot type");
-
-	// InventoryManagerComponentFragments
-
-
-	// InventoryItemInstanceFragments
-
 	
 }

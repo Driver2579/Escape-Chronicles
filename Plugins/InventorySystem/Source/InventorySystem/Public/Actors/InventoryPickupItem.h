@@ -4,13 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
 #include "InventoryPickupItem.generated.h"
 
 class UInventoryManagerComponent;
 
-/**
- * Can be picked up in inventory
- */
+// Can be picked up in inventory
 UCLASS()
 class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
 {
@@ -33,11 +32,14 @@ protected:
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 	
 private:
-	// Set a mesh to this actor from the specified ItemInstance (ItemInstance must have a UPickupInventoryItemFragment)
+	/**
+	 * Applies a change to this actor based on the current Instance
+	 * @return True if all settings are applied correctly
+	 */
 	bool ApplyChangesFromItemInstance() const;
 
-	// Set the same mesh as CDO
-	void SetDefaultStaticMesh() const;
+	// Set the same mesh as default object
+	void SetDefaultSettings() const;
 
 	UPROPERTY()
 	bool bItemInstanceIsValid;

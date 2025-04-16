@@ -2,8 +2,8 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
-#include "Components/ActorComponents/InventoryManagerComponent.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {

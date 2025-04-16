@@ -3,26 +3,29 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Objects/FragmentationDefinition.h"
+
 #include "InventoryItemDefinition.generated.h"
 
 class UInventoryItemFragment;
 
-/**
- * It is intended to describe items by creating heirs and defining fragments for them
- */
+// Describes inventory items by creating defining fragments for them
 UCLASS(Blueprintable, Const, Abstract)
-class INVENTORYSYSTEM_API UInventoryItemDefinition : public UFragmentationDefinition
+class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	virtual const TArray<TObjectPtr<UFragmentationFragment>>* GetFragments() const override
+	FText GetName()
 	{
-        return reinterpret_cast<const TArray<TObjectPtr<UFragmentationFragment>>*>(&Fragments);
+		return DisplayName;
 	}
 	
-protected:
+	const TArray<UInventoryItemFragment*>& GetFragments() const
+	{
+        return Fragments;
+	}
+	
+private:
 	UPROPERTY(EditDefaultsOnly)
 	FText DisplayName;
 	

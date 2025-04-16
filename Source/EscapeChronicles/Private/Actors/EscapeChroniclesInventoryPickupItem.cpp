@@ -3,10 +3,9 @@
 
 #include "Actors/EscapeChroniclesInventoryPickupItem.h"
 
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
-#include "Components/ActorComponents/InventoryManagerComponent.h"
-#include "GameFramework/PlayerState.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()

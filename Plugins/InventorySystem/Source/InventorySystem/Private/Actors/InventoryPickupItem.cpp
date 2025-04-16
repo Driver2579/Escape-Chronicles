@@ -3,11 +3,9 @@
 
 #include "Actors/InventoryPickupItem.h"
 
-#include "InventorySystemGameplayTags.h"
-#include "NaniteSceneProxy.h"
-#include "Components/ActorComponents/InventoryManagerComponent.h"
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "Objects/FragmentationInstances/InventoryItemInstance.h"
+#include "Objects/InventoryItemInstance.h"
 #include "Objects/InventoryItemFragments/PickupInventoryItemFragment.h"
 
 // Sets default values
@@ -41,10 +39,10 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 
 	bItemInstanceIsValid = ApplyChangesFromItemInstance();
 
-	// Until the valid parameters for installing a personal mesh are selected, install the standard one
+	// While bItemInstanceIsValidSet is invalid, set the default settings
 	if (!bItemInstanceIsValid)
 	{
-		SetDefaultStaticMesh();
+		SetDefaultSettings();
 	}
 }
 
@@ -57,7 +55,7 @@ void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
-	if (!IsValid(StaticMeshComponent) || !IsValid(ItemInstance))
+	if (!ensureAlways(IsValid(StaticMeshComponent)) || !IsValid(ItemInstance))
 	{
 		return false;
 	}
@@ -81,35 +79,35 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 	return true;
 }
 
-void AInventoryPickupItem::SetDefaultStaticMesh() const
+void AInventoryPickupItem::SetDefaultSettings() const
 {
-	if (!IsValid(StaticMeshComponent))
+	if (!ensureAlways(IsValid(StaticMeshComponent)))
 	{
 		return;
 	}
 
-	const AInventoryPickupItem* CDO = Cast<AInventoryPickupItem>(GetClass()->GetDefaultObject());
+	const AInventoryPickupItem* DefaultObject = GetClass()->GetDefaultObject<AInventoryPickupItem>();
 
-	if (!IsValid(CDO))
+	if (!ensureAlways(IsValid(DefaultObject)))
 	{
 		return;
 	}
 
-	const UStaticMeshComponent* StaticMeshComponentCDO = CDO->GetStaticMeshComponent();
+	const UStaticMeshComponent* DefaultObjectStaticMeshComponent = DefaultObject->GetStaticMeshComponent();
 	
-	if (!IsValid(StaticMeshComponentCDO))
+	if (!ensureAlways(IsValid(DefaultObjectStaticMeshComponent)))
 	{
 		return;
 	}
 	
-	UStaticMesh* StaticMeshCDO = StaticMeshComponentCDO->GetStaticMesh();
+	UStaticMesh* DefaultObjectStaticMesh = DefaultObjectStaticMeshComponent->GetStaticMesh();
 
-	if (!IsValid(StaticMeshCDO))
+	if (!ensureAlways(IsValid(DefaultObjectStaticMesh)))
 	{
 		return;
 	}
 
-	StaticMeshComponent->SetStaticMesh(StaticMeshCDO);
+	StaticMeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
 }
 
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
