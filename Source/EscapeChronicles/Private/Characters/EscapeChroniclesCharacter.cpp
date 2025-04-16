@@ -508,7 +508,7 @@ void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySyste
 
 void AEscapeChroniclesCharacter::SyncMovementModesTagsWithAbilitySystem() const
 {
-	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent))
 	{
@@ -517,47 +517,52 @@ void AEscapeChroniclesCharacter::SyncMovementModesTagsWithAbilitySystem() const
 
 	if (CharacterMoverComponent->IsFalling())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Falling);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Falling,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_Falling);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Falling,
+			0);
 	}
 
 	if (CharacterMoverComponent->IsAirborne())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_InAir);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_InAir,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(EscapeChroniclesGameplayTags::Status_Movement_InAir);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_InAir,
+			0);
 	}
 
 	if (CharacterMoverComponent->HasGameplayTag(Mover_IsNavWalking, true))
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_NavWalking);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_NavWalking,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_NavWalking, false);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_NavWalking,
+			0);
 	}
 
 	if (CharacterMoverComponent->IsOnGround())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_OnGround);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_OnGround,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_OnGround);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_OnGround,
+			0);
 	}
 }
 
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem() const
 {
-	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent))
 	{
@@ -566,18 +571,19 @@ void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem() const
 
 	if (CharacterMoverComponent->IsCrouching())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Crouching);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_Crouching);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			0);
 	}
 }
 
 void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() const
 {
-	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent))
 	{
@@ -586,31 +592,34 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 
 	if (CharacterMoverComponent->IsWalkGroundSpeedModeActive())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Walking);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_Walking);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			0);
 	}
 
 	if (CharacterMoverComponent->IsJogGroundSpeedModeActive())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Jogging);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_Jogging);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			0);
 	}
 
 	if (CharacterMoverComponent->IsRunGroundSpeedModeActive())
 	{
-		AbilitySystemComponent->AddUniqueLooseGameplayTag(EscapeChroniclesGameplayTags::Status_Movement_Running);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			1);
 	}
 	else
 	{
-		AbilitySystemComponent->RemoveMatchingLooseGameplayTags(
-			EscapeChroniclesGameplayTags::Status_Movement_Running);
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			0);
 	}
 }
