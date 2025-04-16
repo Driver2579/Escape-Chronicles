@@ -132,6 +132,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	CharacterMoverComponent->OnMovementModeChanged.AddDynamic(this, &ThisClass::OnMovementModeChanged);
 	CharacterMoverComponent->OnStanceChanged.AddDynamic(this, &ThisClass::OnStanceChanged);
+	CharacterMoverComponent->OnGroundSpeedModeChanged.AddUObject(this, &ThisClass::OnGroundSpeedModeChanged);
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
