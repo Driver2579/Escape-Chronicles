@@ -3,7 +3,7 @@
 #include "AbilitySystem/Abilities/ToggleCrouchGameplayAbility.h"
 
 #include "Characters/EscapeChroniclesCharacter.h"
-#include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 
 UToggleCrouchGameplayAbility::UToggleCrouchGameplayAbility()
 {

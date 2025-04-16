@@ -18,8 +18,6 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
-	virtual void BeginPlay() override;
-
 	virtual bool CanCrouch() override { return !IsAirborne(); }
 
 	/**

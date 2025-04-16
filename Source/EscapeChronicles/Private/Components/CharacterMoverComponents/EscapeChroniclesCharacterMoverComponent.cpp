@@ -29,19 +29,6 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 }
 #endif
 
-void UEscapeChroniclesCharacterMoverComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	const UGroundSpeedModeSettings* GroundSpeedModeSettings = FindSharedSettings<UGroundSpeedModeSettings>();
-
-	// Add GroundSpeedModeModifier only if GroundSpeedModeSettings exist
-	if (IsValid(GroundSpeedModeSettings))
-	{
-		QueueMovementModifier(MakeShared<FGroundSpeedModeModifier>());
-	}
-}
-
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
 {
 	// We use cons_cast here because CanCrouch should be const, BUT EPIC GAMES FOR SOME FUCKING REASON MADE IT NON-CONST
@@ -92,13 +79,26 @@ void UEscapeChroniclesCharacterMoverComponent::OnMoverPreSimulationTick(const FM
 	const FMoverInputCmdContext& InputCmd)
 {
 	Super::OnMoverPreSimulationTick(TimeStep, InputCmd);
-
+	
 	const UGroundSpeedModeSettings* GroundSpeedModeSettings = FindSharedSettings<UGroundSpeedModeSettings>();
 
-	if (IsValid(GroundSpeedModeSettings) && GroundSpeedModeSettings->GroundSpeedMode != LastGroundSpeedMode)
+	if (IsValid(GroundSpeedModeSettings))
 	{
-		OnGroundSpeedModeChanged.Broadcast(LastGroundSpeedMode, GroundSpeedModeSettings->GroundSpeedMode);
+		/**
+		 * Add GroundSpeedModeModifier only if GroundSpeedModeSettings exist.
+		 *
+		 * Note: We could've do that in BeginPlay but in this case this modifier's handle gets invalidated on clients at
+		 * some point, which causes bugs with other modifiers. So unfortunately we have to add it here every tick for
+		 * its handle to be regenerated in case it gets invalidated.
+		 */
+		QueueMovementModifier(MakeShared<FGroundSpeedModeModifier>());
 
-		LastGroundSpeedMode = GroundSpeedModeSettings->GroundSpeedMode;
+		// Check if the GroundSpeedMode has changed
+		if (GroundSpeedModeSettings->GroundSpeedMode != LastGroundSpeedMode)
+		{
+			OnGroundSpeedModeChanged.Broadcast(LastGroundSpeedMode, GroundSpeedModeSettings->GroundSpeedMode);
+
+			LastGroundSpeedMode = GroundSpeedModeSettings->GroundSpeedMode;
+		}
 	}
 }

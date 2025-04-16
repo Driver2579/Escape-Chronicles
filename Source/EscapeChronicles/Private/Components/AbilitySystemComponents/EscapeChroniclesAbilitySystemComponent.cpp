@@ -69,37 +69,3 @@ void UEscapeChroniclesAbilitySystemComponent::TryEndAbilitiesByInputTag(const FG
 		}
 	}
 }
-
-void UEscapeChroniclesAbilitySystemComponent::AddUniqueLooseGameplayTag(const FGameplayTag& GameplayTagToAdd,
-	const bool bReplicated)
-{
-	if (!HasMatchingGameplayTag(GameplayTagToAdd))
-	{
-		bReplicated ? AddReplicatedLooseGameplayTag(GameplayTagToAdd) : AddLooseGameplayTag(GameplayTagToAdd);
-	}
-}
-
-void UEscapeChroniclesAbilitySystemComponent::RemoveMatchingLooseGameplayTags(const FGameplayTag& GameplayTagToRemove,
-	const bool bReplicated)
-{
-	// If we don't want to replicate the removal, we can just pass the count to RemoveLooseGameplayTag
-	if (!bReplicated)
-	{
-		const int32 GameplayTagCount = GetGameplayTagCount(GameplayTagToRemove);
-		RemoveLooseGameplayTag(GameplayTagToRemove, GameplayTagCount);
-	}
-	/**
-	 * Otherwise, we have to iterate all owned gameplay tags and remove the tag if it matches because there is no count
-	 * parameter in RemoveReplicatedLooseGameplayTag function.
-	 */
-	else
-	{
-		for (const FGameplayTag& OwnedGameplayTag : GetOwnedGameplayTags())
-		{
-			if (OwnedGameplayTag.MatchesTagExact(GameplayTagToRemove))
-			{
-				RemoveReplicatedLooseGameplayTag(GameplayTagToRemove);
-			}
-		}
-	}
-}
