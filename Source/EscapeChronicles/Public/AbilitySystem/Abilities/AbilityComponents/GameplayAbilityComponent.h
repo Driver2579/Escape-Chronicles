@@ -10,9 +10,8 @@
 #include "GameplayAbilityComponent.generated.h"
 
 /**
- * Base class for modular components that can be added to gameplay abilities in this project. It fully copies the
- * interface of UGameplayAbility except for the non-virtual public functions, private functions and functions for
- * internal usage of UE only.
+ * Base class for modular components that can be added to gameplay abilities in this project. It copies almost the whole
+ * interface of UGameplayAbility.
  */
 UCLASS(Abstract, Const, DefaultToInstanced, EditInlineNew, CollapseCategories, Within=EscapeChroniclesGameplayAbility)
 class ESCAPECHRONICLES_API UGameplayAbilityComponent : public UObject
@@ -25,8 +24,55 @@ public:
 
 	// === UGameplayAbility interface ===
 
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const
+	{
+		return true;
+	}
+
+	virtual bool ShouldAbilityRespondToEvent(const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayEventData* Payload) const
+	{
+		return true;
+	}
+
+	virtual bool ShouldActivateAbility(ENetRole Role) const
+	{
+		return true;
+	}
+
+	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const
+	{
+		return true;
+	}
+
+	virtual bool IsBlockingOtherAbilities() const { return false; }
+
+	virtual bool CanBeCanceled() const { return true; }
+
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) {}
+
+	virtual bool CommitCheck(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr)
+	{
+		return true;
+	}
+
+	virtual bool CheckCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const
+	{
+		return true;
+	}
+
+	virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const
+	{
+		return true;
+	}
 
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo) const {}

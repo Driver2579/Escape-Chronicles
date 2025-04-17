@@ -26,8 +26,35 @@ class ESCAPECHRONICLES_API UEscapeChroniclesGameplayAbility : public UGameplayAb
 public:
 	UEscapeChroniclesGameplayAbility();
 
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
+	virtual bool ShouldAbilityRespondToEvent(const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayEventData* Payload) const override;
+
+	virtual bool ShouldActivateAbility(ENetRole Role) const override;
+
+	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
+	virtual bool IsBlockingOtherAbilities() const override;
+
+	virtual bool CanBeCanceled() const override;
+
 	virtual void CancelAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateCancelAbility) override;
+
+	virtual bool CommitCheck(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) override;
+
+	virtual bool CheckCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
+	virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo) const override;

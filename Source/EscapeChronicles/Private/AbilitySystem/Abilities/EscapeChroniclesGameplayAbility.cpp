@@ -24,6 +24,131 @@ UEscapeChroniclesGameplayAbility::UEscapeChroniclesGameplayAbility()
 	NetSecurityPolicy = EGameplayAbilityNetSecurityPolicy::ClientOrServer;
 }
 
+bool UEscapeChroniclesGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
+	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// Check if all components allow ability activation
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::ShouldAbilityRespondToEvent(const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayEventData* Payload) const
+{
+	if (!Super::ShouldAbilityRespondToEvent(ActorInfo, Payload))
+	{
+		return false;
+	}
+
+	// Check if all components allow the ability to respond to the event
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->ShouldAbilityRespondToEvent(ActorInfo, Payload))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::ShouldActivateAbility(ENetRole Role) const
+{
+	if (!Super::ShouldActivateAbility(Role))
+	{
+		return false;
+	}
+
+	// Check if all components allow ability activation
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->ShouldActivateAbility(Role))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::DoesAbilitySatisfyTagRequirements(
+	const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags,
+	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	const bool bParentResult = Super::DoesAbilitySatisfyTagRequirements(AbilitySystemComponent, SourceTags, TargetTags,
+		OptionalRelevantTags);
+
+	if (!bParentResult)
+	{
+		return false;
+	}
+
+	// Check if all components satisfy tag requirements
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		const bool bComponentResult = Component->DoesAbilitySatisfyTagRequirements(AbilitySystemComponent, SourceTags,
+			TargetTags, OptionalRelevantTags);
+
+		if (!bComponentResult)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::IsBlockingOtherAbilities() const
+{
+	if (Super::IsBlockingOtherAbilities())
+	{
+		return true;
+	}
+
+	// Check if any component is blocking other abilities
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (Component->IsBlockingOtherAbilities())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool UEscapeChroniclesGameplayAbility::CanBeCanceled() const
+{
+	if (!Super::CanBeCanceled())
+	{
+		return false;
+	}
+
+	// Check if any component blocks ability cancellation
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->CanBeCanceled())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void UEscapeChroniclesGameplayAbility::CancelAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateCancelAbility)
@@ -34,6 +159,67 @@ void UEscapeChroniclesGameplayAbility::CancelAbility(const FGameplayAbilitySpecH
 	}
 
 	Super::CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+}
+
+bool UEscapeChroniclesGameplayAbility::CommitCheck(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	FGameplayTagContainer* OptionalRelevantTags)
+{
+	if (!Super::CommitCheck(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// Check if all components satisfy the commit check
+	for (UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->CommitCheck(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::CheckCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CheckCooldown(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// Check if all components satisfy the cooldown check
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->CheckCooldown(Handle, ActorInfo, OptionalRelevantTags))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool UEscapeChroniclesGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// Check if all components satisfy the cost check
+	for (const UGameplayAbilityComponent* Component : Components)
+	{
+		if (!Component->CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
 void UEscapeChroniclesGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
