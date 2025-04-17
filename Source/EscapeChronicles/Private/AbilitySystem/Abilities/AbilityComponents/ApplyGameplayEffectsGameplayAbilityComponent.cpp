@@ -1,22 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "AbilitySystem/Abilities/GameplayAbilityWithGameplayEffects.h"
+#include "AbilitySystem/Abilities/AbilityComponents/ApplyGameplayEffectsGameplayAbilityComponent.h"
 
 #include "AbilitySystemComponent.h"
 #include "Engine/AssetManager.h"
 
-void UGameplayAbilityWithGameplayEffects::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+void UApplyGameplayEffectsGameplayAbilityComponent::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
-
-		return;
-	}
 
 	TArray<FSoftObjectPath> GameplayEffectsToLoad;
 	GameplayEffectsToLoad.Reserve(GameplayEffectsToApplyWhileActive.Num());
@@ -36,24 +29,40 @@ void UGameplayAbilityWithGameplayEffects::ActivateAbility(const FGameplayAbility
 	}
 }
 
-void UGameplayAbilityWithGameplayEffects::OnGameplayEffectsLoaded()
+void UApplyGameplayEffectsGameplayAbilityComponent::OnGameplayEffectsLoaded()
 {
+	UEscapeChroniclesGameplayAbility* OwningAbility = GetOwner();
+
+#if DO_CHECK
+	check(IsValid(OwningAbility));
+#endif
+
+	const FGameplayAbilitySpecHandle CurrentSpecHandle = OwningAbility->GetCurrentAbilitySpecHandle();
+	const FGameplayAbilityActorInfo* CurrentActorInfo = OwningAbility->GetCurrentActorInfo();
+	const FGameplayAbilityActivationInfo& CurrentActivationInfo = OwningAbility->GetCurrentActivationInfoRef();
+
 	for (const TSoftClassPtr<UGameplayEffect>& GameplayEffect : GameplayEffectsToApplyWhileActive)
 	{
 		FActiveGameplayEffectHandle AppliedGameplayEffect = ApplyGameplayEffectToOwner(CurrentSpecHandle,
 			CurrentActorInfo, CurrentActivationInfo, GameplayEffect->GetDefaultObject<UGameplayEffect>(),
-			GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
+			OwningAbility->GetAbilityLevel(CurrentSpecHandle, CurrentActorInfo));
 
 		AppliedGameplayEffects.Add(AppliedGameplayEffect);
 	}
 }
 
-void UGameplayAbilityWithGameplayEffects::EndAbility(const FGameplayAbilitySpecHandle Handle,
+void UApplyGameplayEffectsGameplayAbilityComponent::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	const bool bReplicateEndAbility, const bool bWasCancelled)
+	bool bReplicateEndAbility, bool bWasCancelled)
 {
+	const UEscapeChroniclesGameplayAbility* OwningAbility = GetOwner();
+
+#if DO_CHECK
+	check(IsValid(OwningAbility));
+#endif
+
 	// Removing gameplay effects is not allowed to be predicted on the client
-	if (HasAuthority(&ActivationInfo))
+	if (OwningAbility->HasAuthority(&ActivationInfo))
 	{
 		for (const FActiveGameplayEffectHandle& AppliedGameplayEffect : AppliedGameplayEffects)
 		{

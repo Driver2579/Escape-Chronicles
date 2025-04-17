@@ -1,17 +1,17 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
-#include "GameplayAbilityWithGameplayEffects.generated.h"
+#include "GameplayAbilityComponent.h"
+#include "ApplyGameplayEffectsGameplayAbilityComponent.generated.h"
 
 /**
- * Gameplay ability that applies gameplay effects to the owner actor when activated and removes them when ended.
- * @remark EndAbility should be called manually by child classes or externally!
+ * Gameplay ability component that applies gameplay effects to the owner actor when ability is activated and removes
+ * them when ability is ended.
  */
-UCLASS()
-class ESCAPECHRONICLES_API UGameplayAbilityWithGameplayEffects : public UEscapeChroniclesGameplayAbility
+UCLASS(DisplayName="Apply Gameplay Effects")
+class ESCAPECHRONICLES_API UApplyGameplayEffectsGameplayAbilityComponent : public UGameplayAbilityComponent
 {
 	GENERATED_BODY()
 
