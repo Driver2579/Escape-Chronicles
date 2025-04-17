@@ -40,10 +40,13 @@ protected:
 
 	/**
 	 * Called when the new pawn is set (except of the situation when you switch between spectator pawns), but before the
-	 * gameplay effects from AbilitySystemSets are applied. This should be overriden in child classes to initialize
-	 * attributes with custom data if any.
+	 * gameplay effects from AbilitySystemSets are applied. This could be overriden in child classes to initialize
+	 * attributes with custom data, if any.
+	 * @remark The suggested way to initialize attributes is to use gameplay effects. This function exists only for
+	 * attributes that have to be initialized with data that already exists in other classes (for example, in the pawn
+	 * or his components).
 	 */
-	virtual void InitializeAttributes();
+	virtual void InitializeAttributes() {}
 
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")

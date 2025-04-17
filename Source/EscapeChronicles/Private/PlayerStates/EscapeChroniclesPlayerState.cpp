@@ -54,7 +54,7 @@ void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* Own
 		}
 	}
 
-	if (!ensureAlways(IsValid(GameMode)))
+	if (!IsValid(GameMode))
 	{
 		return;
 	}
@@ -142,10 +142,8 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 			AbilitySystemSet->TakeEffectsFromAbilitySystem(AbilitySystemComponent);
 			AbilitySystemSet->GiveEffectsToAbilitySystem(AbilitySystemComponent);
 		}
-	}
-}
 
-void AEscapeChroniclesPlayerState::InitializeAttributes()
-{
-	// TODO: Add attributes initializations here
+		// We also want to apply blocking attributes by tags only after the gameplay effects are applied
+		AbilitySystemSet->ApplyBlockingAttributesByTags(AbilitySystemComponent);
+	}
 }
