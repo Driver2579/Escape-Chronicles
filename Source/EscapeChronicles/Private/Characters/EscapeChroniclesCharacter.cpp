@@ -128,6 +128,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
 
+	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
 	CharacterMoverComponent->OnMovementModeChanged.AddDynamic(this, &ThisClass::OnMovementModeChanged);
@@ -367,6 +368,38 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 
 	ExtendedCharacterInputs.bWantsToBeCrouched = bWantsToBeCrouched;
 	ExtendedCharacterInputs.DesiredGroundSpeedModeOverride = DesiredGroundSpeedModeOverride;
+}
+
+// ReSharper disable once CppMemberFunctionMayBeConst
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void AEscapeChroniclesCharacter::OnMoverPostMovement(const FMoverTimeStep& TimeStep, FMoverSyncState& SyncState,
+	FMoverAuxStateContext& AuxState)
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	const FMoverDefaultSyncState* DefaultSyncState = SyncState.SyncStateCollection.FindDataByType<
+		FMoverDefaultSyncState>();
+
+#if DO_CHECK
+	check(DefaultSyncState);
+#endif
+
+	// Check if the character is moving or not (velocity isn't zero)
+	if (!DefaultSyncState->GetVelocity_BaseSpace().IsNearlyZero())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Moving,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Moving,
+			0);
+	}
 }
 
 void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,

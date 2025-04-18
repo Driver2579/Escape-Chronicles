@@ -22,6 +22,9 @@ namespace EscapeChroniclesGameplayTags
 
 	// === Movement tags ===
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Moving, "Status.Movement.Moving",
+		"The character is moving (velocity not zero)");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Falling, "Status.Movement.Falling", "The character is falling");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_InAir, "Status.Movement.InAir", "The character is in the air");
 

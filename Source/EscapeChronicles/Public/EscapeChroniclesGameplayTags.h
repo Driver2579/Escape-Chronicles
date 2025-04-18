@@ -19,6 +19,8 @@ namespace EscapeChroniclesGameplayTags
 
 	// === Movement tags ===
 
+	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Movement_Moving);
+
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Movement_Falling);
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Movement_InAir);
 

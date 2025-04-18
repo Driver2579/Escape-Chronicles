@@ -120,6 +120,10 @@ protected:
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
 	UFUNCTION()
+	void OnMoverPostMovement(const FMoverTimeStep& TimeStep, FMoverSyncState& SyncState,
+		FMoverAuxStateContext& AuxState);
+
+	UFUNCTION()
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep, const FMoverInputCmdContext& InputCmd);
 
 	UFUNCTION()
