@@ -258,12 +258,12 @@ void UEscapeChroniclesGameplayAbility::InputPressed(const FGameplayAbilitySpecHa
 void UEscapeChroniclesGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
+	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+
 	for (UGameplayAbilityComponent* Component : Components)
 	{
 		Component->InputReleased(Handle, ActorInfo, ActivationInfo);
 	}
-
-	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
 }
 
 void UEscapeChroniclesGameplayAbility::OnWaitingForConfirmInputBegin()
