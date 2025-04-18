@@ -619,7 +619,7 @@ void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceM
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	if (!IsValid(AbilitySystemComponent))
 	{
 		return;
 	}
@@ -642,7 +642,7 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const 
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	if (!IsValid(AbilitySystemComponent))
 	{
 		return;
 	}
