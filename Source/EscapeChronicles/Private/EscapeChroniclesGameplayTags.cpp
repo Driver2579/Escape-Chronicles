@@ -31,17 +31,17 @@ namespace EscapeChroniclesGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_OnGround, "Status.Movement.OnGround",
 		"The character is on the ground");
 
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Walking, "Status.Movement.Walking",
-		"The character is walking (low speed, isn't necessarily on the ground)");
-
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Jogging, "Status.Movement.Jogging",
-		"The character is jogging (medium speed, isn't necessarily on the ground)");
-
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Running, "Status.Movement.Running",
-		"The character is running (high speed, isn't necessarily on the ground)");
-
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Crouching, "Status.Movement.Crouching",
 		"The character is crouching");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Mode_Walking, "Status.Movement.Mode.Walking",
+		"The character is in walking mode (low speed, isn't necessarily on the ground, isn't necessarily moving)");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Mode_Jogging, "Status.Movement.Mode.Jogging",
+		"The character is in jogging mode (medium speed, isn't necessarily on the ground, isn't necessarily moving)");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Movement_Mode_Running, "Status.Movement.Mode.Running",
+		"The character is in running mode (high speed, isn't necessarily on the ground, isn't necessarily moving)");
 
 	// === Roles tags ===
 
