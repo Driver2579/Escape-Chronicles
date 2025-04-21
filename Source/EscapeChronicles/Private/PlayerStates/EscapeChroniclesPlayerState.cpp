@@ -48,15 +48,19 @@ void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* Own
 	{
 		const AGameStateBase* GameState = World->GetGameState();
 
-		if (ensureAlways(IsValid(GameState)))
+		if (IsValid(GameState))
 		{
 			GameMode = GameState->GetDefaultGameMode();
-		}
-	}
 
-	if (!IsValid(GameMode))
-	{
-		return;
+			if (!IsValid(GameMode))
+			{
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
 	}
 
 	FActorSpawnParameters SpawnInfo;
@@ -72,7 +76,7 @@ void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* Own
 	{
 		/**
 		 * Don't call SetPlayerName() as that will broadcast entry messages but the GameMode hasn't had a chance to
-		 * potentially apply a player/bot name yet
+		 * potentially apply a player/bot name yet.
 		 */
 		OwnerController->PlayerState->SetPlayerNameInternal(GameMode->DefaultPlayerName.ToString());
 	}
