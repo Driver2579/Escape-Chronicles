@@ -8,7 +8,8 @@
 
 /**
  * Calls the Crouch function on the owning character when activated.\n
- * Calls the UnCrouch function on the owning character when ended.
+ * Calls the UnCrouch function on the owning character when ended.\n
+ * Automatically ends when the input is released.
  */
 UCLASS()
 class ESCAPECHRONICLES_API UCrouchGameplayAbility : public UEscapeChroniclesGameplayAbility
@@ -21,6 +22,9 @@ public:
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo) override;
 
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;

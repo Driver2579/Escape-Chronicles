@@ -22,7 +22,7 @@ void UToggleCrouchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHan
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
 
 		return;
 	}

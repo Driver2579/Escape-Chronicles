@@ -10,25 +10,6 @@
 class UInputMappingContext;
 class UInputAction;
 
-// Struct used to map an input action to a gameplay input tag and to store additional settings for the input action
-USTRUCT(BlueprintType)
-struct FAbilityInputActionSettings
-{
-	GENERATED_BODY()
-
-	// Input tag to map the input action to
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag InputTag;
-
-	/**
-	 * Whether the ability should be ended when the input action is completed. The ability will be activated on
-	 * ETriggerEvent::Started anyway, but if this is true, it will also be ended on ETriggerEvent::Completed. If this
-	 * is false, the ability should be ended by the ability itself.
-	 */
-	UPROPERTY(EditDefaultsOnly)
-	bool bEndAbilityOnComplete = false;
-};
-
 // Non-mutable data asset that contains input configuration properties
 UCLASS()
 class ESCAPECHRONICLES_API UInputConfig : public UDataAsset
@@ -61,5 +42,5 @@ private:
 	 * bound to abilities with matching input tags.
 	 */
 	UPROPERTY(EditDefaultsOnly)
-	TMap<TObjectPtr<const UInputAction>, FAbilityInputActionSettings> AbilityInputActions;
+	TMap<TObjectPtr<const UInputAction>, FGameplayTag> AbilityInputActions;
 };

@@ -143,15 +143,15 @@ public:
 
 private:
 	// Attribute sets to grant when this ability system set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty="Attribute Set"))
+	UPROPERTY(EditDefaultsOnly, Category="Attribute Sets", meta=(TitleProperty=AttributeSet))
 	TArray<FAbilitySystemSet_AttributeSet> AttributeSetsToGrant;
 
 	// Gameplay abilities to grant when this ability system set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty="Gameplay Ability"))
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Abilities", meta=(TitleProperty=Ability))
 	TArray<FAbilitySystemSet_GameplayAbility> GameplayAbilitiesToGrant;
 
 	// Gameplay effects to grant when this ability system set is granted
-	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects", meta=(TitleProperty="Gameplay Effect"))
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects", meta=(TitleProperty=GameplayEffect))
 	TArray<FAbilitySystemSet_GameplayEffect> GameplayEffectsToGrant;
 
 	/**
