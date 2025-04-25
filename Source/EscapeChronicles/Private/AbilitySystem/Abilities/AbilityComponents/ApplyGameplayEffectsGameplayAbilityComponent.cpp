@@ -22,7 +22,7 @@ void UApplyGameplayEffectsGameplayAbilityComponent::ActivateAbility(const FGamep
 		}
 	}
 
-	if (GameplayEffectsToApplyWhileActive.Num() > 0)
+	if (GameplayEffectsToLoad.Num() > 0)
 	{
 		UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(GameplayEffectsToLoad,
 			FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectsLoaded));
