@@ -181,7 +181,7 @@ void AEscapeChroniclesPlayerController::BindAbilityInputActions(UEnhancedInputCo
 		return;
 	}
 
-	const TMap<TObjectPtr<const UInputAction>, FAbilityInputActionSettings>& AbilityInputActions =
+	const TMap<TObjectPtr<const UInputAction>, FGameplayTag>& AbilityInputActions =
 		InputConfig->GetAbilityInputActions();
 
 	for (auto& InputActionPair : AbilityInputActions)
@@ -193,21 +193,16 @@ void AEscapeChroniclesPlayerController::BindAbilityInputActions(UEnhancedInputCo
 			continue;
 		}
 
-		const FAbilityInputActionSettings& InputConfigActionSettings = InputActionPair.Value;
-
 		// Register the input tag inside the ability system component as required
-		AbilitySystemComponent->RegisterInputTag(InputConfigActionSettings.InputTag);
+		AbilitySystemComponent->RegisterInputTag(InputActionPair.Value);
 
 		// Always bind an action to ETriggerEvent::Started
 		EnhancedInputComponent->BindAction(InputAction, ETriggerEvent::Started, this,
-			&ThisClass::AbilityInputStarted, InputConfigActionSettings.InputTag);
+			&ThisClass::AbilityInputStarted, InputActionPair.Value);
 
-		// Bind an action to the Completed event only if needed
-		if (InputConfigActionSettings.bEndAbilityOnComplete)
-		{
-			EnhancedInputComponent->BindAction(InputAction, ETriggerEvent::Completed, this,
-				&ThisClass::AbilityInputCompleted, InputConfigActionSettings.InputTag);
-		}
+		// Bind an action to the Completed event
+		EnhancedInputComponent->BindAction(InputAction, ETriggerEvent::Completed, this,
+			&ThisClass::AbilityInputCompleted, InputActionPair.Value);
 	}
 }
 
@@ -218,17 +213,17 @@ void AEscapeChroniclesPlayerController::AbilityInputStarted(const FGameplayTag I
 
 	if (ensureAlways(IsValid(AbilitySystemComponent)))
 	{
-		AbilitySystemComponent->TryActivateAbilitiesByInputTag(InputTag);
+		AbilitySystemComponent->PressInputTag(InputTag);
 	}
 }
 
 void AEscapeChroniclesPlayerController::AbilityInputCompleted(const FGameplayTag InputTag)
 {
-	const UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent = GetEscapeChroniclesAbilitySystemComponent();
 
 	if (ensureAlways(IsValid(AbilitySystemComponent)))
 	{
-		AbilitySystemComponent->TryEndAbilitiesByInputTag(InputTag);
+		AbilitySystemComponent->ReleaseInputTag(InputTag);
 	}
 }
 
