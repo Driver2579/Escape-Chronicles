@@ -2,6 +2,7 @@
 
 #include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 
+#include "EscapeChroniclesGameplayTags.h"
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 
 void UEscapeChroniclesAbilitySystemComponent::RegisterInputTag(const FGameplayTag& InputTag)
@@ -68,4 +69,16 @@ void UEscapeChroniclesAbilitySystemComponent::TryEndAbilitiesByInputTag(const FG
 			}
 		}
 	}
+}
+
+bool UEscapeChroniclesAbilitySystemComponent::CanModifyAttribute(const FGameplayAttribute& Attribute) const
+{
+	const FGameplayTag* AssociatedTag = BlockedAttributesByTags.FindKey(Attribute);
+
+	if (AssociatedTag && HasMatchingGameplayTag(*AssociatedTag))
+	{
+		return false;
+	}
+
+	return true;
 }

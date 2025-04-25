@@ -36,6 +36,26 @@ public:
 	 */
 	void TryEndAbilitiesByInputTag(const FGameplayTag& InputTag) const;
 
+	/**
+	 * Doesn't allow certain attributes to be modified by certain roles. Should be used by attribute sets before
+	 * modifying an attribute.
+	 */
+	bool CanModifyAttribute(const FGameplayAttribute& Attribute) const;
+
+	// Adds the specified tag and attribute to the BlockedAttributesByTags map
+	void ApplyBlockingAttributeWhenHasTag(const FGameplayTag& RequiredTagToBlockAttribute,
+		const FGameplayAttribute& AttributeToBlock)
+	{
+		BlockedAttributesByTags.AddUnique(RequiredTagToBlockAttribute, AttributeToBlock);
+	}
+
+	// Removes the specified tag and attribute from the BlockedAttributesByTags map
+	void RemoveBlockingAttributeWhenHasTag(const FGameplayTag& RequiredTagToBlockAttribute,
+		const FGameplayAttribute& AttributeToBlock)
+	{
+		BlockedAttributesByTags.Remove(RequiredTagToBlockAttribute, AttributeToBlock);
+	}
+
 private:
 	/**
 	 * Cached associations between input tags and abilities.
@@ -43,4 +63,13 @@ private:
 	 * @tparam FGameplayAbilitySpecHandle Abilities associated with the input tag.
 	 */
 	TMultiMap<FGameplayTag, FGameplayAbilitySpecHandle> GameplayAbilitiesAssociatedWithInputTags;
+
+	/**
+	 * When this ability system component has a tag from this map, attributes associated with this tag will not be
+	 * allowed to be modified.
+	 * @tparam FGameplayTag Tag that is associated with attributes.
+	 * @tparam FGameplayAttribute Attributes that should be blocked from modification when the owner has an associated
+	 * tag.
+	 */
+	TMultiMap<FGameplayTag, FGameplayAttribute> BlockedAttributesByTags;
 };

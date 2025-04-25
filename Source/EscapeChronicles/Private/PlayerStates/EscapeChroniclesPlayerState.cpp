@@ -3,6 +3,8 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
@@ -12,6 +14,72 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+}
+
+void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* OwnerController,
+	const TSubclassOf<AEscapeChroniclesPlayerState>& PlayerStateClass)
+{
+	// The next code was mostly copied from AController::InitPlayerState() but with some modifications
+
+#if DO_CHECK
+	check(IsValid(OwnerController));
+	check(IsValid(PlayerStateClass));
+#endif
+
+	if (OwnerController->GetNetMode() == NM_Client || !ensureAlways(IsValid(GEngine)))
+	{
+		return;
+	}
+
+	UWorld* World = OwnerController->GetWorld();
+
+	if (!ensureAlways(IsValid(World)))
+	{
+		return;
+	}
+
+	const AGameModeBase* GameMode = World->GetAuthGameMode();
+
+	/**
+	 * If the GameMode is null, this might be a network client that's trying to record a replay. Try to use the default
+	 * game mode in this case so that we can still spawn a PlayerState.
+	 */
+	if (!IsValid(GameMode))
+	{
+		const AGameStateBase* GameState = World->GetGameState();
+
+		if (IsValid(GameState))
+		{
+			GameMode = GameState->GetDefaultGameMode();
+
+			if (!IsValid(GameMode))
+			{
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.Owner = OwnerController;
+	SpawnInfo.Instigator = OwnerController->GetInstigator();
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnInfo.ObjectFlags |= RF_Transient; // We never want player states to save into a map
+
+	OwnerController->SetPlayerState(World->SpawnActor<AEscapeChroniclesPlayerState>(PlayerStateClass, SpawnInfo));
+
+	// Force a default player name if necessary
+	if (OwnerController->PlayerState && OwnerController->PlayerState->GetPlayerName().IsEmpty())
+	{
+		/**
+		 * Don't call SetPlayerName() as that will broadcast entry messages but the GameMode hasn't had a chance to
+		 * potentially apply a player/bot name yet.
+		 */
+		OwnerController->PlayerState->SetPlayerNameInternal(GameMode->DefaultPlayerName.ToString());
+	}
 }
 
 void AEscapeChroniclesPlayerState::PostInitializeComponents()
@@ -78,10 +146,8 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 			AbilitySystemSet->TakeEffectsFromAbilitySystem(AbilitySystemComponent);
 			AbilitySystemSet->GiveEffectsToAbilitySystem(AbilitySystemComponent);
 		}
-	}
-}
 
-void AEscapeChroniclesPlayerState::InitializeAttributes()
-{
-	// TODO: Add attributes initializations here
+		// We also want to apply blocking attributes by tags only after the gameplay effects are applied
+		AbilitySystemSet->ApplyBlockingAttributesByTags(AbilitySystemComponent);
+	}
 }

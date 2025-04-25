@@ -54,7 +54,16 @@ void AEscapeChroniclesPlayerController::SetupInputComponent()
 
 void AEscapeChroniclesPlayerController::InitPlayerState()
 {
-	Super::InitPlayerState();
+	// Initialize the PlayerState with a custom class if it's set
+	if (IsValid(PlayerStateClassOverride))
+	{
+		AEscapeChroniclesPlayerState::InitPlayerStateForController(this, PlayerStateClassOverride);
+	}
+	// Use the default PlayerState initialization otherwise
+	else
+	{
+		Super::InitPlayerState();
+	}
 
 	/**
 	 * Bind all input configs once the PlayerState is initialized if they failed to bind in SetupInputComponent.
