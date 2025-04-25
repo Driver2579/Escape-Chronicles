@@ -21,7 +21,7 @@ void UCrouchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
 
 		return;
 	}
@@ -33,6 +33,14 @@ void UCrouchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	{
 		Character->Crouch();
 	}
+}
+
+void UCrouchGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+
+	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
 
 void UCrouchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,

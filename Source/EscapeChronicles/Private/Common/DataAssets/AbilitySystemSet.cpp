@@ -141,13 +141,24 @@ void UAbilitySystemSet::GiveAbilitiesToAbilitySystem_Internal(
 			continue;
 		}
 
-		UGameplayAbility* AbilityCDO = AbilityToGrant.Ability.GetDefaultObject();
-
-		FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
+		FGameplayAbilitySpec AbilitySpec(AbilityToGrant.Ability, AbilityToGrant.AbilityLevel);
 		AbilitySpec.SourceObject = SourceObject;
-		AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
 
-		GrantedGameplayAbilities.Add(AbilitySystemComponent->GiveAbility(AbilitySpec));
+		const bool bInputTagValid = AbilityToGrant.InputTag.IsValid();
+
+		// Add input tag and input ID only if the input tag is valid
+		if (bInputTagValid)
+		{
+			AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
+			AbilitySpec.InputID = AbilitySystemComponent->GenerateInputId();
+		}
+
+		FGameplayAbilitySpecHandle AbilitySpecHandle = AbilitySystemComponent->GiveAbility(AbilitySpec);
+
+		if (ensureAlways(AbilitySpecHandle.IsValid()))
+		{
+			GrantedGameplayAbilities.Add(AbilitySpecHandle);
+		}
 	}
 }
 
@@ -215,8 +226,13 @@ void UAbilitySystemSet::GiveEffectsToAbilitySystem_Internal(
 
 		const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect.GetDefaultObject();
 
-		AbilitySystemComponent->ApplyGameplayEffectToSelf(GameplayEffect, EffectToGrant.EffectLevel,
-			AbilitySystemComponent->MakeEffectContext());
+		FActiveGameplayEffectHandle EffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(GameplayEffect,
+			EffectToGrant.EffectLevel, AbilitySystemComponent->MakeEffectContext());
+
+		if (EffectHandle.IsValid())
+		{
+			GrantedGameplayEffects.Add(EffectHandle);
+		}
 	}
 }
 

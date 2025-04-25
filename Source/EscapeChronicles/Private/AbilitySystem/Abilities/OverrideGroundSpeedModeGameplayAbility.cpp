@@ -9,8 +9,8 @@ UOverrideGroundSpeedModeGameplayAbility::UOverrideGroundSpeedModeGameplayAbility
 	: GroundSpeedMode(EGroundSpeedMode::None)
 {
 	/**
-	 * Overrid is replicated through the character and CharacterMoverComponent. We don't need to replicate it through
-	 * the ability system.
+	 * Ground speed mode is replicated through the character and CharacterMoverComponent. We don't need to replicate it
+	 * through the ability system.
 	 */
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly;
 }
@@ -23,7 +23,7 @@ void UOverrideGroundSpeedModeGameplayAbility::ActivateAbility(const FGameplayAbi
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
 
 		return;
 	}
@@ -35,6 +35,14 @@ void UOverrideGroundSpeedModeGameplayAbility::ActivateAbility(const FGameplayAbi
 	{
 		Character->OverrideGroundSpeedMode(GroundSpeedMode);
 	}
+}
+
+void UOverrideGroundSpeedModeGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+	Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+
+	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
 
 void UOverrideGroundSpeedModeGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
