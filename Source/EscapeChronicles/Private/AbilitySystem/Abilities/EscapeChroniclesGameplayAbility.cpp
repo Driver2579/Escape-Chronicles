@@ -3,6 +3,7 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 
 #include "AbilitySystem/Abilities/AbilityComponents/GameplayAbilityComponent.h"
+#include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 
 UEscapeChroniclesGameplayAbility::UEscapeChroniclesGameplayAbility()
 {

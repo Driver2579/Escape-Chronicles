@@ -128,32 +128,6 @@ public:
 
 	// === End of UGameplayAbility interface ===
 
-	// === UObject interface ===
-
-	virtual int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override
-	{
-#if DO_CHECK
-		check(IsValid(GetOuter()));
-#endif
-
-		return GetOuter()->GetFunctionCallspace(Function, Stack);
-	}
-
-	virtual bool CallRemoteFunction(UFunction* Function, void* Parameters, FOutParmRec* OutParms,
-		FFrame* Stack) override;
-
-	virtual bool IsSupportedForNetworking() const override
-	{
-#if DO_CHECK
-		check(IsValid(GetOuter()));
-#endif
-
-		// This component is supported for networking if its owner is supported for networking
-		return GetOuter()->IsSupportedForNetworking();
-	}
-
-	// === End of UObject interface ===
-
 protected:
 	// === Start of UGameplayAbility interface ===
 

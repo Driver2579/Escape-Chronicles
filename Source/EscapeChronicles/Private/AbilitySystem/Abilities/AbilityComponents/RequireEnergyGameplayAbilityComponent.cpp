@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/Abilities/AbilityComponents/RequireEnergyGameplayAbilityComponent.h"
 
 #include "AbilitySystemComponent.h"
