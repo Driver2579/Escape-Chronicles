@@ -3,20 +3,67 @@
 #include "Subsystems/SaveGameSubsystem.h"
 
 #include "EngineUtils.h"
-#include "Common/Structs/ActorSaveData.h"
+#include "Common/Structs/SaveData/ActorSaveData.h"
+#include "Common/Structs/SaveData/PlayerSaveData.h"
+#include "GameFramework/PlayerState.h"
 #include "Interfaces/Saveable.h"
 #include "Kismet/GameplayStatics.h"
 #include "Objects/EscapeChroniclesSaveGame.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
-void USaveGameSubsystem::SaveGame(const FString& SlotName)
+USaveGameSubsystem::USaveGameSubsystem()
 {
-	UEscapeChroniclesSaveGame* SaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(
-		UGameplayStatics::CreateSaveGameObject(UEscapeChroniclesSaveGame::StaticClass()));
+	PlayerSpecificClasses = {
+		APawn::StaticClass(),
+		APlayerState::StaticClass(),
+		APlayerController::StaticClass()
+	};
+}
+
+UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked(const FString& SlotName)
+{
+	if (CurrentSaveGameObject)
+	{
+		return CurrentSaveGameObject;
+	}
+
+	CurrentSaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(
+		UGameplayStatics::CreateSaveGameObject(UEscapeChroniclesSaveGame::StaticClass()),
+		ECastCheckedType::NullAllowed);
 
 #if DO_CHECK
-	check(IsValid(SaveGameObject));
+	check(CurrentSaveGameObject);
 #endif
+
+	return CurrentSaveGameObject;
+}
+
+bool USaveGameSubsystem::IsPlayerSpecificActor(const AActor* Actor) const
+{
+#if DO_CHECK
+	check(IsValid(Actor));
+#endif
+
+	for (UClass* PlayerSpecificClass : PlayerSpecificClasses)
+	{
+		if (Actor->IsA(PlayerSpecificClass))
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
+{
+	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked(SlotName);
+
+	// Clear the save game object to avoid saving old data
+	SaveGameObject->ClearStaticSavedActors();
+
+	// Clear the delegate to avoid duplicated binding and calling OnGameSaved on actors that can't be saved anymore
+	OnGameSaved_Internal.Clear();
 
 	for (FActorIterator It(GetWorld()); It; ++It)
 	{
@@ -26,61 +73,156 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName)
 		check(IsValid(Actor));
 #endif
 
-		// Skip actors that don't implement an interface or were dynamically spawned
-		if (!Actor->Implements<USaveable>() || !Actor->HasAnyFlags(RF_WasLoaded))
+		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
+
+		// Skip actors that don't implement an interface and actors that currently can't be saved
+		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
+		{
+			continue;
+		}
+
+		APlayerState* PlayerState = Cast<APlayerState>(Actor);
+
+		// Save the player state separately with the player-specific actors
+		if (PlayerState)
+		{
+			SavePlayerToSaveGameObjectChecked(SaveGameObject, PlayerState);
+
+			continue;
+		}
+
+		// Skip dynamically spawned actors and player-specific actors (player-specific actors are saved separately)
+		if (!Actor->HasAnyFlags(RF_WasLoaded) && !IsPlayerSpecificActor(Actor))
 		{
 			continue;
 		}
 
 		FActorSaveData ActorSaveData;
-
-		// Save actor's transform and all properties marked with "SaveGame"
-		ActorSaveData.ActorSaveData.Transform = Actor->GetTransform();
-		SaveObjectSaveGameFields(Actor, ActorSaveData.ActorSaveData.ByteData);
-
-		for (UActorComponent* Component : Actor->GetComponents())
-		{
-#if DO_CHECK
-			check(IsValid(Component));
-#endif
-
-			// Skip components that don't implement an interface or were dynamically spawned
-			if (!Component->Implements<USaveable>() || !Component->HasAnyFlags(RF_ClassDefaultObject))
-			{
-				continue;
-			}
-
-			FSaveData ComponentSaveData;
-
-			const USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
-
-			// Save component's transform if it's a scene component
-			if (SceneComponent)
-			{
-				ComponentSaveData.Transform = SceneComponent->GetRelativeTransform();
-			}
-
-			// Save component's properties marked with "SaveGame"
-			SaveObjectSaveGameFields(Component, ComponentSaveData.ByteData);
-
-			// Add component's SaveData to the actor's SaveData
-			ActorSaveData.ComponentsSaveData.Add(Component->GetFName(), ComponentSaveData);
-
-			// Subscribe a component to the event to call OnGameSaved on it once the game is saved
-			ISaveable* SaveableComponent = CastChecked<ISaveable>(Component);
-			OnGameSaved_Internal.AddRaw(SaveableComponent, &ISaveable::OnGameSaved);
-		}
+		SaveActorToSaveDataChecked(Actor, ActorSaveData);
 
 		// Add actor's SaveData to the save game object
 		SaveGameObject->AddStaticSavedActor(Actor->GetFName(), ActorSaveData);
-
-		// Subscribe an actor to the event to call OnGameSaved on it once the game is saved
-		ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
-		OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
 	}
 
-	UGameplayStatics::AsyncSaveGameToSlot(SaveGameObject, SlotName, 0,
-		FAsyncSaveGameToSlotDelegate::CreateUObject(this, &USaveGameSubsystem::OnAsyncSavingFinished));
+	if (bAsync)
+	{
+		UGameplayStatics::AsyncSaveGameToSlot(SaveGameObject, SlotName, 0,
+			FAsyncSaveGameToSlotDelegate::CreateUObject(this, &USaveGameSubsystem::OnSavingFinished));
+	}
+	else
+	{
+		const bool bSuccess = UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, 0);
+		OnSavingFinished(SlotName, 0, bSuccess);
+	}
+}
+
+void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
+	APlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
+#endif
+
+	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
+
+	// Skip the player if it doesn't have a valid net ID
+	if (!ensureAlways(PlayerNetID.IsValid()))
+	{
+		return;
+	}
+
+	FPlayerSaveData PlayerSaveData;
+
+	// Save the PlayerState (it's already checked)
+	FActorSaveData PlayerStateSaveData;
+	SaveActorToSaveDataChecked(PlayerState, PlayerStateSaveData);
+	PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerState::StaticClass(), PlayerStateSaveData);
+
+	APawn* Pawn = PlayerState->GetPawn();
+
+	// Save the Pawn if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(Pawn)) && Pawn->Implements<USaveable>())
+	{
+		FActorSaveData PawnSaveData;
+		SaveActorToSaveDataChecked(Pawn, PawnSaveData);
+		PlayerSaveData.PlayerSpecificActorsSaveData.Add(APawn::StaticClass(), PawnSaveData);
+	}
+
+	APlayerController* PlayerController = PlayerState->GetPlayerController();
+
+	// Save the PlayerController if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(PlayerController)) && PlayerController->Implements<USaveable>())
+	{
+		FActorSaveData PlayerControllerSaveData;
+		SaveActorToSaveDataChecked(PlayerController, PlayerControllerSaveData);
+		PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerController::StaticClass(),
+			PlayerControllerSaveData);
+	}
+
+	SaveGameObject->OverridePlayerSaveData(PlayerNetID, PlayerSaveData);
+}
+
+void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveData& OutActorSaveData)
+{
+#if DO_CHECK
+	check(IsValid(Actor));
+	check(Actor->Implements<USaveable>());
+#endif
+
+	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+
+#if DO_ENSURE
+	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
+#endif
+
+	// Let the actor update its properties before saving it
+	SaveableActor->OnPreSaveObject();
+
+	// Save actor's transform and all properties marked with "SaveGame"
+	OutActorSaveData.ActorSaveData.Transform = Actor->GetTransform();
+	SaveObjectSaveGameFields(Actor, OutActorSaveData.ActorSaveData.ByteData);
+
+	for (UActorComponent* Component : Actor->GetComponents())
+	{
+#if DO_CHECK
+		check(IsValid(Component));
+#endif
+
+		// Skip components that don't implement an interface or were dynamically spawned
+		if (!Component->Implements<USaveable>() || Component->HasAnyFlags(RF_ClassDefaultObject))
+		{
+			continue;
+		}
+
+		ISaveable* SaveableComponent = CastChecked<ISaveable>(Component);
+
+		// Let the component update its properties before saving it
+		SaveableComponent->OnPreSaveObject();
+
+		FSaveData ComponentSaveData;
+
+		const USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+
+		// Save component's transform if it's a scene component
+		if (SceneComponent)
+		{
+			ComponentSaveData.Transform = SceneComponent->GetRelativeTransform();
+		}
+
+		// Save component's properties marked with "SaveGame"
+		SaveObjectSaveGameFields(Component, ComponentSaveData.ByteData);
+
+		// Add component's SaveData to the actor's SaveData
+		OutActorSaveData.ComponentsSaveData.Add(Component->GetFName(), ComponentSaveData);
+
+		// Subscribe a component to the event to call OnGameSaved on it once the game is saved
+		OnGameSaved_Internal.AddRaw(SaveableComponent, &ISaveable::OnGameSaved);
+	}
+
+	// Subscribe an actor to the event to call OnGameSaved on it once the game is saved
+	OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
 }
 
 void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData)
@@ -98,7 +240,7 @@ void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>
 	Object->Serialize(Ar);
 }
 
-void USaveGameSubsystem::OnAsyncSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess) const
+void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess) const
 {
 	if (!bSuccess)
 	{
@@ -111,7 +253,7 @@ void USaveGameSubsystem::OnAsyncSavingFinished(const FString& SlotName, int32 Us
 	OnGameSaved.Broadcast();
 }
 
-void USaveGameSubsystem::TryLoadGame(const FString& SlotName) const
+void USaveGameSubsystem::TryLoadGame(const FString& SlotName, const bool bAsync)
 {
 	if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
@@ -120,19 +262,28 @@ void USaveGameSubsystem::TryLoadGame(const FString& SlotName) const
 		return;
 	}
 
-	UGameplayStatics::AsyncLoadGameFromSlot(SlotName, 0, FAsyncLoadGameFromSlotDelegate::CreateUObject(this,
-		&ThisClass::OnAsyncLoadingSaveGameObjectFinished));
+	if (bAsync)
+	{
+		UGameplayStatics::AsyncLoadGameFromSlot(SlotName, 0,
+			FAsyncLoadGameFromSlotDelegate::CreateUObject(this, &ThisClass::OnLoadingSaveGameObjectFinished));
+	}
+	else
+	{
+		USaveGame* SaveGameObject = UGameplayStatics::LoadGameFromSlot(SlotName, 0);
+		OnLoadingSaveGameObjectFinished(SlotName, 0, SaveGameObject);
+	}
 }
 
-void USaveGameSubsystem::OnAsyncLoadingSaveGameObjectFinished(const FString& SlotName, int32 UserIndex,
-	USaveGame* SaveGameObject) const
+void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName, int32 UserIndex,
+	USaveGame* SaveGameObject)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(SaveGameObject->IsA<UEscapeChroniclesSaveGame>());
 #endif
 
-	const UEscapeChroniclesSaveGame* CastedSaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(SaveGameObject);
+	// Override the save game object with a newly loaded one
+	CurrentSaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(SaveGameObject);
 
 	for (FActorIterator It(GetWorld()); It; ++It)
 	{
@@ -142,64 +293,167 @@ void USaveGameSubsystem::OnAsyncLoadingSaveGameObjectFinished(const FString& Slo
 		check(IsValid(Actor));
 #endif
 
-		// Skip actors that don't implement an interface or were dynamically spawned
-		if (!Actor->Implements<USaveable>() || !Actor->HasAnyFlags(RF_WasLoaded))
+		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
+
+		// Skip actors that don't implement an interface and actors that currently can't be loaded
+		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
 		{
 			continue;
 		}
 
-		const FActorSaveData* ActorSaveData = CastedSaveGameObject->FindActorSaveData(Actor->GetFName());
+		APlayerState* PlayerState = Cast<APlayerState>(Actor);
 
-		// Skip actors that don't have any save data
-		if (!ActorSaveData)
+		// Load the player state separately with the player-specific actors
+		if (PlayerState)
+		{
+			LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+
+			continue;
+		}
+
+		// Skip dynamically spawned actors and player-specific actors (player-specific actors are loaded separately)
+		if (!Actor->HasAnyFlags(RF_WasLoaded) && !IsPlayerSpecificActor(Actor))
 		{
 			continue;
 		}
 
-		// Load actor's transform and all properties marked with "SaveGame"
-		Actor->SetActorTransform(ActorSaveData->ActorSaveData.Transform);
-		LoadObjectSaveGameFields(Actor, ActorSaveData->ActorSaveData.ByteData);
+		const FActorSaveData* ActorSaveData = CurrentSaveGameObject->FindStaticActorSaveData(Actor->GetFName());
 
-		for (UActorComponent* Component : Actor->GetComponents())
+		// Load an actor if its save data is valid
+		if (ActorSaveData)
 		{
+			LoadActorFromSaveDataChecked(Actor, *ActorSaveData);
+		}
+	}
+}
+
+void USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+	APlayerState* PlayerState)
+{
 #if DO_CHECK
-			check(IsValid(Component));
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
 #endif
 
-			// Skip components that don't implement an interface or were dynamically spawned
-			if (!Component->Implements<USaveable>() || !Component->HasAnyFlags(RF_ClassDefaultObject))
-			{
-				continue;
-			}
+	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
 
-			const FSaveData* ComponentSaveData = ActorSaveData->ComponentsSaveData.Find(Component->GetFName());
+	// Skip the player if it doesn't have a valid net ID
+	if (!ensureAlways(PlayerNetID.IsValid()))
+	{
+		return;
+	}
 
-			// Skip components that don't have any save data
-			if (!ComponentSaveData)
-			{
-				continue;
-			}
+	const FPlayerSaveData* PlayerSaveData = SaveGameObject->FindPlayerSaveData(PlayerNetID);
 
-			USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+	// Don't load the player if it doesn't have anything to load
+	if (!PlayerSaveData)
+	{
+		return;
+	}
 
-			// Load component's transform if it's a scene component
-			if (SceneComponent)
-			{
-				SceneComponent->SetRelativeTransform(ComponentSaveData->Transform);
-			}
+	const FActorSaveData* PlayerStateSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
+		APlayerState::StaticClass());
 
-			// Load component's properties marked with "SaveGame"
-			LoadObjectSaveGameFields(Component, ComponentSaveData->ByteData);
+	// Load the PlayerState if its save data is valid
+	if (ensureAlways(PlayerStateSaveData))
+	{
+		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
+	}
 
-			// Call OnGameLoaded on the component
-			ISaveable* SaveableComponent = CastChecked<ISaveable>(Component);
-			SaveableComponent->OnGameLoaded();
+	APawn* PlayerPawn = PlayerState->GetPawn();
+
+	// Try to load the Pawn if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(PlayerPawn)) && PlayerPawn->Implements<USaveable>())
+	{
+		const FActorSaveData* PawnSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
+			APawn::StaticClass());
+
+		// Load the Pawn if its save data is valid
+		if (PawnSaveData)
+		{
+			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
+		}
+	}
+
+	APlayerController* PlayerController = PlayerState->GetPlayerController();
+
+	// Try to load the PlayerController if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(PlayerController)) && PlayerController->Implements<USaveable>())
+	{
+		const FActorSaveData* PlayerControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
+			APlayerController::StaticClass());
+
+		// Load the PlayerController if its save data is valid
+		if (PlayerControllerSaveData)
+		{
+			LoadActorFromSaveDataChecked(PlayerController, *PlayerControllerSaveData);
+		}
+	}
+}
+
+void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
+{
+#if DO_CHECK
+	check(IsValid(Actor));
+	check(Actor->Implements<USaveable>());
+#endif
+
+	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+
+#if DO_ENSURE
+	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
+#endif
+
+	// Notify the actor it's about to be loaded
+	SaveableActor->OnPreLoadObject();
+
+	// Load actor's transform and all properties marked with "SaveGame"
+	Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
+	LoadObjectSaveGameFields(Actor, ActorSaveData.ActorSaveData.ByteData);
+
+	for (UActorComponent* Component : Actor->GetComponents())
+	{
+#if DO_CHECK
+		check(IsValid(Component));
+#endif
+
+		// Skip components that don't implement an interface or were dynamically spawned
+		if (!Component->Implements<USaveable>() || Component->HasAnyFlags(RF_ClassDefaultObject))
+		{
+			continue;
 		}
 
-		// Call OnGameLoaded on the actor
-		ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
-		SaveableActor->OnGameLoaded();
+		ISaveable* SaveableComponent = CastChecked<ISaveable>(Component);
+
+		// Notify the component it's about to be loaded
+		SaveableComponent->OnPreLoadObject();
+
+		const FSaveData* ComponentSaveData = ActorSaveData.ComponentsSaveData.Find(Component->GetFName());
+
+		// Skip components that don't have any save data
+		if (!ComponentSaveData)
+		{
+			continue;
+		}
+
+		USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
+
+		// Load component's transform if it's a scene component
+		if (SceneComponent)
+		{
+			SceneComponent->SetRelativeTransform(ComponentSaveData->Transform);
+		}
+
+		// Load component's properties marked with "SaveGame"
+		LoadObjectSaveGameFields(Component, ComponentSaveData->ByteData);
+
+		// Notify the component it's loaded
+		SaveableComponent->OnPostLoadObject();
 	}
+
+	// Notify the actor it's loaded
+	SaveableActor->OnPostLoadObject();
 }
 
 void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<uint8>& InByteData)
@@ -215,4 +469,16 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 
 	// Finally, serialize the object's properties from the archive
 	Object->Serialize(Ar);
+}
+
+void USaveGameSubsystem::TryLoadPlayerFromCurrentSaveGameObject(APlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(PlayerState);
+#endif
+
+	if (ensureAlways(CurrentSaveGameObject))
+	{
+		LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+	}
 }

@@ -11,7 +11,8 @@
 class UAbilitySystemSet;
 
 UCLASS()
-class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface
+class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface,
+	public ISaveable
 {
 	GENERATED_BODY()
 
@@ -33,6 +34,8 @@ public:
 	{
 		return AbilitySystemComponent;
 	}
+
+	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 
 protected:
 	UFUNCTION()

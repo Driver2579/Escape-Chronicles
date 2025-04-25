@@ -4,9 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "Common/Structs/SaveData/PlayerSaveData.h"
 #include "EscapeChroniclesSaveGame.generated.h"
-
-struct FActorSaveData;
 
 /**
  * An object that stores all the data needed to save an actor and its components. Used only internally by the
@@ -18,7 +17,7 @@ class ESCAPECHRONICLES_API UEscapeChroniclesSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
-	const FActorSaveData* FindActorSaveData(const FName& ActorName) const
+	const FActorSaveData* FindStaticActorSaveData(const FName& ActorName) const
 	{
 		return StaticSavedActors.Find(ActorName);
 	}
@@ -29,10 +28,21 @@ public:
 		StaticSavedActors.Add(ActorName, SavedActorData);
 	}
 
-	void ClearSavedActors()
+	void ClearStaticSavedActors()
 	{
 		StaticSavedActors.Empty();
 	}
+
+	const FPlayerSaveData* FindPlayerSaveData(const FUniqueNetIdRepl& PlayerID) const
+	{
+#if DO_CHECK
+		check(PlayerID.IsValid());
+#endif
+
+		return PlayerSpecificSavedActors.Find(PlayerID->ToString());
+	}
+
+	void OverridePlayerSaveData(const FUniqueNetIdRepl& PlayerNetID, const FPlayerSaveData& SavedActorData);
 
 private:
 	/**
@@ -42,4 +52,11 @@ private:
 	 */
 	UPROPERTY()
 	TMap<FName, FActorSaveData> StaticSavedActors;
+
+	/**
+	 * @tparam KeyType Unique ID of the player converted to a string.
+	 * @tparam ValueType Save data for the associated player.
+	 */
+	UPROPERTY()
+	TMap<FString, FPlayerSaveData> PlayerSpecificSavedActors;
 };

@@ -18,6 +18,27 @@ class ISaveable
 	GENERATED_BODY()
 
 public:
+	/**
+	 * Indicates if the object can be saved or loaded now. Can be used to skip saving if the object is not in a valid
+	 * state (for example, when it isn't fully initialized yet).
+	 */
+	virtual bool CanBeSavedOrLoaded() const { return true; }
+
+	/**
+	 * This is called right before saving an object implementing this interface. This is the place where you should
+	 * update all of your properties that are marked with "SaveGame". 
+	 */
+	virtual void OnPreSaveObject() {}
+
+	// This is called right after the game is saved
 	virtual void OnGameSaved() {}
-	virtual void OnGameLoaded() = 0;
+
+	// This is called right before loading an object implementing this interface
+	virtual void OnPreLoadObject() {}
+
+	/**
+	 * This is called right after loading an object implementing this interface. This is the place where you should read
+	 * all of your properties that are marked with "SaveGame".
+	 */
+	virtual void OnPostLoadObject() {}
 };

@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
+#include "Interfaces/Saveable.h"
+#include "Common/Structs/SaveData/AttributeSetSaveData.h"
 #include "EscapeChroniclesAbilitySystemComponent.generated.h"
 
 struct FInputActionValue;
 
 UCLASS()
-class ESCAPECHRONICLES_API UEscapeChroniclesAbilitySystemComponent : public UAbilitySystemComponent
+class ESCAPECHRONICLES_API UEscapeChroniclesAbilitySystemComponent : public UAbilitySystemComponent, public ISaveable
 {
 	GENERATED_BODY()
 
@@ -56,6 +58,10 @@ public:
 		BlockedAttributesByTags.Remove(RequiredTagToBlockAttribute, AttributeToBlock);
 	}
 
+protected:
+	virtual void OnPreSaveObject() override;
+	virtual void OnPostLoadObject() override;
+
 private:
 	/**
 	 * Cached associations between input tags and abilities.
@@ -72,4 +78,8 @@ private:
 	 * tag.
 	 */
 	TMultiMap<FGameplayTag, FGameplayAttribute> BlockedAttributesByTags;
+
+	// Map of attribute sets that are saved in the save game object
+	UPROPERTY(SaveGame)
+	TMap<TSoftClassPtr<UAttributeSet>, FAttributeSetSaveData> SavedAttributeSets;
 };
