@@ -1,19 +1,21 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
 
 #include "AbilitySystemComponent.h"
-#include "Engine/LocalPlayer.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "Camera/CameraComponent.h"
+#include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "GameFramework/Controller.h"
 #include "Components/ArrowComponent.h"
-#include "DefaultMovementSet/CharacterMoverComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
+#include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
+	: DesiredGroundSpeedModeOverride(EGroundSpeedMode::None)
 {
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("Capsule Component");
 	RootComponent = CapsuleComponent;
@@ -79,7 +81,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	CharacterMoverComponent = CreateDefaultSubobject<UCharacterMoverComponent>(TEXT("Mover Component"));
+	CharacterMoverComponent = CreateDefaultSubobject<UEscapeChroniclesCharacterMoverComponent>(TEXT("Mover Component"));
 
 	if (USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent())
 	{
@@ -88,6 +90,23 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	// Disable Actor-level movement replication, since our Mover component will handle it
 	SetReplicatingMovement(false);
+}
+
+UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
+{
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ? EscapeChroniclesPlayerState->GetAbilitySystemComponent() : nullptr;
+}
+
+UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
+{
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	return IsValid(EscapeChroniclesPlayerState) ?
+		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
 }
 
 void AEscapeChroniclesCharacter::PostLoad()
@@ -105,8 +124,15 @@ void AEscapeChroniclesCharacter::PostLoad()
 void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
+
+	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
+
+	CharacterMoverComponent->OnMovementModeChanged.AddDynamic(this, &ThisClass::OnMovementModeChanged);
+	CharacterMoverComponent->OnStanceChanged.AddDynamic(this, &ThisClass::OnStanceChanged);
+	CharacterMoverComponent->OnGroundSpeedModeChanged.AddUObject(this, &ThisClass::OnGroundSpeedModeChanged);
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
@@ -115,16 +141,21 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	// InitAbilityActorInfo on server and client
-	if (IsValid(AbilitySystemComponent))
+	if (!IsValid(AbilitySystemComponent))
 	{
-		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+		return;
 	}
+
+	// InitAbilityActorInfo on server and client
+	AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+
+	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
+	SyncCharacterMoverComponentTagsWithAbilitySystem();
 }
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
 {
-	// The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method
+	// === The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method ===
 
 	FVector AgentLocation = FNavigationSystem::InvalidLocation;
 
@@ -147,7 +178,7 @@ FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
 
 void AEscapeChroniclesCharacter::UpdateNavigationRelevance()
 {
-	// The code below was copied from the MoverExamplesCharacter::UpdateNavigationRelevance method
+	// === The code below was copied from the MoverExamplesCharacter::UpdateNavigationRelevance method ===
 
 	if (CharacterMoverComponent)
 	{
@@ -175,7 +206,7 @@ FVector AEscapeChroniclesCharacter::ConsumeMovementInputVector()
 void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	FMoverInputCmdContext& InputCmdResult)
 {
-	// The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications
+	// === The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications ===
 
 	FCharacterDefaultInputs& CharacterInputs = InputCmdResult.InputCollection.FindOrAddMutableDataByType<
 		FCharacterDefaultInputs>();
@@ -257,7 +288,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		CachedMoveInputVelocity = FVector::ZeroVector;
 	}
 
-	constexpr float RotationMagMin(1e-3);
+	static float RotationMagMin(1e-3);
 
 	const bool bHasAffirmativeMoveInput = CharacterInputs.GetMoveInput().Size() >= RotationMagMin;
 
@@ -299,7 +330,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	// Convert inputs to be relative to the current movement base (depending on options and state)
 	CharacterInputs.bUsingMovementBase = false;
 
-	if (bUseBaseRelativeMovement && CharacterMoverComponent)
+	if (bUseBaseRelativeMovement)
 	{
 		if (UPrimitiveComponent* MovementBase = CharacterMoverComponent->GetMovementBase())
 		{
@@ -328,6 +359,44 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 	 * simulation frames.
 	 */
 	bIsJumpJustPressed = false;
+
+	// === The code below is completely custom and wasn't copied from anywhere ===
+
+	FEscapeChroniclesCharacterExtendedDefaultInputs& ExtendedCharacterInputs =
+		InputCmdResult.InputCollection.FindOrAddMutableDataByType<FEscapeChroniclesCharacterExtendedDefaultInputs>();
+
+	ExtendedCharacterInputs.bWantsToBeCrouched = bWantsToBeCrouched;
+	ExtendedCharacterInputs.DesiredGroundSpeedModeOverride = DesiredGroundSpeedModeOverride;
+}
+
+void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
+	const FMoverInputCmdContext& InputCmd)
+{
+	const FEscapeChroniclesCharacterExtendedDefaultInputs* ExtendedCharacterInputs =
+		InputCmd.InputCollection.FindDataByType<FEscapeChroniclesCharacterExtendedDefaultInputs>();
+
+	if (!ExtendedCharacterInputs)
+	{
+		return;
+	}
+
+	if (ExtendedCharacterInputs->bWantsToBeCrouched)
+	{
+		CharacterMoverComponent->Crouch();
+	}
+	else
+	{
+		CharacterMoverComponent->UnCrouch();
+	}
+
+	if (ExtendedCharacterInputs->DesiredGroundSpeedModeOverride != EGroundSpeedMode::None)
+	{
+		CharacterMoverComponent->SetGroundSpeedMode(ExtendedCharacterInputs->DesiredGroundSpeedModeOverride);
+	}
+	else
+	{
+		CharacterMoverComponent->ResetGroundSpeedMode();
+	}
 }
 
 void AEscapeChroniclesCharacter::Look(const FVector2D& LookAxisVector)
@@ -355,7 +424,7 @@ void AEscapeChroniclesCharacter::StopMoving()
 
 void AEscapeChroniclesCharacter::Jump()
 {
-	// The code below was copied from the MoverExamplesCharacter::OnJumpStarted method
+	// === The code below was copied from the MoverExamplesCharacter::OnJumpStarted method ===
 
 	bIsJumpJustPressed = !bIsJumpPressed;
 	bIsJumpPressed = true;
@@ -363,25 +432,250 @@ void AEscapeChroniclesCharacter::Jump()
 
 void AEscapeChroniclesCharacter::StopJumping()
 {
-	// The code below was copied from the MoverExamplesCharacter::OnJumpReleased method
+	// === The code below was copied from the MoverExamplesCharacter::OnJumpReleased method ===
 
 	bIsJumpPressed = false;
 	bIsJumpJustPressed = false;
 }
 
-UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
+void AEscapeChroniclesCharacter::Crouch()
 {
-	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
-		GetPlayerState(), ECastCheckedType::NullAllowed);
-
-	return IsValid(EscapeChroniclesPlayerState) ? EscapeChroniclesPlayerState->GetAbilitySystemComponent() : nullptr;
+	bWantsToBeCrouched = true;
 }
 
-UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeChroniclesAbilitySystemComponent() const
+void AEscapeChroniclesCharacter::UnCrouch()
 {
-	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
-		GetPlayerState(), ECastCheckedType::NullAllowed);
+	bWantsToBeCrouched = false;
+}
 
-	return IsValid(EscapeChroniclesPlayerState) ?
-		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
+void AEscapeChroniclesCharacter::OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride)
+{
+#if DO_ENSURE
+	ensureAlwaysMsgf(GroundSpeedModeOverride < EGroundSpeedMode::NumberOfModes,
+		TEXT("Invalid GroundSpeedModeOverride was passed!"));
+#endif
+
+	DesiredGroundSpeedModeOverride = GroundSpeedModeOverride;
+}
+
+void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset)
+{
+	// Don't reset the override if the one we want to reset isn't the one that is currently set
+	if (GroundSpeedModeOverrideToReset == DesiredGroundSpeedModeOverride)
+	{
+		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
+	}
+}
+
+void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
+	const FName& NewMovementModeName)
+{
+	/**
+	 * Even though the movement mode is changed, we need to wait for the next tick because gameplay tags in the
+	 * CharacterMoverComponent are updated only in the next tick.
+	 */
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,
+		&ThisClass::SyncMovementModesTagsWithAbilitySystem));
+}
+
+void AEscapeChroniclesCharacter::OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance)
+{
+	SyncStancesTagsWithAbilitySystem(OldStance, NewStance);
+}
+
+void AEscapeChroniclesCharacter::OnGroundSpeedModeChanged(const EGroundSpeedMode OldGroundSpeedMode,
+	const EGroundSpeedMode NewGroundSpeedMode)
+{
+	SyncGroundSpeedModeTagsWithAbilitySystem(OldGroundSpeedMode, NewGroundSpeedMode);
+}
+
+void AEscapeChroniclesCharacter::SyncCharacterMoverComponentTagsWithAbilitySystem() const
+{
+	SyncMovementModesTagsWithAbilitySystem();
+	SyncStancesTagsWithAbilitySystem();
+	SyncGroundSpeedModeTagsWithAbilitySystem();
+}
+
+void AEscapeChroniclesCharacter::SyncMovementModesTagsWithAbilitySystem() const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsFalling())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Falling,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Falling,
+			0);
+	}
+
+	if (CharacterMoverComponent->IsAirborne())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_InAir,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_InAir,
+			0);
+	}
+
+	if (CharacterMoverComponent->HasGameplayTag(Mover_IsNavWalking, true))
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_NavWalking,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_NavWalking,
+			0);
+	}
+
+	if (CharacterMoverComponent->IsOnGround())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_OnGround,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_OnGround,
+			0);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem() const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsCrouching())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			0);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (CharacterMoverComponent->IsWalkGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			0);
+	}
+
+	if (CharacterMoverComponent->IsJogGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			0);
+	}
+
+	if (CharacterMoverComponent->IsRunGroundSpeedModeActive())
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			1);
+	}
+	else
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			0);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
+	const EStanceMode NewStance) const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (OldStance == EStanceMode::Crouch)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			0);
+	}
+
+	if (NewStance == EStanceMode::Crouch)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Crouching,
+			1);
+	}
+}
+
+void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
+	const EGroundSpeedMode NewGroundSpeedMode) const
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	if (OldGroundSpeedMode == EGroundSpeedMode::Walking)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			0);
+	}
+	else if (OldGroundSpeedMode == EGroundSpeedMode::Jogging)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			0);
+	}
+	else if (OldGroundSpeedMode == EGroundSpeedMode::Running)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			0);
+	}
+
+	if (NewGroundSpeedMode == EGroundSpeedMode::Walking)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Walking,
+			1);
+	}
+	else if (NewGroundSpeedMode == EGroundSpeedMode::Jogging)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Jogging,
+			1);
+	}
+	else if (NewGroundSpeedMode == EGroundSpeedMode::Running)
+	{
+		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Running,
+			1);
+	}
 }
