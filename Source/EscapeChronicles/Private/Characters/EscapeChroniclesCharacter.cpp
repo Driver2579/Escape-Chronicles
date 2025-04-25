@@ -390,16 +390,8 @@ void AEscapeChroniclesCharacter::OnMoverPostMovement(const FMoverTimeStep& TimeS
 #endif
 
 	// Check if the character is moving or not (velocity isn't zero)
-	if (!DefaultSyncState->GetVelocity_BaseSpace().IsNearlyZero())
-	{
-		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Moving,
-			1);
-	}
-	else
-	{
-		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Moving,
-			0);
-	}
+	AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Moving,
+		!DefaultSyncState->GetVelocity_BaseSpace().IsNearlyZero() ? 1 : 0);
 }
 
 void AEscapeChroniclesCharacter::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
