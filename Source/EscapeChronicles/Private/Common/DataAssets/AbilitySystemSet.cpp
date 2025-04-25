@@ -21,6 +21,7 @@ void UAbilitySystemSet::GiveToAbilitySystem(UEscapeChroniclesAbilitySystemCompon
 	GiveAttributesToAbilitySystem_Internal(AbilitySystemComponent);
 	GiveAbilitiesToAbilitySystem_Internal(AbilitySystemComponent, SourceObject);
 	GiveEffectsToAbilitySystem_Internal(AbilitySystemComponent);
+	ApplyBlockingAttributesByTags_Internal(AbilitySystemComponent);
 }
 
 void UAbilitySystemSet::TakeFromAbilitySystem(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
@@ -35,6 +36,7 @@ void UAbilitySystemSet::TakeFromAbilitySystem(UEscapeChroniclesAbilitySystemComp
 		return;
 	}
 
+	RemoveBlockingAttributesByTags_Internal(AbilitySystemComponent);
 	TakeEffectsFromAbilitySystem_Internal(AbilitySystemComponent);
 	TakeAbilitiesFromAbilitySystem_Internal(AbilitySystemComponent);
 	TakeAttributesFromAbilitySystem_Internal(AbilitySystemComponent);
@@ -139,13 +141,24 @@ void UAbilitySystemSet::GiveAbilitiesToAbilitySystem_Internal(
 			continue;
 		}
 
-		UGameplayAbility* AbilityCDO = AbilityToGrant.Ability.GetDefaultObject();
-
-		FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
+		FGameplayAbilitySpec AbilitySpec(AbilityToGrant.Ability, AbilityToGrant.AbilityLevel);
 		AbilitySpec.SourceObject = SourceObject;
-		AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
 
-		GrantedGameplayAbilities.Add(AbilitySystemComponent->GiveAbility(AbilitySpec));
+		const bool bInputTagValid = AbilityToGrant.InputTag.IsValid();
+
+		// Add input tag and input ID only if the input tag is valid
+		if (bInputTagValid)
+		{
+			AbilitySpec.GetDynamicSpecSourceTags().AddTag(AbilityToGrant.InputTag);
+			AbilitySpec.InputID = AbilitySystemComponent->GenerateInputId();
+		}
+
+		FGameplayAbilitySpecHandle AbilitySpecHandle = AbilitySystemComponent->GiveAbility(AbilitySpec);
+
+		if (ensureAlways(AbilitySpecHandle.IsValid()))
+		{
+			GrantedGameplayAbilities.Add(AbilitySpecHandle);
+		}
 	}
 }
 
@@ -213,8 +226,13 @@ void UAbilitySystemSet::GiveEffectsToAbilitySystem_Internal(
 
 		const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect.GetDefaultObject();
 
-		AbilitySystemComponent->ApplyGameplayEffectToSelf(GameplayEffect, EffectToGrant.EffectLevel,
-			AbilitySystemComponent->MakeEffectContext());
+		FActiveGameplayEffectHandle EffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(GameplayEffect,
+			EffectToGrant.EffectLevel, AbilitySystemComponent->MakeEffectContext());
+
+		if (EffectHandle.IsValid())
+		{
+			GrantedGameplayEffects.Add(EffectHandle);
+		}
 	}
 }
 
@@ -250,4 +268,78 @@ void UAbilitySystemSet::TakeEffectsFromAbilitySystem_Internal(
 	}
 
 	GrantedGameplayEffects.Empty();
+}
+
+void UAbilitySystemSet::ApplyBlockingAttributesByTags(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to apply or remove blocking attributes by tags
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		ApplyBlockingAttributesByTags_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::ApplyBlockingAttributesByTags_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (const auto& BlockedAttributesPair : AttributesToBlockByTags)
+	{
+		if (!ensureAlways(BlockedAttributesPair.Key.IsValid()))
+		{
+			continue;
+		}
+
+		for (const FGameplayAttribute& BlockedAttribute : BlockedAttributesPair.Value.Attributes)
+		{
+			if (ensureAlways(BlockedAttribute.IsValid()))
+			{
+				AbilitySystemComponent->ApplyBlockingAttributeWhenHasTag(BlockedAttributesPair.Key, BlockedAttribute);
+			}
+		}
+	}
+}
+
+void UAbilitySystemSet::RemoveBlockingAttributesByTags(UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Must be authoritative to apply or remove blocking attributes by tags
+	if (AbilitySystemComponent->IsOwnerActorAuthoritative())
+	{
+		RemoveBlockingAttributesByTags_Internal(AbilitySystemComponent);
+	}
+}
+
+void UAbilitySystemSet::RemoveBlockingAttributesByTags_Internal(
+	UEscapeChroniclesAbilitySystemComponent* AbilitySystemComponent)
+{
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	for (const auto& BlockedAttributesPair : AttributesToBlockByTags)
+	{
+		if (!ensureAlways(BlockedAttributesPair.Key.IsValid()))
+		{
+			continue;
+		}
+
+		for (const FGameplayAttribute& BlockedAttribute : BlockedAttributesPair.Value.Attributes)
+		{
+			if (ensureAlways(BlockedAttribute.IsValid()))
+			{
+				AbilitySystemComponent->RemoveBlockingAttributeWhenHasTag(BlockedAttributesPair.Key, BlockedAttribute);
+			}
+		}
+	}
 }
