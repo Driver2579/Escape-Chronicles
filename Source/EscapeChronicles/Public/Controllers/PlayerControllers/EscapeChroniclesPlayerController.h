@@ -25,14 +25,14 @@ public:
 
 	AEscapeChroniclesCharacter* GetEscapeChroniclesCharacter() const;
 
+	virtual void InitPlayerState() override;
+	virtual void OnRep_PlayerState() override;
+
 	// Adds all input mapping contexts and binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
 
 protected:
 	virtual void SetupInputComponent() override;
-
-	virtual void InitPlayerState() override;
-	virtual void OnRep_PlayerState() override;
 
 	/**
 	 * Binds all input configs set up in the InputConfigs array.
@@ -41,6 +41,9 @@ protected:
 	virtual void BindInputConfigs();
 
 private:
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<class AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+
 	bool bBindInputConfigsOnPlayerStateInitialized = false;
 
 	// Input configs to bind at the start of the game
