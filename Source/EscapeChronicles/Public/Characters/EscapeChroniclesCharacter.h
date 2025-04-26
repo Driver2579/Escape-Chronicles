@@ -8,6 +8,8 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UBoxComponent;
+class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
@@ -42,6 +44,9 @@ public:
 	// Returns FollowCameraComponent subobject
 	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
 
+	// Returns InteractionManagerComponent subobject
+	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
+	
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -168,6 +173,12 @@ private:
 	TObjectPtr<UArrowComponent> ArrowComponent;
 #endif
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<class UInteractionManagerComponent> InteractionManagerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> InteractionZone;
+	
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoomComponent;
@@ -177,7 +188,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UEscapeChroniclesCharacterMoverComponent> CharacterMoverComponent;
-
+	
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;

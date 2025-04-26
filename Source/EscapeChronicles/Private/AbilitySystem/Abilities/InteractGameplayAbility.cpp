@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Abilities/InteractGameplayAbility.h"
 
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 
 UInteractGameplayAbility::UInteractGameplayAbility()
@@ -23,16 +24,18 @@ void UInteractGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	UInteractionManagerComponent* InteractionManagerComponent = ActorInfo->AvatarActor
-		->FindComponentByClass<UInteractionManagerComponent>();
-	if (!IsValid(InteractionManagerComponent))
+	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(ActorInfo->AvatarActor);
+
+	if (!IsValid(Character))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
 		return;
 	}
+	
+	UInteractionManagerComponent* InteractionManagerComponent = Character->GetInteractionManagerComponent();
 
-	const bool IsInteractionCorrect = InteractionManagerComponent->Interact();
+	const bool IsInteractionCorrect = InteractionManagerComponent->TryInteract();
 
 	if (!IsInteractionCorrect)
 	{

@@ -8,21 +8,17 @@ public class InteractionSystem : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(
-			new string[]
+		PublicDependencyModuleNames.AddRange(new string[]
 			{
 				"Core",
 				"NetCore",
 				"UMG"
-			}
-			);
+			});
 		
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
+		PrivateDependencyModuleNames.AddRange(new string[]
 			{
 				"CoreUObject",
 				"Engine",
-			}
-			);
+			});
 	}
 }
