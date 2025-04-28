@@ -12,8 +12,6 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
 	AbilitySystemComponent = CreateDefaultSubobject<UEscapeChroniclesAbilitySystemComponent>(
 		TEXT("AbilitySystemComponent"));
-
-	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("InventoryManagerComponent"));
 	
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);

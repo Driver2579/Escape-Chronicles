@@ -83,7 +83,7 @@ struct FLocalData : public FFastArraySerializer
 		
 		if (Data == nullptr)
 		{
-			const size_t Index = Array.Add(InData);
+			const int32 Index = Array.Add(InData);
 			MarkItemDirty(Array[Index]);
 		}
 		else if (Data->Value != InData.Value)
@@ -101,7 +101,7 @@ struct FLocalData : public FFastArraySerializer
 
 	void RemoveData(const FGameplayTag InName)
 	{
-		const size_t Index = Array.IndexOfByKey(InName);
+		const int32 Index = Array.IndexOfByKey(InName);
 
 		if (Index == INDEX_NONE)
 		{

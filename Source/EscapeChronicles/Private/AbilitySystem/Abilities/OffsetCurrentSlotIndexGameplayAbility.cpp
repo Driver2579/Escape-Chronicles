@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "AbilitySystem/Abilities/SelectNextItemGameplayAbility.h"
+#include "AbilitySystem/Abilities/OffsetCurrentSlotIndexGameplayAbility.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
@@ -10,12 +10,12 @@
 
 class UInventoryManagerSelectorFragment;
 
-USelectNextItemGameplayAbility::USelectNextItemGameplayAbility()
+UOffsetCurrentSlotIndexGameplayAbility::UOffsetCurrentSlotIndexGameplayAbility()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly;
 }
 
-void USelectNextItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
+void UOffsetCurrentSlotIndexGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
@@ -37,16 +37,7 @@ void USelectNextItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	const AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-	if (!IsValid(PlayerState))
-	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
-
-		return;
-	}
-
-	const UInventoryManagerComponent* InventoryManagerComponent = PlayerState->GetInventoryManagerComponent();
+	const UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 	
 	if (!IsValid(InventoryManagerComponent))
 	{
@@ -65,7 +56,7 @@ void USelectNextItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	InventoryManagerSelectorFragment->SelectNextItem();
+	InventoryManagerSelectorFragment->Server_OffsetCurrentSlotIndex(Offset);
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

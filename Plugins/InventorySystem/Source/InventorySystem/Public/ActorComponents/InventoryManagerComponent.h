@@ -19,26 +19,21 @@ class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
 public:
 	UInventoryManagerComponent();
 	
-	const FInventorySlotsTypedArrayContainer& GetTypedInventorySlotsLists()
-	{
-		return TypedInventorySlotsLists;
-	}
-
-	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
-		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
+	const FInventorySlotsTypedArrayContainer& GetTypedInventorySlotsLists() { return TypedInventorySlotsLists; }
 	
 	template<typename T>
 	T* GetFragmentByClass() const;
-	
-	void AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback);
 
+	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
+	const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
+	
 	/**
 	 * Add item DUPLICATE to inventory
-	 * @param Item The item being copied;
+	 * @param ItemInstance The item being copied
 	 * @param SlotIndex Index of the slot (if -1 searches for an empty slot)
 	 * @param SlotsType Slot type tag
 	 */
-	bool AddItem(const UInventoryItemInstance* Item, int32 SlotIndex = -1,
+	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = -1,
 		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
 	/**
@@ -48,13 +43,15 @@ public:
 	 */
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+
+	void AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback);
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void ReadyForReplication() override;
-
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Do an action on each item in the inventory
 	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
@@ -64,9 +61,6 @@ protected:
 private:
 	// Called when the contents of inventory slot change
 	FOnInventoryContentChanged OnInventoryContentChanged;
-
-	UPROPERTY(EditDefaultsOnly, Instanced)
-	TArray<UInventoryManagerFragment*> Fragments;
 	
 	/**
 	* Settings for the number of slots in different types of inventory slots
@@ -75,7 +69,10 @@ private:
 	* @tparam int32 Number of slots;
 	*/
 	UPROPERTY(EditDefaultsOnly)
-	TMap<FGameplayTag, int32> SlotTypesAndNumber;
+	TMap<FGameplayTag, int32> SlotsNumberByTypes;
+
+	UPROPERTY(EditDefaultsOnly, Instanced, Replicated)
+	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
 	
 	UPROPERTY(ReplicatedUsing=OnRep_TypedInventorySlotsLists)
 	FInventorySlotsTypedArrayContainer TypedInventorySlotsLists;
@@ -86,7 +83,6 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContentWhenChanges = false;
 };
-
 
 template<typename T>
 T* UInventoryManagerComponent::GetFragmentByClass() const

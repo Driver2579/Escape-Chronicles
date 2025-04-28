@@ -44,18 +44,23 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 		return Arrays;
 	}
 
-	const FInventorySlotsTypedArray& operator[](const size_t Index) const
+	const FInventorySlotsTypedArray& operator[](const int32 Index) const
 	{
 		return Arrays[Index];
 	}
-	
-	void SetInstance(UInventoryItemInstance* Instance, const size_t ArrayIndex, const size_t SlotIndex)
+
+	UInventoryItemInstance* GetInstance(const int32 ArrayIndex, const int32 SlotIndex) const
+	{
+		return Arrays[ArrayIndex].Array.GetInstance(SlotIndex);
+	}
+
+	void SetInstance(UInventoryItemInstance* Instance, const int32 ArrayIndex, const int32 SlotIndex)
 	{
 		Arrays[ArrayIndex].Array.SetInstance(Instance, SlotIndex);
 		MarkItemDirty(Arrays[ArrayIndex]);
 	}
 
-	size_t IndexOfByTag(const FGameplayTag Type) const
+	int32 IndexOfByTag(const FGameplayTag Type) const
 	{
 		return Arrays.IndexOfByPredicate(
 			[Type](const FInventorySlotsTypedArray& List)

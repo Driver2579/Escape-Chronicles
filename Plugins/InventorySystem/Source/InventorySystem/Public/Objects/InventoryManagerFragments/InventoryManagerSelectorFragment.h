@@ -8,6 +8,7 @@
 #include "InventoryManagerSelectorFragment.generated.h"
 
 class AInventoryPickupItem;
+
 // Adds selector for a single typed array
 UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerSelectorFragment : public UInventoryManagerFragment
@@ -17,33 +18,28 @@ class INVENTORYSYSTEM_API UInventoryManagerSelectorFragment : public UInventoryM
 public:
 	virtual void OnManagerInitialized(UInventoryManagerComponent* Inventory) override;
 	
-	// 
-	void SelectNextItem();
+	FGameplayTag GetSelectableSlotsType() const { return SelectableSlotsType; }
+	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
 
-	// 
-	void SelectPrevItem();
-
-	//
-	void DropSelectedItem(const FVector ThrowingDirection);
-	
+	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
-private:
 	UFUNCTION(Server, Reliable)
 	void Server_OffsetCurrentSlotIndex(const int32 Offset);
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_DropItem(const int32 Offset, const FVector ThrowingDirection);
+protected:
+	void LogCurrentSlotIndex() const;
 	
+private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag SelectableSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType;
 
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<AInventoryPickupItem> DropItemActorClass;
-	
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing="OnRep_SelectedSlotIndex")
 	int32 CurrentSlotIndex;
 
+	UFUNCTION()
+	void OnRep_SelectedSlotIndex();
+	
 	UPROPERTY(EditDefaultsOnly)
-	int32 MaxTrowingPower;
+	bool bLogCurrentSlotIndex = false;
 };

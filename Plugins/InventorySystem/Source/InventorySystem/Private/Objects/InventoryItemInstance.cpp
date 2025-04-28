@@ -25,7 +25,7 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (IsValid(DefinitionDefaultObject))
+	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
 	{
 		return;
 	}

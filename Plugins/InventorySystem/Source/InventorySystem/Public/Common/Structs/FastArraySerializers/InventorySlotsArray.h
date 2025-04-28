@@ -27,20 +27,25 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		return Slots;
 	}
 	
-	const FInventorySlot& operator[](const size_t Index) const
+	const FInventorySlot& operator[](const int32 Index) const
 	{
 		return Slots[Index];
 	}
+
+	UInventoryItemInstance* GetInstance(const int32 Index) const
+	{
+		return Slots[Index].Instance;
+	}
 	
-	void SetInstance(UInventoryItemInstance* Instance, const size_t Index)
+	void SetInstance(UInventoryItemInstance* Instance, const int32 Index)
 	{
 		Slots[Index].Instance = Instance;
 		MarkItemDirty(Slots[Index]);
 	}
 
-	size_t GetEmptySlotIndex() const
+	int32 GetEmptySlotIndex() const
 	{
-		for (size_t i = 0; i < Slots.Num(); ++i)
+		for (int32 i = 0; i < Slots.Num(); ++i)
 		{
 			if (IsEmptySlot(i))
 			{
@@ -51,12 +56,12 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		return -1;
 	}
 
-	bool IsValidSlotIndex(const size_t Index) const
+	bool IsValidSlotIndex(const int32 Index) const
 	{
 		return Index >= 0 && Index <= Slots.Num() - 1;
 	}
 	
-	bool IsEmptySlot(const size_t Index) const
+	bool IsEmptySlot(const int32 Index) const
 	{
 		return !IsValid(Slots[Index].Instance);
 	}

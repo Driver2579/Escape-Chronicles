@@ -4,9 +4,9 @@
 #include "Actors/EscapeChroniclesInventoryPickupItem.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
-#include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()
 {
@@ -31,21 +31,15 @@ void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerCo
 		return;
 	}
 	
-	const APawn* Pawn = Cast<APawn>(InteractionManagerComponent->GetOwner());
+	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
+		InteractionManagerComponent->GetOwner());
 
-	if (!ensureAlways(IsValid(Pawn)))
-	{
-		return;
-	}
-
-	const AEscapeChroniclesPlayerState* PlayerState = Pawn->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-	if (!ensureAlways(IsValid(PlayerState)))
+	if (!ensureAlways(IsValid(Character)))
 	{
 		return;
 	}
 	
-	UInventoryManagerComponent* InventoryManagerComponent =  PlayerState->GetInventoryManagerComponent();
+	UInventoryManagerComponent* InventoryManagerComponent =  Character->GetInventoryManagerComponent();
 
 	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{

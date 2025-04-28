@@ -33,36 +33,28 @@ public:
 		}
 	}
 	
-	UStaticMeshComponent* GetStaticMeshComponent() const
-	{
-		return StaticMeshComponent;
-	}
+	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
 		override;
 	
 protected:
-	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
-
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void BeginPlay() override;
 	
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
-	
-private:
+
 	/**
 	 * Applies a change to this actor based on the current Instance
 	 * @return True if all settings are applied correctly
 	 */
-	bool ApplyChangesFromItemInstance() const;
+	virtual bool ApplyChangesFromItemInstance() const;
 
-	// Set the same mesh as default object
-	void SetDefaultSettings() const;
-
-	UPROPERTY()
-	bool bItemInstanceIsValid;
+	// Set the settings  mesh as default object
+	virtual void SetDefaultSettings() const;
 	
+private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 	
@@ -71,4 +63,7 @@ private:
 
 	UFUNCTION()
 	void OnRep_ItemInstance();
+
+	UPROPERTY()
+	bool bItemInstanceIsValid;
 };

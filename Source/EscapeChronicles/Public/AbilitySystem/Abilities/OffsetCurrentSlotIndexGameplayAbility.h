@@ -4,20 +4,24 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
-#include "DropItemGameplayAbility.generated.h"
+#include "OffsetCurrentSlotIndexGameplayAbility.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ESCAPECHRONICLES_API UDropItemGameplayAbility : public UEscapeChroniclesGameplayAbility
+class ESCAPECHRONICLES_API UOffsetCurrentSlotIndexGameplayAbility : public UEscapeChroniclesGameplayAbility
 {
 	GENERATED_BODY()
 	
 public:
-	UDropItemGameplayAbility();
+	UOffsetCurrentSlotIndexGameplayAbility();
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+private:
+	UPROPERTY(EditDefaultsOnly)
+	int32 Offset = 0;
 };

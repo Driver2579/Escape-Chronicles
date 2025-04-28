@@ -28,38 +28,6 @@ public:
 	}
 
 	virtual bool IsSupportedForNetworking() const override { return true; }
-	
-	virtual int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override
-	{
-#if DO_CHECK
-		check(IsValid(GetOuter()))
-#endif
-
-		return GetOuter()->GetFunctionCallspace(Function, Stack);
-	}
-
-	virtual bool CallRemoteFunction(UFunction* Function, void* Params, FOutParmRec* OutParams, FFrame* Stack) override
-	{
-#if DO_CHECK
-		check(!HasAnyFlags(RF_ClassDefaultObject));
-#endif
-
-		AActor* OwningActor = GetTypedOuter<AActor>();
-
-#if DO_CHECK
-		checkf(IsValid(OwningActor),
-		  TEXT("Replicated object %s was created with different outer than actor or component!"), *GetName());
-#endif
-
-		UNetDriver* NetDriver = OwningActor->GetNetDriver();
-
-		if (IsValid(NetDriver) )
-		{
-			NetDriver->ProcessRemoteFunction(OwningActor, Function, Params, OutParams, Stack, this);
-
-			return true;
-		}
-
-		return false;
-	}
+	virtual int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override;
+	virtual bool CallRemoteFunction(UFunction* Function, void* Params, FOutParmRec* OutParams, FFrame* Stack) override;
 };

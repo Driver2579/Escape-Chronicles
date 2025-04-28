@@ -5,6 +5,7 @@
 
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerDropItemsFragment.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
@@ -36,17 +37,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	
-	const AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-	if (!IsValid(PlayerState))
-	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
-
-		return;
-	}
-
-	const UInventoryManagerComponent* InventoryManagerComponent = PlayerState->GetInventoryManagerComponent();
+	const UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 	
 	if (!IsValid(InventoryManagerComponent))
 	{
@@ -55,7 +46,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment = 
+	const UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment = 
 		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
 
 	if (!IsValid(InventoryManagerSelectorFragment))
@@ -65,7 +56,18 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	InventoryManagerSelectorFragment->DropSelectedItem(TrowingDirection);
+	UInventoryManagerDropItemsFragment* InventoryManagerDropItemsFragment = 
+	InventoryManagerComponent->GetFragmentByClass<UInventoryManagerDropItemsFragment>();
+
+	if (!IsValid(InventoryManagerDropItemsFragment))
+	{
+		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+
+		return;
+	}
+
+	InventoryManagerDropItemsFragment->Server_DropItem(InventoryManagerSelectorFragment->GetCurrentSlotIndex(),
+		InventoryManagerSelectorFragment->GetSelectableSlotsType());
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

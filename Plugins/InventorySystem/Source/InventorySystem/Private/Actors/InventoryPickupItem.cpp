@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Actors/InventoryPickupItem.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
@@ -11,36 +10,13 @@
 // Sets default values
 AInventoryPickupItem::AInventoryPickupItem()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
+	
 	bReplicates = true;
 	
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SetRootComponent(StaticMeshComponent);
-
 	StaticMeshComponent->SetSimulatePhysics(true);
-}
-
-void AInventoryPickupItem::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (!HasAuthority())
-	{
-		return;
-	}
-	
-	if (!ensureAlways(IsValid(ItemInstance)))
-	{
-		return;
-	}
-	
-	check(bItemInstanceIsValid);
-
-	if (!ItemInstance->IsInitialized())
-	{
-		ItemInstance->Initialize();
-	}
-
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
@@ -52,7 +28,7 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 		return;
 	}
 		
-	// Only update actors on scene
+	// Do not process during editing in blueprint
 	if (!GetWorld()->HasBegunPlay() && !IsAsset())
 	{
 		return;
@@ -67,33 +43,24 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 	}
 }
 
-void AInventoryPickupItem::Tick(float DeltaSeconds)
+void AInventoryPickupItem::BeginPlay()
 {
-	Super::Tick(DeltaSeconds);
-	int len = GetVelocity().Length();
-	
-	UE_LOG(LogTemp, Warning, TEXT("AInventoryPickupItem::Tick: %d"), len);
-}
+	Super::BeginPlay();
 
-void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, ItemInstance);
-}
-
-bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
-	FReplicationFlags* RepFlags)
-{
-	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-			
-	if (IsValid(ItemInstance))
+	if (!HasAuthority())
 	{
-		bWroteSomething |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
+		return;
 	}
 	
-	return bWroteSomething;
+	check(bItemInstanceIsValid);
+
+	if (!ItemInstance->IsInitialized())
+	{
+		ItemInstance->Initialize();
+	}
+
 }
+
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
 	if (!ensureAlways(IsValid(StaticMeshComponent)) || !IsValid(ItemInstance))
@@ -101,14 +68,15 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 		return false;
 	}
 	
-	const UPickupInventoryItemFragment* ItemFragment = ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
+	const UPickupInventoryItemFragment* PickupInventoryItemFragment =
+		ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 
-	if (!IsValid(ItemFragment))
+	if (!IsValid(PickupInventoryItemFragment))
 	{
 		return false;
 	}
 	
-	UStaticMesh* StaticMesh = ItemFragment->GetStaticMesh();
+	UStaticMesh* StaticMesh = PickupInventoryItemFragment->GetStaticMesh();
 	
 	if (!IsValid(StaticMesh))
 	{
@@ -143,12 +111,30 @@ void AInventoryPickupItem::SetDefaultSettings() const
 	
 	UStaticMesh* DefaultObjectStaticMesh = DefaultObjectStaticMeshComponent->GetStaticMesh();
 
-	if (!ensureAlways(IsValid(DefaultObjectStaticMesh)))
+	if (ensureAlways(IsValid(DefaultObjectStaticMesh)))
 	{
-		return;
+		StaticMeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
 	}
+}
 
-	StaticMeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
+void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, ItemInstance);
+}
+
+bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
+	FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+			
+	if (IsValid(ItemInstance))
+	{
+		bWroteSomething |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
+	}
+	
+	return bWroteSomething;
 }
 
 void AInventoryPickupItem::OnRep_ItemInstance()

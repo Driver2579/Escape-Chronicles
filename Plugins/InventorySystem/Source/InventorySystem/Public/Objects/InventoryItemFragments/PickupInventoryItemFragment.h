@@ -13,10 +13,7 @@ class INVENTORYSYSTEM_API UPickupInventoryItemFragment : public UInventoryItemFr
 	GENERATED_BODY()
 
 public:
-	UStaticMesh* GetStaticMesh() const
-	{
-		return StaticMesh;
-	}
+	UStaticMesh* GetStaticMesh() const { return StaticMesh; }
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

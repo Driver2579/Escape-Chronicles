@@ -3,38 +3,14 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerFragment.h"
 
 UInventoryManagerComponent::UInventoryManagerComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 
 	bReplicateUsingRegisteredSubObjectList = true;
 	SetIsReplicatedByDefault(true);
-}
-
-UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
-	const FGameplayTag SlotsType) const
-{
-	const int32 SlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
-	
-	if (SlotsArrayIndex == INDEX_NONE)
-	{
-		return nullptr;
-	}
-
-	const FInventorySlotsArray& SlotsArray = TypedInventorySlotsLists[SlotsArrayIndex].Array;
-	
-	if (!SlotsArray.IsValidSlotIndex(SlotIndex))
-	{
-		return nullptr;
-	}
-
-	return SlotsArray.GetSlots()[SlotIndex].Instance;
-}
-
-void UInventoryManagerComponent::AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback)
-{
-	OnInventoryContentChanged.Add(Callback);
 }
 
 void UInventoryManagerComponent::BeginPlay()
@@ -44,42 +20,49 @@ void UInventoryManagerComponent::BeginPlay()
 	if (bLogInventoryContentWhenChanges)
 	{
 		FOnInventoryContentChanged::FDelegate Delegate;
-		Delegate.BindLambda([&]
-		{
-			LogInventoryContent();
-		});
+		Delegate.BindLambda([&] { LogInventoryContent(); });
 
-		AddOnInventoryContentChanged(Delegate);
+		AddInventoryContentChangedHandler(Delegate);
 	}
 
 	if (!GetOwner()->HasAuthority())
 	{
 		return;
 	}
+
+	// === Preparing for initialization ===
 	
-	if (!ensureAlwaysMsgf(SlotTypesAndNumber.Find(InventorySystemGameplayTags::InventoryTag_MainSlotType) != nullptr,
-		TEXT("SlotTypesAndNumber must contain InventorySystemGameplayTags::InventoryTag_MainSlotType!")))
+	if (!ensureAlwaysMsgf(SlotsNumberByTypes.Find(InventorySystemGameplayTags::InventoryTag_MainSlotType) != nullptr,
+		TEXT("SlotsNumberByTypes must contain InventorySystemGameplayTags::InventoryTag_MainSlotType!")))
 	{
-		SlotTypesAndNumber.Add(InventorySystemGameplayTags::InventoryTag_MainSlotType, 1);
+		SlotsNumberByTypes.Add(InventorySystemGameplayTags::InventoryTag_MainSlotType, 1);
 	}
 
-	for (auto SlotTypeAndNumber : SlotTypesAndNumber)
+	for (auto SlotsNumberByType : SlotsNumberByTypes)
 	{
-		if (!ensureAlwaysMsgf(SlotTypeAndNumber.Value > 0, TEXT("SlotTypeAndNumber must not be negative (%s)!"),
-			*SlotTypeAndNumber.Key.ToString()))
+		if (!ensureAlwaysMsgf(SlotsNumberByType.Value > 0, TEXT("SlotsNumberByType %s must not be negative!"),
+			*SlotsNumberByType.Key.ToString()))
 		{
-			SlotTypesAndNumber.Remove(SlotTypeAndNumber.Key);
+			SlotsNumberByTypes.Remove(SlotsNumberByType.Key);
 		}
 	}
 
-	TypedInventorySlotsLists.Initialize(SlotTypesAndNumber);
+	// === Initialization ===
+	
+	TypedInventorySlotsLists.Initialize(SlotsNumberByTypes);
 }
 
-void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
+	const FGameplayTag SlotsType) const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	const int32 ArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
 	
-	DOREPLIFETIME(ThisClass, TypedInventorySlotsLists);
+	if (ArrayIndex == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	return TypedInventorySlotsLists.GetInstance(ArrayIndex, SlotIndex);
 }
 
 void UInventoryManagerComponent::ForEachInventoryItemInstance(
@@ -98,25 +81,40 @@ void UInventoryManagerComponent::ForEachInventoryItemInstance(
 	}
 }
 
+void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ThisClass, TypedInventorySlotsLists);
+	DOREPLIFETIME(ThisClass, Fragments);
+}
+
 void UInventoryManagerComponent::ReadyForReplication()
 {
 	Super::ReadyForReplication();
 
-	if (IsUsingRegisteredSubObjectList())
+	if (!IsUsingRegisteredSubObjectList())
 	{
-		ForEachInventoryItemInstance([&](UInventoryItemInstance* Instance)
-		{
-			AddReplicatedSubObject(Instance);
-		});
+		return;
+	}
+	
+	ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
+	{
+		AddReplicatedSubObject(ItemInstance);
+	});
+
+	for (UInventoryManagerFragment* Fragment : Fragments)
+	{
+		AddReplicatedSubObject(Fragment);
 	}
 }
 
-bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, int32 SlotIndex,
+bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex,
 	const FGameplayTag SlotsType)
 {
 	check(GetOwner()->HasAuthority());
 
-	if (!ensureAlways(IsValid(Item)))
+	if (!ensureAlways(IsValid(ItemInstance)))
 	{
 		return false;
 	}
@@ -146,7 +144,7 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, int
 	// TODO: There are suspicions of memory leaks if you install the Outer component due to bug UE-127172
 	// (In Lyra, this is circumvented by setting the Outer component owner. You can also create a subsystem that will
 	// control the life cycle of the object, which is more difficult but better from an architectural point of view)
-	UInventoryItemInstance* ItemInstanceDuplicate = Item->Duplicate(this);
+	UInventoryItemInstance* ItemInstanceDuplicate = ItemInstance->Duplicate(this);
 
 	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
 	{
@@ -201,10 +199,18 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	return true;
 }
 
+void UInventoryManagerComponent::AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback)
+{
+	OnInventoryContentChanged.Add(Callback);
+}
+
 // ReSharper disable once CppMemberFunctionMayBeConst
 void UInventoryManagerComponent::OnRep_TypedInventorySlotsLists()
 {
-	OnInventoryContentChanged.Broadcast();
+	if (bLogInventoryContentWhenChanges)
+	{
+		OnInventoryContentChanged.Broadcast();
+	}
 }
 
 void UInventoryManagerComponent::LogInventoryContent() const

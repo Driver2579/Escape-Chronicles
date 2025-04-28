@@ -17,20 +17,9 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	TSubclassOf<UInventoryItemDefinition> GetDefinition() const
-	{
-		return Definition;
-	}
-	
-	FLocalData& GetLocalData()
-	{
-		return LocalData;
-	}
-
-	bool IsInitialized() const
-	{
-		return bInitialized;
-	}
+	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
+	FLocalData& GetLocalData() { return LocalData; }
+	bool IsInitialized() const { return bInitialized; }
 
 	template<typename T>
 	T* GetFragmentByClass() const;
@@ -60,7 +49,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
 
-	if (!IsValid(GetDefinition()))
+	if (!ensureAlways(IsValid(GetDefinition())))
 	{
 		return nullptr;
 	}
@@ -68,7 +57,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!IsValid(DefinitionDefaultObject))
+	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
 	{
 		return nullptr;
 	}
@@ -93,7 +82,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 
 	OutFragments.Empty();
 
-	if (!IsValid(GetDefinition()))
+	if (!ensureAlways(IsValid(GetDefinition())))
 	{
 		return;
 	}
@@ -101,7 +90,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!IsValid(DefinitionDefaultObject))
+	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
 	{
 		return;
 	}
