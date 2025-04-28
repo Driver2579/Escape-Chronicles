@@ -3,65 +3,90 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InteractableComponent.h"
-#include "Components/ActorComponent.h"
 #include "Components/BoxComponent.h"
 #include "InteractionManagerComponent.generated.h"
 
 class UInteractableComponent;
 
 /**
- * Handles interaction logic: checking conditions, calling events.
+ * Handles pawn interaction logic by detecting, selecting, and processing interactions with nearby interactable objects.
+ * Uses overlap detection to maintain a pool of nearby interactables and automatically selects the best candidate.
+ * Must attach at least one UPrimitiveComponent for selection.
  */
 UCLASS()
-class INTERACTIONSYSTEM_API UInteractionManagerComponent : public UBoxComponent
+class INTERACTIONSYSTEM_API UInteractionManagerComponent : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
+	UInteractionManagerComponent();
+	
 	UInteractableComponent* GetSelectedInteractableComponent() const
 	{
 		return SelectedInteractableComponent.Get();
 	}
 
-	UInteractionManagerComponent();
-
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
-	// Sends a request to attempt to interact with the server
-	bool Interact();
-	bool Interact(UInteractableComponent* InteractableComponent);
+	/**
+	 * Attempts interaction with currently selected interactable
+	 * @return True if interaction was successful
+	 */
+	bool TryInteract();
+
+	/**
+	 * Attempts interaction with specific interactable component
+	 * @param InteractableComponent Target component to interact with
+	 * @return True if interaction was successful
+	 */
+	bool TryInteract(UInteractableComponent* InteractableComponent);
 	
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	// Checking if there are obstacles to the InteractableComponent 
-	bool IsThereObstacle(const UInteractableComponent* InteractableComponent) const;
-	
-	// Selects the InteractableComponent that is closest to the direction of the view from InteractableComponentsPool
-	void SelectInteractableComponent();
+	/**
+	 * Checks if there are obstacles between this component and target interactable
+	 * @param InteractableComponent Target interactable to check
+	 * @return True if path is obstructed
+	 */
+	bool IsPathObstructed(const UInteractableComponent* InteractableComponent) const;
 
-	// Add InteractableComponents to InteractableComponentsPool
+	/**
+	 * Selects the most suitable interactable component from the current pool
+	 * Considers view direction and obstacles
+	 */
+	void SelectInteractableComponent();
+	
 	UFUNCTION()
 	void OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	// Delete InteractableComponents to InteractableComponentsPool
 	UFUNCTION()
 	void OnDeleteFromInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
-	// Try to interact with an item on the server
+	/**
+	 * Server-side interaction validation and execution
+	 * @param InteractableComponent Component to interact with
+	 */
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_TryInteract(UInteractableComponent* InteractableComponent);
 
-	// The maximum distance the server handles for interaction
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction", meta=(AllowPrivateAccess = "true"))
+	// Maximum distance at which interaction is possible
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Interaction", meta=(AllowPrivateAccess = "true", ClampMin=0,
+		UIMin=0, ForceUnits="cm"))
 	float MaxInteractionDistance = 500.0f;
-	
+
+	// Controller that owns this interaction component 
 	TWeakObjectPtr<AController> OwnerController;
-	TWeakObjectPtr<UInteractableComponent> SelectedInteractableComponent;
+
+	// Pool of all interactable components currently in detection range 
 	TArray<TWeakObjectPtr<UInteractableComponent>> InteractableComponentsPool;
+
+	// Currently selected/focused interactable component (the best candidate from pool) 
+	TWeakObjectPtr<UInteractableComponent> SelectedInteractableComponent;
+
+	bool bIsLocallyControlled = false;
 };

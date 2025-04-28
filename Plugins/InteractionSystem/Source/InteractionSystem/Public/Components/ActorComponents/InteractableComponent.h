@@ -6,62 +6,58 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
-class UInteractPopupWidget;
 class UInteractionManagerComponent;
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent*);
-
-/**
- * Added to objects that can react to interaction (doors, objects, items, etc.).
- */
+// A component that makes an actor interactive
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	FName GetMeshesHintTag() const 
-	{
-		return MeshesHintTag;
-	}
-
-	FName GetWidgetHintTag() const
-	{
-		return WidgetHintTag;
-	}
+	/**
+	 * Delegate called when interacting with the actor
+	 * @param InteractionManagerComponent Reference to the manager of the actor that call the event
+	 */
+	
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
 	
 	UInteractableComponent();
 
+	// Calls the interaction delegate (OnInteract)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
-	void AddInteractHandler(const FOnInteractDelegate::FDelegate& Callback);
 
-	virtual void SetInteractionHintVisible(bool Value);
+	// Adds an interaction event handler (OnInteract)
+	void AddInteractionHandler(const FOnInteractDelegate::FDelegate& Callback);
+
+	// Enables/disables the visibility of the interaction hint
+	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
 	
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	void MeshesHintInitialize();
-	void WidgetHintInitialize();
+	void InitializeHintMeshes();
+	void InitializeHintWidget();
 	
-	// Called every time the item is interacted with
+	// A delegate called when interacting with an actor
 	FOnInteractDelegate OnInteract;
 
-	// Meshes with this tag will be a hint
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	FName MeshesHintTag = "MeshHint";
+	// Tag to find meshes to hint when the interaction hint visibility is true
+	UPROPERTY(EditAnywhere, Category="Hint")
+	FName HintMeshTag = "HintMesh";
 
-	// Widgets with this tag will be a hint
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
-	FName WidgetHintTag = "WidgetHint";
+	// Tag to find widget that is visible when the interaction hint visibility is true
+	UPROPERTY(EditAnywhere, Category="Hint")
+	FName HintWidgetTag = "HintWidget";
 	
-	// Set as overlay material when showing hint
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Hint", meta=(AllowPrivateAccess = "true"))
+	// Material applied to the meshes when the interaction hint visibility is true
+	UPROPERTY(EditAnywhere, Category="Hint")
 	TObjectPtr<UMaterialInterface> OverlayMaterialHint;
 
-	// Widget that has the visible parameter set when showing a hint
-	TWeakObjectPtr<UInteractPopupWidget> WidgetHint;
+	// Widget that is visible when the interaction hint visibility is true
+	TWeakObjectPtr<class UInteractPopupWidget> HintWidget;
 	
-	// Mesh to which OverlayMaterialHint is set when showing a hint
-	TArray<TWeakObjectPtr<UMeshComponent>> MeshHints;
+	// Meshes to hint when the interaction hint visibility is true
+	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;
 };

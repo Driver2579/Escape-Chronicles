@@ -6,9 +6,7 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "InteractGameplayAbility.generated.h"
 
-/**
- * Allows you to interact with AActor that have UInteractableComponent through own UInteractionManagerComponent
- */
+// Allows you to interact with actor that have UInteractableComponent through own UInteractionManagerComponent
 UCLASS()
 class ESCAPECHRONICLES_API UInteractGameplayAbility : public UEscapeChroniclesGameplayAbility
 {
