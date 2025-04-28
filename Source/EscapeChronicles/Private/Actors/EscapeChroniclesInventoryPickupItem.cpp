@@ -12,14 +12,14 @@ AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()
 {
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 
-	GetStaticMeshComponent()->ComponentTags.Add(InteractableComponent->GetMeshesHintTag());
+	GetStaticMeshComponent()->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
 }
 
 void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableComponent->AddInteractHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
+	InteractableComponent->AddInteractionHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
 		&AEscapeChroniclesInventoryPickupItem::InteractHandler));
 }
 

@@ -22,12 +22,12 @@ void UInteractionManagerComponent::BeginPlay()
 
 	bIsLocallyControlled = OwningPawn->IsLocallyControlled();
 
-	if (bIsLocallyControlled)
+	if (!bIsLocallyControlled)
 	{
 		return;
 	}
-		
-	OwnerController = GetOwner<APawn>()->GetController<APlayerController>();
+
+	OwnerController = OwningPawn->GetController<APlayerController>();
 
 	bool bWasThereCollisionBinding = false;
 	

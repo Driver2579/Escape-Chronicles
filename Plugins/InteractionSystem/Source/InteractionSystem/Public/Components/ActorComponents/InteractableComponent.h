@@ -8,6 +8,13 @@
 
 class UInteractionManagerComponent;
 
+/**
+ * Delegate called when interacting with the actor
+ * @param InteractionManagerComponent Reference to the manager of the actor that call the event
+ */
+	
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
+	
 // A component that makes an actor interactive
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
@@ -15,15 +22,18 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	/**
-	 * Delegate called when interacting with the actor
-	 * @param InteractionManagerComponent Reference to the manager of the actor that call the event
-	 */
-	
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
-	
 	UInteractableComponent();
 
+	FName GetHintMeshTag() const
+	{
+		return HintMeshTag;
+	}
+
+	FName GetHintWidgetTag() const
+	{
+		return HintWidgetTag;
+	}
+	
 	// Calls the interaction delegate (OnInteract)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 
