@@ -24,7 +24,7 @@ public:
 	void SelectPrevItem();
 
 	//
-	void DropSelectedItem();
+	void DropSelectedItem(const FVector ThrowingDirection);
 	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
@@ -32,8 +32,8 @@ private:
 	UFUNCTION(Server, Reliable)
 	void Server_OffsetCurrentSlotIndex(const int32 Offset);
 
-	UFUNCTION(Server, Reliable)
-	void Server_DropItem(const int32 Offset);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_DropItem(const int32 Offset, const FVector ThrowingDirection);
 	
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag SelectableSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType;
@@ -43,4 +43,7 @@ private:
 	
 	UPROPERTY(Replicated)
 	int32 CurrentSlotIndex;
+
+	UPROPERTY(EditDefaultsOnly)
+	int32 MaxTrowingPower;
 };

@@ -65,7 +65,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	InventoryManagerSelectorFragment->DropSelectedItem();
+	InventoryManagerSelectorFragment->DropSelectedItem(TrowingDirection);
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

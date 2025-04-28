@@ -31,9 +31,9 @@ void UInventoryManagerSelectorFragment::SelectPrevItem()
 	Server_OffsetCurrentSlotIndex(-1);
 }
 
-void UInventoryManagerSelectorFragment::DropSelectedItem()
+void UInventoryManagerSelectorFragment::DropSelectedItem(const FVector ThrowingDirection)
 {
-	Server_DropItem(CurrentSlotIndex);
+	Server_DropItem(CurrentSlotIndex, ThrowingDirection);
 }
 
 void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
@@ -44,7 +44,12 @@ void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	DOREPLIFETIME(ThisClass, CurrentSlotIndex);
 }
 
-void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int32 Offset)
+bool UInventoryManagerSelectorFragment::Server_DropItem_Validate(const int32 Offset, const FVector ThrowingDirection)
+{
+	return ThrowingDirection.Length() < MaxTrowingPower;
+}
+
+void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int32 Offset, const FVector ThrowingDirection)
 {
 	UInventoryManagerComponent* Inventory = GetInventoryManager();
 	
@@ -67,7 +72,7 @@ void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int
 		return;
 	}
 
-	const FTransform Character = Pawn->GetActorTransform();
+	const FTransform ActorTransform = Pawn->GetActorTransform();
 	
 	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(Offset, SelectableSlotsType);
 
@@ -77,7 +82,7 @@ void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int
 	}
 	
 	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
-		Character);
+		ActorTransform);
 	
 	if (!ensureAlways(IsValid(ItemActor)))
 	{
@@ -93,13 +98,21 @@ void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int
 	
 	ItemActor->SetItemInstance(ItemInstanceDuplicate);
 	
-	if (Inventory->DeleteItem(Offset, SelectableSlotsType))
-	{
-		ItemActor->FinishSpawning(Character);
-	}
-	else
+	if (!Inventory->DeleteItem(Offset, SelectableSlotsType))
 	{
 		ItemActor->Destroy();
+
+		return;
+	}
+	
+	ItemActor->FinishSpawning(ActorTransform);
+
+	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetStaticMeshComponent();
+
+	if (ensureAlways(IsValid(ItemActorMeshComponent)))
+	{
+		const FVector RotatedImpulseVector = ActorTransform.GetRotation().RotateVector(ThrowingDirection);
+		ItemActorMeshComponent->AddImpulse(RotatedImpulseVector + ItemActor->GetVelocity());
 	}
 }
 

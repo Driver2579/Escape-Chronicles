@@ -12,10 +12,12 @@
 AInventoryPickupItem::AInventoryPickupItem()
 {
 	PrimaryActorTick.bCanEverTick = true;
-	SetReplicates(true);
+	bReplicates = true;
 	
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SetRootComponent(StaticMeshComponent);
+
+	StaticMeshComponent->SetSimulatePhysics(true);
 }
 
 void AInventoryPickupItem::BeginPlay()
@@ -68,6 +70,9 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 void AInventoryPickupItem::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	int len = GetVelocity().Length();
+	
+	UE_LOG(LogTemp, Warning, TEXT("AInventoryPickupItem::Tick: %d"), len);
 }
 
 void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
