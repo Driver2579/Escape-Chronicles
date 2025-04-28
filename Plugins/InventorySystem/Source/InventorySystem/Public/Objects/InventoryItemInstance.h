@@ -11,7 +11,7 @@ class UInventoryItemDefinition;
 class UInventoryItemFragment;
 
 // A specific object whose properties are described by a UInventoryItemDefinition
-UCLASS()
+UCLASS(EditInlineNew)
 class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 {
 	GENERATED_BODY()
@@ -27,6 +27,11 @@ public:
 		return LocalData;
 	}
 
+	bool IsInitialized() const
+	{
+		return bInitialized;
+	}
+
 	template<typename T>
 	T* GetFragmentByClass() const;
 
@@ -37,9 +42,8 @@ public:
 
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
 	
-protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool IsSupportedForNetworking() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
 	UPROPERTY(EditAnywhere, Replicated)

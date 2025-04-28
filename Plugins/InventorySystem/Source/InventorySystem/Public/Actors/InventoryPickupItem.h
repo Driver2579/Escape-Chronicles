@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/ActorChannel.h"
 #include "GameFramework/Actor.h"
+#include "Objects/InventoryItemInstance.h"
 
 #include "InventoryPickupItem.generated.h"
 
@@ -16,19 +18,36 @@ class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
 	GENERATED_BODY()
 	
 public:
+	AInventoryPickupItem();
+
+	void SetItemInstance(UInventoryItemInstance* InItemInstance)
+	{
+		if (!ensureAlways(!HasActorBegunPlay()))
+		{
+			return;
+		}
+
+		if (ensureAlways(IsValid(InItemInstance)))
+		{
+			ItemInstance = InItemInstance;
+		}
+	}
+	
 	UStaticMeshComponent* GetStaticMeshComponent() const
 	{
 		return StaticMeshComponent;
 	}
 	
-	AInventoryPickupItem();
-	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
+		override;
 	
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnConstruction(const FTransform& Transform) override;
 
+	virtual void Tick(float DeltaSeconds) override;
+	
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 	
 private:
@@ -47,6 +66,9 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
 	
-	UPROPERTY(EditInstanceOnly, Instanced, Replicated)
-	TObjectPtr<class UInventoryItemInstance> ItemInstance;
+	UPROPERTY(EditInstanceOnly, Instanced, ReplicatedUsing="OnRep_ItemInstance")
+	TObjectPtr<UInventoryItemInstance> ItemInstance;
+
+	UFUNCTION()
+	void OnRep_ItemInstance();
 };

@@ -12,6 +12,26 @@ UInventoryManagerComponent::UInventoryManagerComponent()
 	SetIsReplicatedByDefault(true);
 }
 
+UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
+	const FGameplayTag SlotsType) const
+{
+	const int32 SlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
+	
+	if (SlotsArrayIndex == INDEX_NONE)
+	{
+		return nullptr;
+	}
+
+	const FInventorySlotsArray& SlotsArray = TypedInventorySlotsLists[SlotsArrayIndex].Array;
+	
+	if (!SlotsArray.IsValidSlotIndex(SlotIndex))
+	{
+		return nullptr;
+	}
+
+	return SlotsArray.GetSlots()[SlotIndex].Instance;
+}
+
 void UInventoryManagerComponent::AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback)
 {
 	OnInventoryContentChanged.Add(Callback);
@@ -91,7 +111,7 @@ void UInventoryManagerComponent::ReadyForReplication()
 	}
 }
 
-bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, size_t SlotIndex,
+bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, int32 SlotIndex,
 	const FGameplayTag SlotsType)
 {
 	check(GetOwner()->HasAuthority());
@@ -101,7 +121,7 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, siz
 		return false;
 	}
 
-	const size_t SlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
+	const int32 SlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
 	
 	if (!ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE, TEXT("Array not found by tag")))
 	{
@@ -140,6 +160,43 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* Item, siz
 		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
+	OnInventoryContentChanged.Broadcast();
+	return true;
+}
+
+bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGameplayTag SlotsType)
+{
+	check(GetOwner()->HasAuthority());
+
+	const int32 SlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(SlotsType);
+	
+	if (!ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE, TEXT("Array not found by tag")))
+	{
+		return false;
+	}
+	
+	const FInventorySlotsArray& SlotsArray = TypedInventorySlotsLists[SlotsArrayIndex].Array;
+	
+	if (!ensureAlwaysMsgf(SlotsArray.IsValidSlotIndex(SlotIndex), TEXT("Unavailable slot index"))
+		|| SlotsArray.IsEmptySlot(SlotIndex))
+	{
+		return false;
+	}
+
+	UInventoryItemInstance* ItemInstance = SlotsArray.GetSlots()[SlotIndex].Instance;
+
+	if (!ensureAlways(IsValid(ItemInstance)))
+	{
+		return false;
+	}
+	
+	if (IsUsingRegisteredSubObjectList())
+	{
+		RemoveReplicatedSubObject(ItemInstance);
+	}
+	
+	TypedInventorySlotsLists.SetInstance(nullptr, SlotsArrayIndex, SlotIndex);
+	
 	OnInventoryContentChanged.Broadcast();
 	return true;
 }

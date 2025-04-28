@@ -7,6 +7,7 @@
 #include "InventorySystemGameplayTags.h"
 #include "InventoryManagerSelectorFragment.generated.h"
 
+class AInventoryPickupItem;
 // Adds selector for a single typed array
 UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerSelectorFragment : public UInventoryManagerFragment
@@ -22,16 +23,24 @@ public:
 	// 
 	void SelectPrevItem();
 
-protected:
+	//
+	void DropSelectedItem();
+	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 private:
 	UFUNCTION(Server, Reliable)
 	void Server_OffsetCurrentSlotIndex(const int32 Offset);
+
+	UFUNCTION(Server, Reliable)
+	void Server_DropItem(const int32 Offset);
 	
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag SelectableSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType;
 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<AInventoryPickupItem> DropItemActorClass;
+	
 	UPROPERTY(Replicated)
 	int32 CurrentSlotIndex;
 };

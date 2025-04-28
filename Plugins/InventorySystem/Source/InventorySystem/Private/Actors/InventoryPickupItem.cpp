@@ -11,9 +11,9 @@
 // Sets default values
 AInventoryPickupItem::AInventoryPickupItem()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	SetReplicates(true);
-
+	
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SetRootComponent(StaticMeshComponent);
 }
@@ -22,17 +22,36 @@ void AInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	if (!ensureAlways(IsValid(ItemInstance)))
+	{
+		return;
+	}
+	
 	check(bItemInstanceIsValid);
 
-	ItemInstance->Initialize();
+	if (!ItemInstance->IsInitialized())
+	{
+		ItemInstance->Initialize();
+	}
+
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
-	
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+		
 	// Only update actors on scene
-	if (!IsAsset())
+	if (!GetWorld()->HasBegunPlay() && !IsAsset())
 	{
 		return;
 	}
@@ -46,6 +65,11 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 	}
 }
 
+void AInventoryPickupItem::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+}
+
 void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -53,6 +77,18 @@ void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	DOREPLIFETIME(ThisClass, ItemInstance);
 }
 
+bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
+	FReplicationFlags* RepFlags)
+{
+	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+			
+	if (IsValid(ItemInstance))
+	{
+		bWroteSomething |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
+	}
+	
+	return bWroteSomething;
+}
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
 	if (!ensureAlways(IsValid(StaticMeshComponent)) || !IsValid(ItemInstance))
@@ -108,6 +144,22 @@ void AInventoryPickupItem::SetDefaultSettings() const
 	}
 
 	StaticMeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
+}
+
+void AInventoryPickupItem::OnRep_ItemInstance()
+{
+	bItemInstanceIsValid = ApplyChangesFromItemInstance();
+
+	// While bItemInstanceIsValidSet is invalid, set the default settings
+	if (!bItemInstanceIsValid)
+	{
+		SetDefaultSettings();
+	}
+
+	if (!ItemInstance->IsInitialized())
+	{
+		ItemInstance->Initialize();
+	}
 }
 
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)

@@ -8,22 +8,17 @@ public class InventorySystem : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-		PublicDependencyModuleNames.AddRange(
-			new string[]
+		PublicDependencyModuleNames.AddRange(new string[]
 			{
 				"Core",
 				"NetCore",
-				"GameplayTags",
-				"FragmentationSystem"
-			}
-			);
+				"GameplayTags"
+			});
 		
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
+		PrivateDependencyModuleNames.AddRange(new string[]
 			{
 				"CoreUObject",
 				"Engine",
-			}
-			);
+			});
 	}
 }

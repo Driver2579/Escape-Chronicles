@@ -17,17 +17,20 @@ class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
 	GENERATED_BODY()
 	
 public:
+	UInventoryManagerComponent();
+	
 	const FInventorySlotsTypedArrayContainer& GetTypedInventorySlotsLists()
 	{
 		return TypedInventorySlotsLists;
 	}
 
+	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
+		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
+	
 	template<typename T>
 	T* GetFragmentByClass() const;
 	
 	void AddOnInventoryContentChanged(const FOnInventoryContentChanged::FDelegate& Callback);
-	
-	UInventoryManagerComponent();
 
 	/**
 	 * Add item DUPLICATE to inventory
@@ -35,9 +38,17 @@ public:
 	 * @param SlotIndex Index of the slot (if -1 searches for an empty slot)
 	 * @param SlotsType Slot type tag
 	 */
-	bool AddItem(const UInventoryItemInstance* Item, size_t SlotIndex = -1,
+	bool AddItem(const UInventoryItemInstance* Item, int32 SlotIndex = -1,
 		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
+	/**
+	 * Delete an item from inventory
+	 * @param SlotIndex Index of the slot
+	 * @param SlotsType Slot type tag
+	 */
+	bool DeleteItem(const int32 SlotIndex,
+		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	
 protected:
 	virtual void BeginPlay() override;
 

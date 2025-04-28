@@ -23,8 +23,6 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 		return;
 	}
 
-	bInitialized = true;
-
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
 	if (IsValid(DefinitionDefaultObject))
@@ -36,6 +34,8 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 	{
 		Fragment->OnInstanceInitialized(this);
 	}
+
+	bInitialized = true;
 }
 
 UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const

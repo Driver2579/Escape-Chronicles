@@ -3,6 +3,8 @@
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
+#include "Actors/InventoryPickupItem.h"
+#include "GameFramework/PlayerState.h"
 #include "Net/UnrealNetwork.h"
 
 void UInventoryManagerSelectorFragment::OnManagerInitialized(UInventoryManagerComponent* Inventory)
@@ -29,6 +31,11 @@ void UInventoryManagerSelectorFragment::SelectPrevItem()
 	Server_OffsetCurrentSlotIndex(-1);
 }
 
+void UInventoryManagerSelectorFragment::DropSelectedItem()
+{
+	Server_DropItem(CurrentSlotIndex);
+}
+
 void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -37,16 +44,68 @@ void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	DOREPLIFETIME(ThisClass, CurrentSlotIndex);
 }
 
-void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementation(const int32 Offset)
+void UInventoryManagerSelectorFragment::Server_DropItem_Implementation(const int32 Offset)
 {
-	UObject* Outer = GetOuter();
+	UInventoryManagerComponent* Inventory = GetInventoryManager();
+	
+	if (!ensureAlways(IsValid(Inventory)))
+	{
+		return;
+	}
 
-	if (!ensureAlways(IsValid(Outer)))
+	const APlayerState* PlayerState = Inventory->GetOwner<APlayerState>();
+
+	if (!IsValid(PlayerState))
+	{
+		return;
+	}
+
+	const APawn* Pawn = PlayerState->GetPawn();
+
+	if (!IsValid(Pawn))
+	{
+		return;
+	}
+
+	const FTransform Character = Pawn->GetActorTransform();
+	
+	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(Offset, SelectableSlotsType);
+
+	if (!IsValid(ItemInstance))
 	{
 		return;
 	}
 	
-	UInventoryManagerComponent* Inventory = Cast<UInventoryManagerComponent>(Outer);
+	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
+		Character);
+	
+	if (!ensureAlways(IsValid(ItemActor)))
+	{
+		return;
+	}
+
+	UInventoryItemInstance* ItemInstanceDuplicate = ItemInstance->Duplicate(ItemActor);
+
+	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
+	{
+		return;
+	}
+	
+	ItemActor->SetItemInstance(ItemInstanceDuplicate);
+	
+	if (Inventory->DeleteItem(Offset, SelectableSlotsType))
+	{
+		ItemActor->FinishSpawning(Character);
+	}
+	else
+	{
+		ItemActor->Destroy();
+	}
+}
+
+void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementation(const int32 Offset)
+{
+	UInventoryManagerComponent* Inventory = GetInventoryManager();
 	
 	if (!ensureAlways(IsValid(Inventory)))
 	{
