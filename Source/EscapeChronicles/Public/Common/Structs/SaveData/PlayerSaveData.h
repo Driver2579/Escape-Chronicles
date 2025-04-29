@@ -3,6 +3,7 @@
 #pragma once
 
 #include "ActorSaveData.h"
+#include "Common/Structs/FunctionLibriries/MapFunctionLibriry.h"
 #include "PlayerSaveData.generated.h"
 
 USTRUCT()
@@ -16,4 +17,10 @@ struct FPlayerSaveData
 	 */
 	UPROPERTY()
 	TMap<TSoftClassPtr<AActor>, FActorSaveData> PlayerSpecificActorsSaveData;
+
+	bool operator==(const FPlayerSaveData& Other) const
+	{
+		return FMapFunctionLibrary::AreMapsEqual(PlayerSpecificActorsSaveData,
+			Other.PlayerSpecificActorsSaveData);
+	}
 };

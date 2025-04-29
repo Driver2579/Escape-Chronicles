@@ -25,6 +25,7 @@ void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& 
 		return;
 	}
 
+	// Automatically try to load the game when it has started
 	SaveGameSubsystem->OnGameLoaded.AddUObject(this, &AEscapeChroniclesGameMode::OnInitialGameLoadFinished);
 	SaveGameSubsystem->TryLoadGame();
 }
@@ -34,15 +35,26 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 {
 	const FString ParentResult = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 
+	if (!ensureAlways(NewPlayerController->PlayerState))
+	{
+		return ParentResult;
+	}
+
 	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
+	/**
+	 * Try to load the joined player from the last save game object that was saved or loaded if any, but only if the
+	 * game was already loaded. If it wasn't loaded yet, then just skip loading the player because he's going to be
+	 * loaded automatically by the SaveGameSubsystem when the game is loaded.
+	 */
 	if (ensureAlways(SaveGameSubsystem) && ensureAlways(NewPlayerController->PlayerState) && bInitialGameLoadFinished)
 	{
 #if DO_ENSURE
 		ensureAlways(IsValid(NewPlayerController->GetPawn()));
 #endif
 
-		SaveGameSubsystem->TryLoadPlayerFromCurrentSaveGameObject(NewPlayerController->PlayerState);
+		SaveGameSubsystem->TryLoadPlayerFromCurrentSaveGameObject(
+			CastChecked<AEscapeChroniclesPlayerState>(NewPlayerController->PlayerState));
 	}
 
 	return ParentResult;

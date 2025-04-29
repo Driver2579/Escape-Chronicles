@@ -116,6 +116,8 @@ void UEscapeChroniclesAbilitySystemComponent::OnPreSaveObject()
 
 void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
 {
+	// TODO: Загрузка не работает корректно, почему-то
+
 	// Iterate all attribute sets to update their attributes with loaded data
 	for (UAttributeSet* AttributeSet : GetSpawnedAttributes())
 	{

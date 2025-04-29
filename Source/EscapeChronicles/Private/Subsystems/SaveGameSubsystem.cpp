@@ -5,17 +5,24 @@
 #include "EngineUtils.h"
 #include "Common/Structs/SaveData/ActorSaveData.h"
 #include "Common/Structs/SaveData/PlayerSaveData.h"
-#include "GameFramework/PlayerState.h"
+#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameStateBase.h"
 #include "Interfaces/Saveable.h"
 #include "Kismet/GameplayStatics.h"
 #include "Objects/EscapeChroniclesSaveGame.h"
+#include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
 
 USaveGameSubsystem::USaveGameSubsystem()
 {
+	AllowedDynamicallySpawnedActorsClasses = {
+		AGameModeBase::StaticClass(),
+		AGameStateBase::StaticClass()
+	};
+
 	PlayerSpecificClasses = {
 		APawn::StaticClass(),
-		APlayerState::StaticClass(),
+		AEscapeChroniclesPlayerState::StaticClass(),
 		APlayerController::StaticClass()
 	};
 }
@@ -36,6 +43,23 @@ UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked(
 #endif
 
 	return CurrentSaveGameObject;
+}
+
+bool USaveGameSubsystem::IsAllowedDynamicallySpawnedActor(const AActor* Actor) const
+{
+#if DO_CHECK
+	check(IsValid(Actor));
+#endif
+
+	for (UClass* AllowedClass : AllowedDynamicallySpawnedActorsClasses)
+	{
+		if (Actor->IsA(AllowedClass))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool USaveGameSubsystem::IsPlayerSpecificActor(const AActor* Actor) const
@@ -60,7 +84,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
 	// Clear the save game object to avoid saving old data
-	SaveGameObject->ClearStaticSavedActors();
+	SaveGameObject->ClearSavedActors();
 
 	// Clear the delegate to avoid duplicated binding and calling OnGameSaved on actors that can't be saved anymore
 	OnGameSaved_Internal.Clear();
@@ -81,7 +105,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 			continue;
 		}
 
-		APlayerState* PlayerState = Cast<APlayerState>(Actor);
+		AEscapeChroniclesPlayerState* PlayerState = Cast<AEscapeChroniclesPlayerState>(Actor);
 
 		// Save the player state separately with the player-specific actors
 		if (PlayerState)
@@ -92,7 +116,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 		}
 
 		// Skip dynamically spawned actors and player-specific actors (player-specific actors are saved separately)
-		if (!Actor->HasAnyFlags(RF_WasLoaded) && !IsPlayerSpecificActor(Actor))
+		if (!Actor->HasAnyFlags(RF_WasLoaded) || IsPlayerSpecificActor(Actor))
 		{
 			continue;
 		}
@@ -117,7 +141,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 }
 
 void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
-	APlayerState* PlayerState)
+	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
@@ -129,10 +153,10 @@ void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSave
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
+	const FUniquePlayerID& PlayerID = PlayerState->GetUniquePlayerID();
 
 	// Skip the player if it doesn't have a valid net ID
-	if (!ensureAlways(PlayerNetID.IsValid()))
+	if (!ensureAlways(PlayerID.IsValid()))
 	{
 		return;
 	}
@@ -165,7 +189,7 @@ void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSave
 			PlayerControllerSaveData);
 	}
 
-	SaveGameObject->OverridePlayerSaveData(PlayerNetID, PlayerSaveData);
+	SaveGameObject->OverridePlayerSaveData(PlayerID, PlayerSaveData);
 }
 
 void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveData& OutActorSaveData)
@@ -293,6 +317,10 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Override the save game object with a newly loaded one
 	CurrentSaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(SaveGameObject);
 
+	TArray<AActor*> StaticActors;
+	TArray<AActor*> AllowedDynamicallySpawnedActors;
+	TArray<AEscapeChroniclesPlayerState*> PlayerStates;
+
 	for (FActorIterator It(GetWorld()); It; ++It)
 	{
 		AActor* Actor = *It;
@@ -309,34 +337,71 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 			continue;
 		}
 
-		APlayerState* PlayerState = Cast<APlayerState>(Actor);
+		AEscapeChroniclesPlayerState* PlayerState = Cast<AEscapeChroniclesPlayerState>(Actor);
 
-		// Load the player state separately with the player-specific actors
+		// Try to add an Actor to PlayerStates if it's a PlayerState
 		if (PlayerState)
 		{
-			LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+			PlayerStates.Add(PlayerState);
 
 			continue;
 		}
 
-		// Skip dynamically spawned actors and player-specific actors (player-specific actors are loaded separately)
-		if (!Actor->HasAnyFlags(RF_WasLoaded) && !IsPlayerSpecificActor(Actor))
+		// Skip player-specific actors because they are loaded separately
+		if (IsPlayerSpecificActor(Actor))
 		{
 			continue;
 		}
 
-		const FActorSaveData* ActorSaveData = CurrentSaveGameObject->FindStaticActorSaveData(Actor->GetFName());
+		// Try to add an Actor to AllowedDynamicallySpawnedActors if it's a dynamically spawned actor
+		if (Actor->HasAnyFlags(RF_WasLoaded))
+		{
+			if (IsAllowedDynamicallySpawnedActor(Actor))
+			{
+				AllowedDynamicallySpawnedActors.Add(Actor);
+			}
+
+			continue;
+		}
+
+		// If we passed all checks, then the actor is static
+		StaticActors.Add(Actor);
+	}
+
+	// First load StaticActors
+	for (AActor* StaticActor : StaticActors)
+	{
+		const FActorSaveData* ActorSaveData = CurrentSaveGameObject->FindStaticActorSaveData(StaticActor->GetFName());
 
 		// Load an actor if its save data is valid
 		if (ActorSaveData)
 		{
-			LoadActorFromSaveDataChecked(Actor, *ActorSaveData);
+			LoadActorFromSaveDataChecked(StaticActor, *ActorSaveData);
 		}
+	}
+
+	// Then load AllowedDynamicallySpawnedActors
+	for (AActor* AllowedDynamicallySpawnedActor : AllowedDynamicallySpawnedActors)
+	{
+		const FActorSaveData* ActorSaveData = CurrentSaveGameObject->FindDynamicallySpawnedActorSaveData(
+			AllowedDynamicallySpawnedActor->GetClass());
+
+		// Load an actor if its save data is valid
+		if (ActorSaveData)
+		{
+			LoadActorFromSaveDataChecked(AllowedDynamicallySpawnedActor, *ActorSaveData);
+		}
+	}
+
+	// Then load players
+	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
+	{
+		LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
 	}
 }
 
-void USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-	APlayerState* PlayerState)
+bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
@@ -348,20 +413,32 @@ void USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroni
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
+	/**
+	 * TODO:
+	 * Это не безопасно. Может произойти ситуация, что хост будет иметь не первый сгенерированный ID. Например, если он
+	 * перекинет сейв другому игроку, на котором до этого хост уже подключался онлайн. Тогда новый игрок получит сейв,
+	 * на котором уже есть минимум один ID, зарезервированный под NetID, и у нового клиента сгенерируется уже не нулевой
+	 * ID. Нам надо отдельно сохранять ID хоста, если у него не привязан NetID. То есть, подключаемся -> пытаемся
+	 * загрузить сейв по NetID -> если не получается, то проверяем, является ли игрок хостом -> если нет, то просто
+	 * генерируем новый ID и останавливаем цепочку, а если да, то проверяем есть ли сохраненный FUniquePlayerID для
+	 * хоста без NetID (или можно сохранять просто uint64 PlayerID) -> если есть, то присваиваем PlayerID от него к
+	 * подключенному игроку, а если нет, то просто генерируем новый ID и останавливаем цепочку -> если у подключенного
+	 * игрока есть NetID, то удаляем тот PlayerID, который был сохранен (тогда выходит, что у нас больше нет
+	 * сохраненного офлайн хоста, ибо игрок, подключившийся онлайн, его перехватил). При сохранении, соответственно,
+	 * надо будет тоже проверять является ли игрок хостом и нет ли у него NetID. Если хост без NetID, то сохраняем как
+	 * новый ID хоста.
+	 */
+	// Generate a UniquePlayerID for the PlayerState if it doesn't already have one
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
 
-	// Skip the player if it doesn't have a valid net ID
-	if (!ensureAlways(PlayerNetID.IsValid()))
-	{
-		return;
-	}
+	FUniquePlayerID& PlayerID = PlayerState->GetUniquePlayerID();
 
-	const FPlayerSaveData* PlayerSaveData = SaveGameObject->FindPlayerSaveData(PlayerNetID);
+	const FPlayerSaveData* PlayerSaveData = SaveGameObject->FindPlayerSaveDataAndUpdatePlayerID(PlayerID);
 
-	// Don't load the player if it doesn't have anything to load
+	// Don't load the player if it doesn't have anything to load. Usually, we should always have it if the ID is valid.
 	if (!PlayerSaveData)
 	{
-		return;
+		return false;
 	}
 
 	const FActorSaveData* PlayerStateSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
@@ -402,6 +479,8 @@ void USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroni
 			LoadActorFromSaveDataChecked(PlayerController, *PlayerControllerSaveData);
 		}
 	}
+
+	return true;
 }
 
 void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
@@ -487,7 +566,7 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 	Object->Serialize(Ar);
 }
 
-void USaveGameSubsystem::TryLoadPlayerFromCurrentSaveGameObject(APlayerState* PlayerState) const
+bool USaveGameSubsystem::TryLoadPlayerFromCurrentSaveGameObject(AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(PlayerState);
@@ -495,6 +574,8 @@ void USaveGameSubsystem::TryLoadPlayerFromCurrentSaveGameObject(APlayerState* Pl
 
 	if (ensureAlways(CurrentSaveGameObject))
 	{
-		LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+		return LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
 	}
+
+	return false;
 }

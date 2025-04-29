@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
+#include "GameModes/EscapeChroniclesGameMode.h"
+#include "Net/UnrealNetwork.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
@@ -14,6 +16,13 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+}
+
+void AEscapeChroniclesPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, UniquePlayerID);
 }
 
 void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* OwnerController,
@@ -149,5 +158,35 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 
 		// We also want to apply blocking attributes by tags only after the gameplay effects are applied
 		AbilitySystemSet->ApplyBlockingAttributesByTags(AbilitySystemComponent);
+	}
+}
+
+void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
+{
+	if (UniquePlayerID.IsValid())
+	{
+		return;
+	}
+
+	AEscapeChroniclesGameMode* GameMode = GetWorld()->GetAuthGameMode<AEscapeChroniclesGameMode>();
+
+	if (!ensureAlways(GameMode))
+	{
+		return;
+	}
+
+	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerId();
+
+	const FUniqueNetIdRepl& UniqueNetId = GetUniqueId();
+
+	if (!IsABot() && UniqueNetId.IsValid())
+	{
+		const bool bV2Online = UniqueNetId.IsV2() &&
+			UniqueNetId.GetV2Unsafe().GetOnlineServicesType() != UE::Online::EOnlineServices::None;
+
+		if (bV2Online || (UniqueNetId.IsV1() && !UniqueNetId.GetV1Unsafe()->GetType().IsEqual(TEXT("NULL"))))
+		{
+			UniquePlayerID.NetID = UniqueNetId->ToString();
+		}
 	}
 }

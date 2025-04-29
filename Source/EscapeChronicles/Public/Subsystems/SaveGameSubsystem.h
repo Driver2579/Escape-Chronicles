@@ -7,6 +7,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "SaveGameSubsystem.generated.h"
 
+class AEscapeChroniclesPlayerState;
 class UEscapeChroniclesSaveGame;
 
 struct FActorSaveData;
@@ -47,8 +48,11 @@ public:
 	// Usually happens when the given slot name doesn't exist
 	FSimpleMulticastDelegate OnFailedToLoadGame;
 
-	// Tries to load the given player from the last save game object that was saved or loaded if any
-	void TryLoadPlayerFromCurrentSaveGameObject(APlayerState* PlayerState) const;
+	/**
+	 * Tries to load the given player from the last save game object that was saved or loaded if any. Could fail in case
+	 * there is no save game object or the player doesn't have anything to load.
+	 */
+	bool TryLoadPlayerFromCurrentSaveGameObject(AEscapeChroniclesPlayerState* PlayerState) const;
 
 protected:
 	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked();
@@ -63,6 +67,17 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FString AutoSaveSlotName = TEXT("AutoSave");
 
+	/**
+	 * List of classes that are allowed to be saved even if they were dynamically spawned. Should be used for some
+	 * game-specific actors (e.g., GameMode, GameState, etc.).
+	 * @note This doesn't mean that actors in this list will be spawned or destroyed by the SaveGameSubsystem when
+	 * loading the game. It's expected that the classes in this list are already spawned in the world when loading the
+	 * game.
+	 */
+	TArray<TSubclassOf<AActor>> AllowedDynamicallySpawnedActorsClasses;
+
+	bool IsAllowedDynamicallySpawnedActor(const AActor* Actor) const;
+
 	// List of classes that are saved separately for each player (e.g., Pawn, PlayerState, PlayerController, etc.)
 	TArray<TSubclassOf<AActor>> PlayerSpecificClasses;
 
@@ -71,9 +86,13 @@ private:
 	 */
 	bool IsPlayerSpecificActor(const AActor* Actor) const;
 
-	// TODO: Implement saving bots by name
-	// Saves all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) to the given save game object
-	void SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject, APlayerState* PlayerState);
+	// TODO: Implement saving bots
+	/**
+	 * Saves all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) associated with the given
+	 * PlayerState to the given save game object
+	 */
+	void SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
+		AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
 	 * Saves an actor to the OutActorSaveData and prepares it to be saved in the given save game object (e.g., calling
@@ -87,13 +106,13 @@ private:
 
 	void OnLoadingSaveGameObjectFinished(const FString& SlotName, int32 UserIndex, USaveGame* SaveGameObject);
 
-	// TODO: Implement loading bots by name
+	// TODO: Implement loading bots
 	/**
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save game
-	 * object.
+	 * object. Also, generates a UniquePlayerID for the given PlayerState if it doesn't have one.
 	 */
-	static void LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-		APlayerState* PlayerState);
+	static bool LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+		AEscapeChroniclesPlayerState* PlayerState);
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
 	static void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData);

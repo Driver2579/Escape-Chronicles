@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
 #include "Common/Structs/SaveData/PlayerSaveData.h"
+#include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesSaveGame.generated.h"
 
 /**
@@ -28,21 +29,35 @@ public:
 		StaticSavedActors.Add(ActorName, SavedActorData);
 	}
 
-	void ClearStaticSavedActors()
+	/**
+	 * Finds the save data for the dynamically spawned actor of the given class. It doesn't support finding the child or
+	 * parent class. The class should be exact.
+	 */
+	const FActorSaveData* FindDynamicallySpawnedActorSaveData(const TSoftClassPtr<AActor>& ActorClass) const
+	{
+		return DynamicallySpawnedSavedActors.Find(ActorClass);
+	}
+
+	// Should be used only for actors that were dynamically spawned (not created with the level)
+	void AddDynamicallySpawnedSavedActor(const TSoftClassPtr<AActor>& ActorClass, const FActorSaveData& SavedActorData)
+	{
+		DynamicallySpawnedSavedActors.Add(ActorClass, SavedActorData);
+	}
+
+	// Clears both StaticSavedActors and DynamicallySpawnedSavedActors
+	void ClearSavedActors()
 	{
 		StaticSavedActors.Empty();
+		DynamicallySpawnedSavedActors.Empty();
 	}
 
-	const FPlayerSaveData* FindPlayerSaveData(const FUniqueNetIdRepl& PlayerID) const
-	{
-#if DO_CHECK
-		check(PlayerID.IsValid());
-#endif
+	/**
+	 * Finds the save data for the given FUniquePlayerID and update the PlayerID in the struct if it's different from
+	 * the one in the save data.
+	 */
+	const FPlayerSaveData* FindPlayerSaveDataAndUpdatePlayerID(FUniquePlayerID& InOutUniquePlayerID) const;
 
-		return PlayerSpecificSavedActors.Find(PlayerID->ToString());
-	}
-
-	void OverridePlayerSaveData(const FUniqueNetIdRepl& PlayerNetID, const FPlayerSaveData& SavedActorData);
+	void OverridePlayerSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedActorData);
 
 private:
 	/**
@@ -54,9 +69,25 @@ private:
 	TMap<FName, FActorSaveData> StaticSavedActors;
 
 	/**
-	 * @tparam KeyType Unique ID of the player converted to a string.
+	 * Map of saved actors that were dynamically spawned (not created with the level).
+	 * @tparam KeyType Class of the saved actor.
+	 * @tparam ValueType Save data for the associated actor.
+	 */
+	UPROPERTY()
+	TMap<TSoftClassPtr<AActor>, FActorSaveData> DynamicallySpawnedSavedActors;
+
+	/**
+	 * @tparam KeyType Unique ID of the player.
 	 * @tparam ValueType Save data for the associated player.
 	 */
 	UPROPERTY()
-	TMap<FString, FPlayerSaveData> PlayerSpecificSavedActors;
+	TMap<FUniquePlayerID, FPlayerSaveData> PlayersSaveData;
+
+	// TODO: Implement this
+	/**
+	 * @tparam KeyType Unique ID of the bot.
+	 * @tparam ValueType Save data for the associated bot.
+	 */
+	UPROPERTY()
+	TMap<FUniquePlayerID, FPlayerSaveData> BotsSaveData;
 };
