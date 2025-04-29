@@ -14,5 +14,6 @@ struct FPlayerSaveData
 	 * @tparam KeyType Class of the actor that exists with the player (e.g., Pawn, PlayerState, PlayerController, etc.).
 	 * @tparam ValueType Save data for the associated class.
 	 */
+	UPROPERTY()
 	TMap<TSoftClassPtr<AActor>, FActorSaveData> PlayerSpecificActorsSaveData;
 };

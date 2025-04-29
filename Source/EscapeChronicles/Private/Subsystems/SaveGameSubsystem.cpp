@@ -20,7 +20,7 @@ USaveGameSubsystem::USaveGameSubsystem()
 	};
 }
 
-UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked(const FString& SlotName)
+UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked()
 {
 	if (CurrentSaveGameObject)
 	{
@@ -57,7 +57,7 @@ bool USaveGameSubsystem::IsPlayerSpecificActor(const AActor* Actor) const
 
 void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 {
-	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked(SlotName);
+	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
 	// Clear the save game object to avoid saving old data
 	SaveGameObject->ClearStaticSavedActors();
@@ -125,6 +125,10 @@ void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSave
 	check(PlayerState->Implements<USaveable>());
 #endif
 
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+#endif
+
 	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
 
 	// Skip the player if it doesn't have a valid net ID
@@ -169,6 +173,10 @@ void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveDat
 #if DO_CHECK
 	check(IsValid(Actor));
 	check(Actor->Implements<USaveable>());
+#endif
+
+#if DO_ENSURE
+	ensureAlways(Actor->HasAuthority());
 #endif
 
 	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
@@ -336,6 +344,10 @@ void USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroni
 	check(PlayerState->Implements<USaveable>());
 #endif
 
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+#endif
+
 	const FUniqueNetIdRepl& PlayerNetID = PlayerState->GetUniqueId();
 
 	// Skip the player if it doesn't have a valid net ID
@@ -397,6 +409,10 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 #if DO_CHECK
 	check(IsValid(Actor));
 	check(Actor->Implements<USaveable>());
+#endif
+
+#if DO_ENSURE
+	ensureAlways(Actor->HasAuthority());
 #endif
 
 	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);

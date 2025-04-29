@@ -51,7 +51,7 @@ public:
 	void TryLoadPlayerFromCurrentSaveGameObject(APlayerState* PlayerState) const;
 
 protected:
-	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked(const FString& SlotName);
+	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked();
 
 	static void SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData);
 	static void LoadObjectSaveGameFields(UObject* Object, const TArray<uint8>& InByteData);
@@ -88,7 +88,6 @@ private:
 	void OnLoadingSaveGameObjectFinished(const FString& SlotName, int32 UserIndex, USaveGame* SaveGameObject);
 
 	// TODO: Implement loading bots by name
-	// TODO: Почему-то, не сохраняются данные из ASC. Вроде сериализируются нормально, но при загрузке пустышка
 	/**
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save game
 	 * object.
