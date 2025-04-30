@@ -6,6 +6,7 @@
 #include "Common/Structs/UniquePlayerID.h"
 #include "OfflineStandalonePlayerSaveData.generated.h"
 
+// This struct is designed to be used only in USaveGame object
 USTRUCT()
 struct FOfflineStandalonePlayerSaveData
 {

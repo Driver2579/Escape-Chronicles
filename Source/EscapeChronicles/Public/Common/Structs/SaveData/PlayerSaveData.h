@@ -6,6 +6,7 @@
 #include "Common/Structs/FunctionLibriries/MapFunctionLibriry.h"
 #include "PlayerSaveData.generated.h"
 
+// This struct is designed to be used only in USaveGame object
 USTRUCT()
 struct FPlayerSaveData
 {

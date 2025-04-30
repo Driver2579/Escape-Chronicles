@@ -11,6 +11,10 @@ struct FAttributeSetSaveData
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
-	TMap<FGameplayAttribute, float> AttributesBaseValues;
+	/**
+	 * @tparam KeyType The name of the attribute.
+	 * @tparam ValueType The base value of the attribute.
+	 */
+	UPROPERTY(SaveGame)
+	TMap<FString, float> AttributesBaseValues;
 };

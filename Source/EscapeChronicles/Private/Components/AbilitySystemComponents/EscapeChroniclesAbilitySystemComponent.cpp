@@ -105,7 +105,7 @@ void UEscapeChroniclesAbilitySystemComponent::OnPreSaveObject()
 		for (const FGameplayAttribute& Attribute : Attributes)
 		{
 			// Save information about what attribute is being saved and save its base value
-			AttributeSetSaveData.AttributesBaseValues.Add(Attribute,
+			AttributeSetSaveData.AttributesBaseValues.Add(Attribute.GetName(),
 				Attribute.GetGameplayAttributeDataChecked(AttributeSet)->GetBaseValue());
 		}
 
@@ -116,8 +116,6 @@ void UEscapeChroniclesAbilitySystemComponent::OnPreSaveObject()
 
 void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
 {
-	// TODO: Загрузка не работает корректно, почему-то
-
 	// Iterate all attribute sets to update their attributes with loaded data
 	for (UAttributeSet* AttributeSet : GetSpawnedAttributes())
 	{
@@ -139,12 +137,19 @@ void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
 
 		for (FGameplayAttribute& Attribute : Attributes)
 		{
-			const float* LoadedBaseValue = AttributeSetSaveData->AttributesBaseValues.Find(Attribute);
+			const float* LoadedBaseValue = AttributeSetSaveData->AttributesBaseValues.Find(Attribute.GetName());
 
 			// Set the loaded base value to the attribute if it was found
 			if (LoadedBaseValue)
 			{
-				Attribute.GetGameplayAttributeDataChecked(AttributeSet)->SetBaseValue(*LoadedBaseValue);
+				FGameplayAttributeData* GameplayAttributeData = Attribute.GetGameplayAttributeDataChecked(AttributeSet);
+
+				/**
+				 * We need to set both base	and current value because setting the base value doesn't automatically
+				 * update the current value.
+				 */
+				GameplayAttributeData->SetBaseValue(*LoadedBaseValue);
+				GameplayAttributeData->SetCurrentValue(*LoadedBaseValue);
 			}
 		}
 	}

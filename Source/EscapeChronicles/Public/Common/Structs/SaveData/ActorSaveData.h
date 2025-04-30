@@ -1,10 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-#include "Common/Structs/FunctionLibriries/MapFunctionLibriry.h"
 
+#include "Common/Structs/FunctionLibriries/MapFunctionLibriry.h"
 #include "ActorSaveData.generated.h"
 
+// This struct is designed to be used only in USaveGame object
 USTRUCT()
 struct FSaveData
 {
@@ -24,6 +25,7 @@ struct FSaveData
 	}
 };
 
+// This struct is designed to be used only in USaveGame object
 USTRUCT()
 struct FActorSaveData
 {
