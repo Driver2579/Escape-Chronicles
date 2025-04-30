@@ -24,8 +24,6 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
-	virtual void Logout(AController* Exiting) override;
-
 private:
 	FUniquePlayerIdManager UniquePlayerIdManager;
 

@@ -73,20 +73,6 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 	return ParentResult;
 }
 
-void AEscapeChroniclesGameMode::Logout(AController* Exiting)
-{
-	USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
-
-	// TODO: Pawn is invalid here. Maybe try notifying the GameMode in EndPlay of the controller?
-	if (ensureAlways(SaveGameSubsystem))
-	{
-		// Save the game synchronously because we may close the game before the async save is finished
-		SaveGameSubsystem->SaveGame(false);
-	}
-
-	Super::Logout(Exiting);
-}
-
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
 void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* OldPawn, APawn* NewPawn)
 {
