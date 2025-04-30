@@ -110,7 +110,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 		// Save the player state separately with the player-specific actors
 		if (PlayerState)
 		{
-			SavePlayerToSaveGameObjectChecked(SaveGameObject, PlayerState);
+			SavePlayerOrBotToSaveGameObjectChecked(SaveGameObject, PlayerState);
 
 			continue;
 		}
@@ -140,7 +140,7 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 	}
 }
 
-void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
+void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
 	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
@@ -153,10 +153,10 @@ void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSave
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	const FUniquePlayerID& PlayerID = PlayerState->GetUniquePlayerID();
+	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
 
-	// Skip the player if it doesn't have a valid net ID
-	if (!ensureAlways(PlayerID.IsValid()))
+	// Skip the player if it doesn't have a valid UniquePlayerID (which should never be the case)
+	if (!ensureAlways(UniquePlayerID.IsValid()))
 	{
 		return;
 	}
@@ -189,7 +189,43 @@ void USaveGameSubsystem::SavePlayerToSaveGameObjectChecked(UEscapeChroniclesSave
 			PlayerControllerSaveData);
 	}
 
-	SaveGameObject->OverridePlayerSaveData(PlayerID, PlayerSaveData);
+	// If the NetID is valid here, then the player is for sure playing using the online-service
+	if (!UniquePlayerID.NetID.IsEmpty())
+	{
+		// Save the player to the list for online players because he has a valid NetID
+		SaveGameObject->OverrideOnlinePlayerSaveData(UniquePlayerID, PlayerSaveData);
+
+		const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
+			SaveGameObject->GetOfflineStandalonePlayerSaveData();
+
+		/**
+		 * If there is a save data for the offline standalone player and this is that player (which was offline, but now
+		 * is online), then clear the save data for the offline standalone player because we moved this player to the
+		 * list of online player.
+		 *
+		 * Note: This means that if the player once joined online, he can't continue his save game offline anymore and
+		 * will start as a new player next time he joins offline. To continue his save, he has to join online again
+		 * (this will not affect users that are logged in into Steam (or other platform) and playing in offline mode).
+		 */
+
+		const bool bUsedToBeSavedOfflineStandalonePlayer = OfflineStandalonePlayerSaveData &&
+			OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID == UniquePlayerID.PlayerID;
+
+		if (bUsedToBeSavedOfflineStandalonePlayer)
+		{
+			SaveGameObject->ClearOfflineStandalonePlayerSaveData();
+		}
+	}
+	// If it's not an online player, then check if it's a bot and save it if it is
+	else if (PlayerState->IsABot())
+	{
+		SaveGameObject->OverrideBotSaveData(UniquePlayerID, PlayerSaveData);
+	}
+	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
+	else
+	{
+		SaveGameObject->OverrideOfflineStandalonePlayerSaveData(UniquePlayerID, PlayerSaveData);
+	}
 }
 
 void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveData& OutActorSaveData)
@@ -285,7 +321,7 @@ void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserInd
 	OnGameSaved.Broadcast();
 }
 
-void USaveGameSubsystem::TryLoadGame(const FString& SlotName, const bool bAsync)
+void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(const FString& SlotName, const bool bAsync)
 {
 	if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
@@ -396,12 +432,14 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Then load players
 	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
 	{
-		LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+		LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(CurrentSaveGameObject, PlayerState);
 	}
+
+	// TODO: Also load bots once bots are implemented
 }
 
-bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-	AEscapeChroniclesPlayerState* PlayerState)
+bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(
+	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
@@ -413,29 +451,10 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroni
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	/**
-	 * TODO:
-	 * Это не безопасно. Может произойти ситуация, что хост будет иметь не первый сгенерированный ID. Например, если он
-	 * перекинет сейв другому игроку, на котором до этого хост уже подключался онлайн. Тогда новый игрок получит сейв,
-	 * на котором уже есть минимум один ID, зарезервированный под NetID, и у нового клиента сгенерируется уже не нулевой
-	 * ID. Нам надо отдельно сохранять ID хоста, если у него не привязан NetID. То есть, подключаемся -> пытаемся
-	 * загрузить сейв по NetID -> если не получается, то проверяем, является ли игрок хостом -> если нет, то просто
-	 * генерируем новый ID и останавливаем цепочку, а если да, то проверяем есть ли сохраненный FUniquePlayerID для
-	 * хоста без NetID (или можно сохранять просто uint64 PlayerID) -> если есть, то присваиваем PlayerID от него к
-	 * подключенному игроку, а если нет, то просто генерируем новый ID и останавливаем цепочку -> если у подключенного
-	 * игрока есть NetID, то удаляем тот PlayerID, который был сохранен (тогда выходит, что у нас больше нет
-	 * сохраненного офлайн хоста, ибо игрок, подключившийся онлайн, его перехватил). При сохранении, соответственно,
-	 * надо будет тоже проверять является ли игрок хостом и нет ли у него NetID. Если хост без NetID, то сохраняем как
-	 * новый ID хоста.
-	 */
-	// Generate a UniquePlayerID for the PlayerState if it doesn't already have one
-	PlayerState->GenerateUniquePlayerIdIfInvalid();
+	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(SaveGameObject,
+		PlayerState);
 
-	FUniquePlayerID& PlayerID = PlayerState->GetUniquePlayerID();
-
-	const FPlayerSaveData* PlayerSaveData = SaveGameObject->FindPlayerSaveDataAndUpdatePlayerID(PlayerID);
-
-	// Don't load the player if it doesn't have anything to load. Usually, we should always have it if the ID is valid.
+	// Don't load the player if he doesn't have anything to load
 	if (!PlayerSaveData)
 	{
 		return false;
@@ -481,6 +500,89 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectChecked(const UEscapeChroni
 	}
 
 	return true;
+}
+
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(
+	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
+	check(IsValid(PlayerState->GetPlayerController()));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(!PlayerState->IsABot());
+#endif
+
+	const FPlayerSaveData* PlayerSaveData = nullptr;
+
+	if (PlayerState->IsOnlinePlayer())
+	{
+		/**
+		 * Generate the UniquePlayerID if it's not valid already. The PlayerID from here can be overriden by the one
+		 * from the save, but the NetID won't be changed.
+		 */
+		PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+		FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID_Mutable();
+
+		/**
+		 * Find the save data for the given NetID and get the PlayerID from the save data. If it's not found, just keep
+		 * the UniquePlayerID we just generated for now.
+		 */
+		PlayerSaveData = SaveGameObject->FindOnlinePlayerSaveDataAndUpdatePlayerID(UniquePlayerID);
+
+		/**
+		 * If we failed to find the save data for the player and the player is locally controlled (this code is executed
+		 * on server), then it's probably a hosting player that used to play offline before (or another player that uses
+		 * the same save). But maybe we don't have a saved data for the offline standalone player at all.
+		 */
+		const bool bIsHostThatMaybeWasSavedOffline = !PlayerSaveData &&
+			PlayerState->GetPlayerController()->IsLocalController();
+
+		if (bIsHostThatMaybeWasSavedOffline)
+		{
+			const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
+				SaveGameObject->GetOfflineStandalonePlayerSaveData();
+
+			/**
+			 * If we have a saved data for the offline standalone player, then we can use it for the current hosting
+			 * player. Otherwise, we just keep the UniquePlayerID we generated.
+			 */
+			if (OfflineStandalonePlayerSaveData)
+			{
+				UniquePlayerID.PlayerID = OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID;
+				PlayerSaveData = &OfflineStandalonePlayerSaveData->PlayerSaveData;
+			}
+		}
+	}
+	else
+	{
+		const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
+			SaveGameObject->GetOfflineStandalonePlayerSaveData();
+
+		/**
+		 * If we have a saved data for the offline standalone player, then we can use it for this player since he's
+		 * playing offline.
+		 */
+		if (OfflineStandalonePlayerSaveData)
+		{
+			PlayerState->GetUniquePlayerID_Mutable().PlayerID =
+				OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID;
+
+			PlayerSaveData = &OfflineStandalonePlayerSaveData->PlayerSaveData;
+		}
+		// Otherwise, just generate a new UniquePlayerID for the player he doesn't have it already
+		else
+		{
+			PlayerState->GenerateUniquePlayerIdIfInvalid();
+		}
+	}
+
+	return PlayerSaveData;
 }
 
 void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
@@ -566,16 +668,21 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 	Object->Serialize(Ar);
 }
 
-bool USaveGameSubsystem::TryLoadPlayerFromCurrentSaveGameObject(AEscapeChroniclesPlayerState* PlayerState) const
+bool USaveGameSubsystem::LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlayerIdForPlayer(
+	AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
-	check(PlayerState);
+	check(IsValid(PlayerState));
 #endif
 
-	if (ensureAlways(CurrentSaveGameObject))
+	if (CurrentSaveGameObject)
 	{
-		return LoadPlayerFromSaveGameObjectChecked(CurrentSaveGameObject, PlayerState);
+		return LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(CurrentSaveGameObject,
+			PlayerState);
 	}
+
+	// Just Generate a UniquePlayerID for the player if we don't have a save game object
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
 
 	return false;
 }

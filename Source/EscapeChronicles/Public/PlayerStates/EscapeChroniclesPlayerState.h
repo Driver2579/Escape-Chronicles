@@ -42,8 +42,11 @@ public:
 	 * The PlayerID in the struct should be overriden by the SaveGameSubsystem if it found the save for the same NetId
 	 * but their PlayerIDs are different.
 	 */
-	FUniquePlayerID& GetUniquePlayerID() { return UniquePlayerID; }
+	FUniquePlayerID& GetUniquePlayerID_Mutable() { return UniquePlayerID; }
+
 	const FUniquePlayerID& GetUniquePlayerID() const { return UniquePlayerID; }
+
+	bool IsOnlinePlayer() const;
 
 	void GenerateUniquePlayerIdIfInvalid();
 

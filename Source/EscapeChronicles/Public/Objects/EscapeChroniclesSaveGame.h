@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
-#include "Common/Structs/SaveData/PlayerSaveData.h"
-#include "Common/Structs/UniquePlayerID.h"
+#include "Common/Structs/SaveData/OfflineStandalonePlayerSaveData.h"
 #include "EscapeChroniclesSaveGame.generated.h"
 
 /**
@@ -55,9 +54,32 @@ public:
 	 * Finds the save data for the given FUniquePlayerID and update the PlayerID in the struct if it's different from
 	 * the one in the save data.
 	 */
-	const FPlayerSaveData* FindPlayerSaveDataAndUpdatePlayerID(FUniquePlayerID& InOutUniquePlayerID) const;
+	const FPlayerSaveData* FindOnlinePlayerSaveDataAndUpdatePlayerID(FUniquePlayerID& InOutUniquePlayerID) const;
 
-	void OverridePlayerSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedActorData);
+	// Should be used only for players that are connected online (with NetID)
+	void OverrideOnlinePlayerSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedPlayerData);
+
+	const FOfflineStandalonePlayerSaveData* GetOfflineStandalonePlayerSaveData() const
+	{
+		return OfflineStandalonePlayerSaveData.UniquePlayerID.IsValid() ? &OfflineStandalonePlayerSaveData : nullptr;
+	}
+
+	// Should be used only for the offline standalone player (without NetID)
+	void OverrideOfflineStandalonePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
+		const FPlayerSaveData& SavedPlayerData);
+
+	void ClearOfflineStandalonePlayerSaveData()
+	{
+		OfflineStandalonePlayerSaveData = FOfflineStandalonePlayerSaveData();
+	}
+
+	// Should be used only for bots (without NetID)
+	void OverrideBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData);
+
+	void ClearBotsSaveData()
+	{
+		BotsSaveData.Empty();
+	}
 
 private:
 	/**
@@ -77,15 +99,23 @@ private:
 	TMap<TSoftClassPtr<AActor>, FActorSaveData> DynamicallySpawnedSavedActors;
 
 	/**
+	 * Map of saved players that are connected online (with NetID).
 	 * @tparam KeyType Unique ID of the player.
 	 * @tparam ValueType Save data for the associated player.
 	 */
 	UPROPERTY()
-	TMap<FUniquePlayerID, FPlayerSaveData> PlayersSaveData;
+	TMap<FUniquePlayerID, FPlayerSaveData> OnlinePlayersSaveData;
 
-	// TODO: Implement this
 	/**
-	 * @tparam KeyType Unique ID of the bot.
+	 * Save data of the only player that is playing offline (standalone player without NetID). Once the player with this
+	 * ID connects online, you should move it from here to OnlinePlayersSaveData.
+	 */
+	UPROPERTY()
+	FOfflineStandalonePlayerSaveData OfflineStandalonePlayerSaveData;
+
+	/**
+	 * Map of saved bots.
+	 * @tparam KeyType Unique ID of the bot (NetID should be empty).
 	 * @tparam ValueType Save data for the associated bot.
 	 */
 	UPROPERTY()

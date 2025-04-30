@@ -29,10 +29,13 @@ protected:
 private:
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
-	void OnInitialGameLoadFinished()
+	void OnInitialGameLoadFinishedOrFailed()
 	{
-		bInitialGameLoadFinished = true;
+		bInitialGameLoadFinishedOrFailed = true;
 	}
 
-	bool bInitialGameLoadFinished = false;
+	bool bInitialGameLoadFinishedOrFailed = false;
+
+	UFUNCTION()
+	void OnPlayerToLoadPawnChanged(APawn* OldPawn, APawn* NewPawn);
 };

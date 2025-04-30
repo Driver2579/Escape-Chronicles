@@ -2,41 +2,84 @@
 
 #include "Objects/EscapeChroniclesSaveGame.h"
 
-const FPlayerSaveData* UEscapeChroniclesSaveGame::FindPlayerSaveDataAndUpdatePlayerID(
+const FPlayerSaveData* UEscapeChroniclesSaveGame::FindOnlinePlayerSaveDataAndUpdatePlayerID(
 	FUniquePlayerID& InOutUniquePlayerID) const
 {
 #if DO_CHECK
 	check(InOutUniquePlayerID.IsValid());
 #endif
 
-	const FPlayerSaveData* SaveData = PlayersSaveData.Find(InOutUniquePlayerID);
-
-	if (SaveData)
-	{
-		const FUniquePlayerID* SavedUniquePlayerID = PlayersSaveData.FindKey(*SaveData);
-
-#if DO_CHECK
-		// Make sure the NetIDs are equal
-		check(SavedUniquePlayerID->NetID == InOutUniquePlayerID.NetID);
+#if DO_ENSURE
+	ensureAlwaysMsgf(!InOutUniquePlayerID.NetID.IsEmpty(), TEXT("Online players must contain the NetID!"));
 #endif
 
-		// Update the PlayerID if it's different from the one in the save data
-		InOutUniquePlayerID.PlayerID = SavedUniquePlayerID->PlayerID;
+	const FPlayerSaveData* SaveData = OnlinePlayersSaveData.Find(InOutUniquePlayerID);
+
+	if (!SaveData)
+	{
+		return nullptr;
 	}
+
+	const FUniquePlayerID* SavedUniquePlayerID = OnlinePlayersSaveData.FindKey(*SaveData);
+
+#if DO_ENSURE
+	// Make sure the NetID is set because this map should not contain players without NetIDs
+	ensureAlways(!SavedUniquePlayerID->NetID.IsEmpty());
+
+	// Make sure the NetIDs are equal
+	ensureAlways(SavedUniquePlayerID->NetID == InOutUniquePlayerID.NetID);
+#endif
+
+	// Update the PlayerID if it's different from the one in the save data
+	InOutUniquePlayerID.PlayerID = SavedUniquePlayerID->PlayerID;
 
 	return SaveData;
 }
 
-void UEscapeChroniclesSaveGame::OverridePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
-	const FPlayerSaveData& SavedActorData)
+void UEscapeChroniclesSaveGame::OverrideOnlinePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
+	const FPlayerSaveData& SavedPlayerData)
 {
 #if DO_CHECK
 	check(UniquePlayerID.IsValid());
 #endif
 
 	// Remove the old data if it exists
-	PlayersSaveData.Remove(UniquePlayerID);
+	OnlinePlayersSaveData.Remove(UniquePlayerID);
 
 	// Add the new data
-	PlayersSaveData.Add(UniquePlayerID, SavedActorData);
+	OnlinePlayersSaveData.Add(UniquePlayerID, SavedPlayerData);
+}
+
+void UEscapeChroniclesSaveGame::OverrideOfflineStandalonePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
+	const FPlayerSaveData& SavedPlayerData)
+{
+#if DO_CHECK
+	check(UniquePlayerID.IsValid());
+#endif
+
+#if DO_ENSURE
+	ensureAlwaysMsgf(UniquePlayerID.NetID.IsEmpty(),
+		TEXT("Offline standalone player must NOT contain the NetID!"));
+#endif
+
+	OfflineStandalonePlayerSaveData.UniquePlayerID = UniquePlayerID;
+	OfflineStandalonePlayerSaveData.PlayerSaveData = SavedPlayerData;
+}
+
+void UEscapeChroniclesSaveGame::OverrideBotSaveData(const FUniquePlayerID& UniquePlayerID,
+	const FPlayerSaveData& SavedBotData)
+{
+#if DO_CHECK
+	check(UniquePlayerID.IsValid());
+#endif
+
+#if DO_ENSURE
+	ensureAlwaysMsgf(UniquePlayerID.NetID.IsEmpty(), TEXT("Bots must NOT contain the NetID!"));
+#endif
+
+	// Remove the old data if it exists
+	OnlinePlayersSaveData.Remove(UniquePlayerID);
+
+	// Add the new data
+	OnlinePlayersSaveData.Add(UniquePlayerID, SavedBotData);
 }

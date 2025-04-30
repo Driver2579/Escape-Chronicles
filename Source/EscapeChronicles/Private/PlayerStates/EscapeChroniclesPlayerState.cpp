@@ -161,6 +161,24 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 	}
 }
 
+bool AEscapeChroniclesPlayerState::IsOnlinePlayer() const
+{
+	// If it's a bot, then it's for sure not a player
+	if (IsABot())
+	{
+		return false;
+	}
+
+	const FUniqueNetIdRepl& UniqueNetId = GetUniqueId();
+
+#if DO_ENSURE
+	ensureAlways(UniqueNetId.IsValid());
+#endif
+
+	return (UniqueNetId.IsV1() && !UniqueNetId.GetV1Unsafe()->GetType().IsEqual(TEXT("NULL"))) ||
+		(UniqueNetId.IsV2() && UniqueNetId.GetV2Unsafe().GetOnlineServicesType() != UE::Online::EOnlineServices::None);
+}
+
 void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 {
 	if (UniquePlayerID.IsValid())
@@ -177,16 +195,9 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 
 	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerId();
 
-	const FUniqueNetIdRepl& UniqueNetId = GetUniqueId();
-
-	if (!IsABot() && UniqueNetId.IsValid())
+	// Generate the NetID if it's an online player
+	if (IsOnlinePlayer())
 	{
-		const bool bV2Online = UniqueNetId.IsV2() &&
-			UniqueNetId.GetV2Unsafe().GetOnlineServicesType() != UE::Online::EOnlineServices::None;
-
-		if (bV2Online || (UniqueNetId.IsV1() && !UniqueNetId.GetV1Unsafe()->GetType().IsEqual(TEXT("NULL"))))
-		{
-			UniquePlayerID.NetID = UniqueNetId->ToString();
-		}
+		UniquePlayerID.NetID = GetUniqueId()->ToString();
 	}
 }
