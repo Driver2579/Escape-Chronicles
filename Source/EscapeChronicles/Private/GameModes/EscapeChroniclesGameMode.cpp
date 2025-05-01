@@ -4,6 +4,7 @@
 
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
+#include "HUDs/EscapeChroniclesHUD.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
@@ -11,4 +12,5 @@ AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
+	HUDClass = AEscapeChroniclesHUD::StaticClass();
 }

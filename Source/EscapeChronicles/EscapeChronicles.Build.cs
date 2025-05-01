@@ -18,7 +18,9 @@ public class EscapeChronicles : ModuleRules
 			"Mover",
 			"GameplayAbilities",
 			"GameplayTags",
-			"GameplayTasks"
+			"GameplayTasks",
+			"UMG",
+			"CommonUI"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
