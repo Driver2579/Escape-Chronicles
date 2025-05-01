@@ -27,13 +27,15 @@ protected:
 private:
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
-	void OnInitialGameLoadFinishedOrFailed()
-	{
-		bInitialGameLoadFinishedOrFailed = true;
-	}
-
 	bool bInitialGameLoadFinishedOrFailed = false;
 
-	UFUNCTION()
-	void OnPlayerToLoadPawnChanged(APawn* OldPawn, APawn* NewPawn);
+	void OnInitialGameLoadFinishedOrFailed();
+
+	TArray<TWeakObjectPtr<APlayerController>> PlayersWaitingToBeLoaded;
+
+	void LoadPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController) const;
+
+	void OnPlayerToLoadPawnChanged(APawn* NewPawn) const;
+
+	void LoadPlayerOrGenerateUniquePlayerIdForPlayer(const APlayerController* PlayerController) const;
 };

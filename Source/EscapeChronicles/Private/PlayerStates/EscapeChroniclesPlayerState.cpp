@@ -186,14 +186,21 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 		return;
 	}
 
-	AEscapeChroniclesGameMode* GameMode = GetWorld()->GetAuthGameMode<AEscapeChroniclesGameMode>();
+	const UWorld* World = GetWorld();
+
+	AEscapeChroniclesGameMode* GameMode = World->GetAuthGameMode<AEscapeChroniclesGameMode>();
 
 	if (!ensureAlways(GameMode))
 	{
 		return;
 	}
 
-	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerId();
+#if WITH_EDITORONLY_DATA
+	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
+#else
+	// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build
+	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerID(0);
+#endif
 
 	// Generate the NetID if it's an online player
 	if (IsOnlinePlayer())

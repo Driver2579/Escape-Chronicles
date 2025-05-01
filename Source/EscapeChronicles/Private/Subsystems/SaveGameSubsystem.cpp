@@ -161,6 +161,18 @@ void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChronicle
 		return;
 	}
 
+	APawn* Pawn = PlayerState->GetPawn();
+
+	/**
+	 * There might be a situation where the player is saved after his pawn was already unpossessed. This may happen due
+	 * to the game close where the game gets saved on each player that exists (they exit one by one), so the game save
+	 * may be called multiple times and already after this player was already saved.
+	 */
+	if (!IsValid(Pawn))
+	{
+		return;
+	}
+
 	FPlayerSaveData PlayerSaveData;
 
 	// Save the PlayerState (it's already checked)
@@ -168,10 +180,8 @@ void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChronicle
 	SaveActorToSaveDataChecked(PlayerState, PlayerStateSaveData);
 	PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerState::StaticClass(), PlayerStateSaveData);
 
-	APawn* Pawn = PlayerState->GetPawn();
-
 	// Save the Pawn if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Pawn)) && Pawn->Implements<USaveable>())
+	if (Pawn->Implements<USaveable>())
 	{
 		FActorSaveData PawnSaveData;
 		SaveActorToSaveDataChecked(Pawn, PawnSaveData);
@@ -192,29 +202,22 @@ void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChronicle
 	// If the NetID is valid here, then the player is for sure playing using the online-service
 	if (!UniquePlayerID.NetID.IsEmpty())
 	{
-		// Save the player to the list for online players because he has a valid NetID
-		SaveGameObject->OverrideOnlinePlayerSaveData(UniquePlayerID, PlayerSaveData);
-
-		const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
-			SaveGameObject->GetOfflineStandalonePlayerSaveData();
-
 		/**
-		 * If there is a save data for the offline standalone player and this is that player (which was offline, but now
-		 * is online), then clear the save data for the offline standalone player because we moved this player to the
-		 * list of online player.
+		 * If there are save data for offline players and this is a player that was previously saved as an offline one
+		 * (he was offline, but now he is online), then more save data for offline players to save data for online
+		 * players. Once moved, the next offline players we are probably going to save will simply ignore this check.
 		 *
-		 * Note: This means that if the player once joined online, he can't continue his save game offline anymore and
-		 * will start as a new player next time he joins offline. To continue his save, he has to join online again
+		 * Note: This means that if players once joined online, they can't continue their save game offline anymore and
+		 * will start as new players next time they join offline. To continue their save, they have to join online again
 		 * (this will not affect users that are logged in into Steam (or other platform) and playing in offline mode).
 		 */
-
-		const bool bUsedToBeSavedOfflineStandalonePlayer = OfflineStandalonePlayerSaveData &&
-			OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID == UniquePlayerID.PlayerID;
-
-		if (bUsedToBeSavedOfflineStandalonePlayer)
+		if (SaveGameObject->FindOfflinePlayerSaveData(UniquePlayerID))
 		{
-			SaveGameObject->ClearOfflineStandalonePlayerSaveData();
+			SaveGameObject->MoveOfflinePlayersSaveDataToOnlinePlayersSaveData();
 		}
+
+		// Save the player to the list for online players because he has a valid NetID
+		SaveGameObject->OverrideOnlinePlayerSaveData(UniquePlayerID, PlayerSaveData);
 	}
 	// If it's not an online player, then check if it's a bot and save it if it is
 	else if (PlayerState->IsABot())
@@ -436,6 +439,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	}
 
 	// TODO: Also load bots once bots are implemented
+
+	OnGameLoaded.Broadcast();
 }
 
 bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(
@@ -517,18 +522,19 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdForPlayer
 	ensureAlways(!PlayerState->IsABot());
 #endif
 
-	const FPlayerSaveData* PlayerSaveData = nullptr;
+	const FPlayerSaveData* PlayerSaveData;
 
+	/**
+	 * Generate the UniquePlayerID if it's not valid already. The PlayerID from here can be overriden by the one
+	 * from the save, but NetID and LocalPlayerID won't be changed.
+	 */
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+	FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID_Mutable();
+
+	// Load the save data for the player as an online player if the player is online
 	if (PlayerState->IsOnlinePlayer())
 	{
-		/**
-		 * Generate the UniquePlayerID if it's not valid already. The PlayerID from here can be overriden by the one
-		 * from the save, but the NetID won't be changed.
-		 */
-		PlayerState->GenerateUniquePlayerIdIfInvalid();
-
-		FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID_Mutable();
-
 		/**
 		 * Find the save data for the given NetID and get the PlayerID from the save data. If it's not found, just keep
 		 * the UniquePlayerID we just generated for now.
@@ -538,51 +544,55 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdForPlayer
 		/**
 		 * If we failed to find the save data for the player and the player is locally controlled (this code is executed
 		 * on server), then it's probably a hosting player that used to play offline before (or another player that uses
-		 * the same save). But maybe we don't have a saved data for the offline standalone player at all.
+		 * the same save). But maybe we don't have a saved data for the offline player at all.
 		 */
 		const bool bIsHostThatMaybeWasSavedOffline = !PlayerSaveData &&
 			PlayerState->GetPlayerController()->IsLocalController();
 
+		/**
+		 * Try to find the data for this player in the offline players list if it's a host that maybe was saved offline
+		 * in previous sessions.
+		 */
 		if (bIsHostThatMaybeWasSavedOffline)
 		{
-			const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
-				SaveGameObject->GetOfflineStandalonePlayerSaveData();
-
-			/**
-			 * If we have a saved data for the offline standalone player, then we can use it for the current hosting
-			 * player. Otherwise, we just keep the UniquePlayerID we generated.
-			 */
-			if (OfflineStandalonePlayerSaveData)
-			{
-				UniquePlayerID.PlayerID = OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID;
-				PlayerSaveData = &OfflineStandalonePlayerSaveData->PlayerSaveData;
-			}
+			PlayerSaveData = LoadOfflinePlayerSaveDataAndPlayerID(SaveGameObject, UniquePlayerID);
 		}
 	}
+	// Otherwise, load the save data for the player as an offline player because he's playing offline
 	else
 	{
-		const FOfflineStandalonePlayerSaveData* OfflineStandalonePlayerSaveData =
-			SaveGameObject->GetOfflineStandalonePlayerSaveData();
-
-		/**
-		 * If we have a saved data for the offline standalone player, then we can use it for this player since he's
-		 * playing offline.
-		 */
-		if (OfflineStandalonePlayerSaveData)
-		{
-			PlayerState->GetUniquePlayerID_Mutable().PlayerID =
-				OfflineStandalonePlayerSaveData->UniquePlayerID.PlayerID;
-
-			PlayerSaveData = &OfflineStandalonePlayerSaveData->PlayerSaveData;
-		}
-		// Otherwise, just generate a new UniquePlayerID for the player he doesn't have it already
-		else
-		{
-			PlayerState->GenerateUniquePlayerIdIfInvalid();
-		}
+		PlayerSaveData = LoadOfflinePlayerSaveDataAndPlayerID(SaveGameObject, UniquePlayerID);
 	}
 
 	return PlayerSaveData;
+}
+
+const FPlayerSaveData* USaveGameSubsystem::LoadOfflinePlayerSaveDataAndPlayerID(
+	const UEscapeChroniclesSaveGame* SaveGameObject, FUniquePlayerID& InOutUniquePlayerID)
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(InOutUniquePlayerID.IsValid());
+#endif
+
+	const FPlayerSaveData* OfflinePlayerSaveData;
+	uint64 PlayerID;
+
+	const bool bWasSaved = SaveGameObject->FindOfflinePlayerSaveDataAndPlayerIdByLocalPlayerID(
+		InOutUniquePlayerID.LocalPlayerID, OfflinePlayerSaveData, PlayerID);
+
+	/**
+	 * If we have a saved data for this offline player, then we can use it for this player. Otherwise, we just keep the
+	 * PlayerID we generated above.
+	 */
+	if (bWasSaved)
+	{
+		InOutUniquePlayerID.PlayerID = PlayerID;
+
+		return OfflinePlayerSaveData;
+	}
+
+	return nullptr;
 }
 
 void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)

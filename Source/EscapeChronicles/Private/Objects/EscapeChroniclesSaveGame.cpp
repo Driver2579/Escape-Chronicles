@@ -50,6 +50,23 @@ void UEscapeChroniclesSaveGame::OverrideOnlinePlayerSaveData(const FUniquePlayer
 	OnlinePlayersSaveData.Add(UniquePlayerID, SavedPlayerData);
 }
 
+bool UEscapeChroniclesSaveGame::FindOfflinePlayerSaveDataAndPlayerIdByLocalPlayerID(const int32 LocalPlayerID,
+	const FPlayerSaveData*& OutPlayerSaveData, uint64& OutPlayerIdForUniquePlayerID) const
+{
+	for (const TPair<FUniquePlayerID, FPlayerSaveData>& Pair : OfflinePlayersSaveData)
+	{
+		if (Pair.Key.LocalPlayerID == LocalPlayerID)
+		{
+			OutPlayerSaveData = &Pair.Value;
+			OutPlayerIdForUniquePlayerID = Pair.Key.PlayerID;
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void UEscapeChroniclesSaveGame::OverrideOfflineStandalonePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
 	const FPlayerSaveData& SavedPlayerData)
 {
@@ -62,8 +79,11 @@ void UEscapeChroniclesSaveGame::OverrideOfflineStandalonePlayerSaveData(const FU
 		TEXT("Offline standalone player must NOT contain the NetID!"));
 #endif
 
-	OfflineStandalonePlayerSaveData.UniquePlayerID = UniquePlayerID;
-	OfflineStandalonePlayerSaveData.PlayerSaveData = SavedPlayerData;
+	// Remove the old data if it exists
+	OfflinePlayersSaveData.Remove(UniquePlayerID);
+
+	// Add the new data
+	OfflinePlayersSaveData.Add(UniquePlayerID, SavedPlayerData);
 }
 
 void UEscapeChroniclesSaveGame::OverrideBotSaveData(const FUniquePlayerID& UniquePlayerID,

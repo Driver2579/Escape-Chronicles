@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
-#include "Common/Structs/SaveData/OfflineStandalonePlayerSaveData.h"
+#include "Common/Structs/UniquePlayerID.h"
+#include "Common/Structs/SaveData/PlayerSaveData.h"
 #include "EscapeChroniclesSaveGame.generated.h"
 
 /**
@@ -59,18 +60,32 @@ public:
 	// Should be used only for players that are connected online (with NetID)
 	void OverrideOnlinePlayerSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedPlayerData);
 
-	const FOfflineStandalonePlayerSaveData* GetOfflineStandalonePlayerSaveData() const
+	const FPlayerSaveData* FindOfflinePlayerSaveData(const FUniquePlayerID& UniquePlayerID) const
 	{
-		return OfflineStandalonePlayerSaveData.UniquePlayerID.IsValid() ? &OfflineStandalonePlayerSaveData : nullptr;
+		return OfflinePlayersSaveData.Find(UniquePlayerID);
 	}
+
+	/**
+	 * @param LocalPlayerID LocalPlayerID from FUniquePlayerID of the player to find.
+	 * @param OutPlayerSaveData Save data for the found player.
+	 * @param OutPlayerIdForUniquePlayerID PlayerID that was associated with the given UniquePlayerID's LocalPlayerID.
+	 * @return True if the player was found. False otherwise.
+	 */
+	bool FindOfflinePlayerSaveDataAndPlayerIdByLocalPlayerID(const int32 LocalPlayerID,
+		const FPlayerSaveData*& OutPlayerSaveData, uint64& OutPlayerIdForUniquePlayerID) const;
 
 	// Should be used only for the offline standalone player (without NetID)
 	void OverrideOfflineStandalonePlayerSaveData(const FUniquePlayerID& UniquePlayerID,
 		const FPlayerSaveData& SavedPlayerData);
 
-	void ClearOfflineStandalonePlayerSaveData()
+	/**
+	 * This should be called when players from OfflinePlayersSaveData connect online. This is a move function instead of
+	 * the clear function because there could be a save data for another local player that isn't currently playing.
+	 */
+	void MoveOfflinePlayersSaveDataToOnlinePlayersSaveData()
 	{
-		OfflineStandalonePlayerSaveData = FOfflineStandalonePlayerSaveData();
+		OnlinePlayersSaveData.Append(OfflinePlayersSaveData);
+		OfflinePlayersSaveData.Empty();
 	}
 
 	// Should be used only for bots (without NetID)
@@ -107,11 +122,13 @@ private:
 	TMap<FUniquePlayerID, FPlayerSaveData> OnlinePlayersSaveData;
 
 	/**
-	 * Save data of the only player that is playing offline (standalone player without NetID). Once the player with this
-	 * ID connects online, you should move it from here to OnlinePlayersSaveData.
+	 * Save data of the players that are playing offline (players without NetID (PIE players or split-screen players)).
+	 * Once the player with one of these ID connects online, you should move him from here to OnlinePlayersSaveData.
+	 * @tparam KeyType ID of the offline player. NetID should remain empty here.
+	 * @tparam Save data of the offline player.
 	 */
 	UPROPERTY()
-	FOfflineStandalonePlayerSaveData OfflineStandalonePlayerSaveData;
+	TMap<FUniquePlayerID, FPlayerSaveData> OfflinePlayersSaveData;
 
 	/**
 	 * Map of saved bots.
