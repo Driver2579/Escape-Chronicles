@@ -92,7 +92,7 @@ bool USaveGameSubsystem::IsPlayerSpecificActor(const AActor* Actor) const
 	return false;
 }
 
-void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
+void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 {
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
@@ -105,6 +105,14 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 
 	// Clear the delegate to avoid duplicated binding and calling OnGameSaved on actors that can't be saved anymore
 	OnGameSaved_Internal.Clear();
+
+	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this);
+
+	// Remember the level we're saving this SaveGameObject for
+	SaveGameObject->SetLevelName(CurrentLevelName);
+
+	// Add the level name to the slot name to know which slot for which level we need to load the game from when loading
+	SlotName += SlotNameSplitter + CurrentLevelName;
 
 	for (FActorIterator It(GetWorld()); It; ++It)
 	{
@@ -341,8 +349,13 @@ void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserInd
 	OnGameSaved.Broadcast();
 }
 
-void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(const FString& SlotName, const bool bAsync)
+void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync)
 {
+	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this);
+
+	// Add the level name to the slot name to know which slot for which level we need to load the game from
+	SlotName += SlotNameSplitter + CurrentLevelName;
+
 	if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
 	{
 		OnFailedToLoadGame.Broadcast();
@@ -372,6 +385,16 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 
 	// Override the save game object with a newly loaded one
 	CurrentSaveGameObject = CastChecked<UEscapeChroniclesSaveGame>(SaveGameObject);
+
+	// Make sure the level name that was saved in SaveGameObject matches the current level name
+	const bool bLevelNamesMatch = ensureAlways(
+		CurrentSaveGameObject->GetLevelName() == UGameplayStatics::GetCurrentLevelName(this));
+
+	// Forbid loading the game if level names don't match
+	if (!bLevelNamesMatch)
+	{
+		return;
+	}
 
 	TArray<AActor*> StaticActors;
 	TArray<AActor*> AllowedDynamicallySpawnedActors;

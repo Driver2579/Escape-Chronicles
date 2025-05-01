@@ -18,6 +18,9 @@ class ESCAPECHRONICLES_API UEscapeChroniclesSaveGame : public USaveGame
 	GENERATED_BODY()
 
 public:
+	const FString& GetLevelName() const { return LevelName; }
+	void SetLevelName(const FString& NewLevelName) { LevelName = NewLevelName; }
+
 	const FActorSaveData* FindStaticActorSaveData(const FName& ActorName) const
 	{
 		return StaticSavedActors.Find(ActorName);
@@ -104,6 +107,10 @@ public:
 	}
 
 private:
+	// Name of the level associated with this save game object
+	UPROPERTY()
+	FString LevelName;
+
 	/**
 	 * Map of saved actors that are created with the level (not dynamically spawned).
 	 * @tparam KeyType Name of the saved actor.

@@ -16,7 +16,6 @@ struct FUniquePlayerID;
 
 /**
  * TODO: Add documentation to different classes
- * TODO: Add support for saving/loading different save game objects depending on the level
  */
 UCLASS()
 class ESCAPECHRONICLES_API USaveGameSubsystem : public UWorldSubsystem
@@ -32,10 +31,10 @@ public:
 	void SaveGame(const bool bAsync = true) { SaveGame(AutoSaveSlotName, bAsync); }
 
 	/**
-	 * Saves the game to the specified slot name.
+	 * Saves the game to the specified slot name. The name of the level will be appended to this name.
 	 * @remark It's recommended if you load the game first.
 	 */
-	virtual void SaveGame(const FString& SlotName, const bool bAsync = true);
+	virtual void SaveGame(FString SlotName, const bool bAsync = true);
 
 	// Loads the game from the AutoSaveSlotName. Also, initializes FUniquePlayerIDs for all connected players.
 	void LoadGameAndInitializeUniquePlayerIDs(const bool bAsync = true)
@@ -43,8 +42,11 @@ public:
 		LoadGameAndInitializeUniquePlayerIDs(AutoSaveSlotName, bAsync);
 	}
 
-	// Loads the game from the specified slot name. Also, initializes FUniquePlayerIDs for all connected players.
-	virtual void LoadGameAndInitializeUniquePlayerIDs(const FString& SlotName, const bool bAsync = true);
+	/**
+	 * Loads the game from the specified slot name. The name of the level will be appended to this name. Also,
+	 * initializes FUniquePlayerIDs for all connected players.
+	 */
+	virtual void LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync = true);
 
 	FSimpleMulticastDelegate OnGameSaved;
 	FSimpleMulticastDelegate OnGameLoaded;
@@ -88,6 +90,10 @@ private:
 	{
 		SaveGame(true);
 	}
+
+	// The character that is going to split the slot name. Example: "SlotName_LevelName" where "_" is a splitter.
+	UPROPERTY(EditDefaultsOnly, Category="Slot Names")
+	FString SlotNameSplitter = TEXT("_");
 
 	/**
 	 * List of classes that are allowed to be saved even if they were dynamically spawned. Should be used for some
