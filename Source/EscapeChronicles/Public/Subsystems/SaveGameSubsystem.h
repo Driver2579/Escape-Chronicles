@@ -26,6 +26,8 @@ class ESCAPECHRONICLES_API USaveGameSubsystem : public UWorldSubsystem
 public:
 	USaveGameSubsystem();
 
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
+
 	// Saves the game to the autosave slot
 	void SaveGame(const bool bAsync = true) { SaveGame(AutoSaveSlotName, bAsync); }
 
@@ -73,8 +75,19 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<UEscapeChroniclesSaveGame> CurrentSaveGameObject;
 
-	UPROPERTY(EditDefaultsOnly)
+	// Base name for the auto save slot. The name of the level will be appended to this name.
+	UPROPERTY(EditDefaultsOnly, Category="Auto Saves")
 	FString AutoSaveSlotName = TEXT("AutoSave");
+
+	// Period in seconds between auto saves
+	UPROPERTY(EditDefaultsOnly, Category="Auto Saves", meta=(ClampMin=0.1))
+	float AutoSavePeriod = 5;
+
+	// Asynchronously saves the game to the auto save slot. This function exists only to be called from the timer.
+	void AutoSaveAsync()
+	{
+		SaveGame(true);
+	}
 
 	/**
 	 * List of classes that are allowed to be saved even if they were dynamically spawned. Should be used for some

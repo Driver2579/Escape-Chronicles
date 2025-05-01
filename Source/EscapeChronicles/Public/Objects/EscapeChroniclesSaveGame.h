@@ -88,8 +88,15 @@ public:
 		OfflinePlayersSaveData.Empty();
 	}
 
+	const TMap<FUniquePlayerID, FPlayerSaveData>& GetBotsSaveData() const { return BotsSaveData; }
+
+	FPlayerSaveData* FindBotSaveData(const FUniquePlayerID& UniquePlayerID)
+	{
+		return BotsSaveData.Find(UniquePlayerID);
+	}
+
 	// Should be used only for bots (without NetID)
-	void OverrideBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData);
+	void AddBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData);
 
 	void ClearBotsSaveData()
 	{

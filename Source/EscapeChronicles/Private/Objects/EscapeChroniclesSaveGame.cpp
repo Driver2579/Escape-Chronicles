@@ -86,7 +86,7 @@ void UEscapeChroniclesSaveGame::OverrideOfflineStandalonePlayerSaveData(const FU
 	OfflinePlayersSaveData.Add(UniquePlayerID, SavedPlayerData);
 }
 
-void UEscapeChroniclesSaveGame::OverrideBotSaveData(const FUniquePlayerID& UniquePlayerID,
+void UEscapeChroniclesSaveGame::AddBotSaveData(const FUniquePlayerID& UniquePlayerID,
 	const FPlayerSaveData& SavedBotData)
 {
 #if DO_CHECK

@@ -27,6 +27,19 @@ USaveGameSubsystem::USaveGameSubsystem()
 	};
 }
 
+void USaveGameSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+
+	// Automatically save the game every AutoSavePeriod seconds
+	if (InWorld.GetNetMode() < NM_Client)
+	{
+		FTimerHandle TimerHandle;
+		InWorld.GetTimerManager().SetTimer(TimerHandle, this, &ThisClass::AutoSaveAsync, AutoSavePeriod,
+			true);
+	}
+}
+
 UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked()
 {
 	if (CurrentSaveGameObject)
@@ -83,8 +96,12 @@ void USaveGameSubsystem::SaveGame(const FString& SlotName, const bool bAsync)
 {
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
-	// Clear the save game object to avoid saving old data
+	/**
+	 * Clear the save game object to avoid saving old data, except we don't want to clear the data for the players
+	 * because some players that were previously saved may be not in the game right now. We want to keep their data.
+	 */
 	SaveGameObject->ClearSavedActors();
+	SaveGameObject->ClearBotsSaveData();
 
 	// Clear the delegate to avoid duplicated binding and calling OnGameSaved on actors that can't be saved anymore
 	OnGameSaved_Internal.Clear();
@@ -222,7 +239,7 @@ void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChronicle
 	// If it's not an online player, then check if it's a bot and save it if it is
 	else if (PlayerState->IsABot())
 	{
-		SaveGameObject->OverrideBotSaveData(UniquePlayerID, PlayerSaveData);
+		SaveGameObject->AddBotSaveData(UniquePlayerID, PlayerSaveData);
 	}
 	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
 	else
