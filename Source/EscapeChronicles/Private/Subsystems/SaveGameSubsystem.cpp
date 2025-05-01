@@ -23,7 +23,7 @@ USaveGameSubsystem::USaveGameSubsystem()
 	PlayerSpecificClasses = {
 		APawn::StaticClass(),
 		AEscapeChroniclesPlayerState::StaticClass(),
-		APlayerController::StaticClass()
+		AController::StaticClass()
 	};
 }
 
@@ -213,15 +213,14 @@ void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChronicle
 		PlayerSaveData.PlayerSpecificActorsSaveData.Add(APawn::StaticClass(), PawnSaveData);
 	}
 
-	APlayerController* PlayerController = PlayerState->GetPlayerController();
+	AController* Controller = PlayerState->GetOwningController();
 
-	// Save the PlayerController if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(PlayerController)) && PlayerController->Implements<USaveable>())
+	// Save the Controller if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
 	{
-		FActorSaveData PlayerControllerSaveData;
-		SaveActorToSaveDataChecked(PlayerController, PlayerControllerSaveData);
-		PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerController::StaticClass(),
-			PlayerControllerSaveData);
+		FActorSaveData ControllerSaveData;
+		SaveActorToSaveDataChecked(Controller, ControllerSaveData);
+		PlayerSaveData.PlayerSpecificActorsSaveData.Add(AController::StaticClass(), ControllerSaveData);
 	}
 
 	// If the NetID is valid here, then the player is for sure playing using the online-service
@@ -529,18 +528,18 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdFor
 		}
 	}
 
-	APlayerController* PlayerController = PlayerState->GetPlayerController();
+	AController* Controller = PlayerState->GetOwningController();
 
-	// Try to load the PlayerController if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(PlayerController)) && PlayerController->Implements<USaveable>())
+	// Try to load the Controller if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
 	{
-		const FActorSaveData* PlayerControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-			APlayerController::StaticClass());
+		const FActorSaveData* ControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
+			AController::StaticClass());
 
-		// Load the PlayerController if its save data is valid
-		if (PlayerControllerSaveData)
+		// Load the Controller if its save data is valid
+		if (ControllerSaveData)
 		{
-			LoadActorFromSaveDataChecked(PlayerController, *PlayerControllerSaveData);
+			LoadActorFromSaveDataChecked(Controller, *ControllerSaveData);
 		}
 	}
 
