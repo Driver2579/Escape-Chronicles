@@ -114,7 +114,39 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 	// Add the level name to the slot name to know which slot for which level we need to load the game from when loading
 	SlotName += SlotNameSplitter + CurrentLevelName;
 
-	for (FActorIterator It(GetWorld()); It; ++It)
+	const UWorld* World = GetWorld();
+
+	// Save world subsystems
+	World->ForEachSubsystem<UWorldSubsystem>([this, SaveGameObject](UWorldSubsystem* WorldSubsystem)
+	{
+		ISaveable* SaveableSubsystem = Cast<ISaveable>(WorldSubsystem);
+
+		/**
+		 * Go to the next world subsystem if this one doesn't implement the Saveable interface or currently can't be
+		 * saved.
+		 */
+		if (!SaveableSubsystem || !SaveableSubsystem->CanBeSavedOrLoaded())
+		{
+			return;
+		}
+
+		FSaveData WorldSubsystemSaveData;
+
+		// Notify the subsystem it's about to be saved
+		SaveableSubsystem->OnPreSaveObject();
+
+		// Save the subsystem to the SaveData
+		SaveObjectSaveGameFields(WorldSubsystem, WorldSubsystemSaveData.ByteData);
+
+		// Add world subsystem's SaveData to the SaveGameObject
+		SaveGameObject->AddWorldSubsystemSaveData(WorldSubsystem->GetClass(), WorldSubsystemSaveData);
+
+		// Subscribe a subsystem to the event to call OnGameSaved on it once the game is saved
+		OnGameSaved_Internal.AddRaw(SaveableSubsystem, &ISaveable::OnGameSaved);
+	});
+
+	// Save actors
+	for (FActorIterator It(World); It; ++It)
 	{
 		AActor* Actor = *It;
 
@@ -395,11 +427,41 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		return;
 	}
 
+	const UWorld* World = GetWorld();
+
+	// === Load world subsystems ===
+
+	World->ForEachSubsystem<UWorldSubsystem>([this](UWorldSubsystem* WorldSubsystem)
+	{
+		ISaveable* SaveableSubsystem = Cast<ISaveable>(WorldSubsystem);
+
+		// Try to load the world subsystem if it implements the Saveable interface and currently can be loaded
+		if (SaveableSubsystem && SaveableSubsystem->CanBeSavedOrLoaded())
+		{
+			const FSaveData* WorldSubsystemSaveData = CurrentSaveGameObject->FindWorldSubsystemSaveData(
+				WorldSubsystem->GetClass());
+
+			if (WorldSubsystemSaveData)
+			{
+				// Notify the subsystem it's about to be loaded
+				SaveableSubsystem->OnPreLoadObject();
+
+				// Load the subsystem
+				LoadObjectSaveGameFields(WorldSubsystem, WorldSubsystemSaveData->ByteData);
+
+				// Notify the subsystem it was loaded
+				SaveableSubsystem->OnPostLoadObject();
+			}
+		}
+	});
+
+	// === Load actors ===
+
 	TArray<AActor*> StaticActors;
 	TArray<AActor*> AllowedDynamicallySpawnedActors;
 	TArray<AEscapeChroniclesPlayerState*> PlayerStates;
 
-	for (FActorIterator It(GetWorld()); It; ++It)
+	for (FActorIterator It(World); It; ++It)
 	{
 		AActor* Actor = *It;
 
@@ -446,7 +508,7 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		StaticActors.Add(Actor);
 	}
 
-	// First load StaticActors
+	// First, load StaticActors
 	for (AActor* StaticActor : StaticActors)
 	{
 		const FActorSaveData* ActorSaveData = CurrentSaveGameObject->FindStaticActorSaveData(StaticActor->GetFName());
@@ -508,7 +570,7 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdFor
 		APlayerState::StaticClass());
 
 	// Load the PlayerState if its save data is valid
-	if (ensureAlways(PlayerStateSaveData))
+	if (PlayerStateSaveData)
 	{
 		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
 	}

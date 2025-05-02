@@ -94,6 +94,6 @@ private:
 	TMultiMap<FGameplayTag, FGameplayAttribute> BlockedAttributesByTags;
 
 	// Map of attribute sets that are saved in the save game object
-	UPROPERTY(SaveGame)
+	UPROPERTY(Transient, SaveGame)
 	TMap<TSoftClassPtr<UAttributeSet>, FAttributeSetSaveData> SavedAttributeSets;
 };

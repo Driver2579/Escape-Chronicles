@@ -14,6 +14,7 @@ struct FUniquePlayerID
 {
 	GENERATED_BODY()
 
+	// Default constructor. Creates invalid FUniquePlayerID.
 	FUniquePlayerID() = default;
 
 	FUniquePlayerID(const uint64 InPlayerId, const int32 InLocalPlayerId)

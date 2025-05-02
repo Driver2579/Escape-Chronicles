@@ -15,6 +15,6 @@ struct FAttributeSetSaveData
 	 * @tparam KeyType The name of the attribute.
 	 * @tparam ValueType The base value of the attribute.
 	 */
-	UPROPERTY(SaveGame)
+	UPROPERTY(Transient, SaveGame)
 	TMap<FString, float> AttributesBaseValues;
 };

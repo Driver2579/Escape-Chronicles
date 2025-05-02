@@ -21,6 +21,26 @@ public:
 	const FString& GetLevelName() const { return LevelName; }
 	void SetLevelName(const FString& NewLevelName) { LevelName = NewLevelName; }
 
+	/**
+	 * Finds the save data for the world subsystem of the given class. It doesn't support finding the child or parent
+	 * class. The class should be exact.
+	 */
+	const FSaveData* FindWorldSubsystemSaveData(const TSoftClassPtr<UWorldSubsystem>& WorldSubsystemClass) const
+	{
+		return WorldSubsystemsSaveData.Find(WorldSubsystemClass);
+	}
+
+	void AddWorldSubsystemSaveData(const TSoftClassPtr<UWorldSubsystem>& WorldSubsystemClass,
+		const FSaveData& SavedWorldSubsystemData)
+	{
+		WorldSubsystemsSaveData.Add(WorldSubsystemClass, SavedWorldSubsystemData);
+	}
+
+	void ClearSavedWorldSubsystems()
+	{
+		WorldSubsystemsSaveData.Empty();
+	}
+
 	const FActorSaveData* FindStaticActorSaveData(const FName& ActorName) const
 	{
 		return StaticSavedActors.Find(ActorName);
@@ -110,6 +130,14 @@ private:
 	// Name of the level associated with this save game object
 	UPROPERTY()
 	FString LevelName;
+
+	/**
+	 * Map of saved WorldSubsystems.
+	 * @tparam KeyType Class of the saved WorldSubsystem.
+	 * @tparam ValueType Save data for the associated WorldSubsystem.
+	 */
+	UPROPERTY()
+	TMap<TSoftClassPtr<UWorldSubsystem>, FSaveData> WorldSubsystemsSaveData;
 
 	/**
 	 * Map of saved actors that are created with the level (not dynamically spawned).

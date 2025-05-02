@@ -15,17 +15,12 @@ struct FPlayerSaveData;
 struct FUniquePlayerID;
 
 /**
- * TODO: Add documentation to different classes
- * TODO: Save/load GameInstance
- * TODO: Save/load subsystems
- */
-/**
- * A subsystem that handles saving and loading the game. It saves/loads all actors, all their components, the
- * GameInstance and all subsystems that implement the Saveable interface, and that can be currently saved/loaded, except
- * it doesn't save dynamically spawned actors which classes were not added in AllowedDynamicallySpawnedActorsClasses.
- * Player-specific actors (e.g., PlayerState, Pawn, PlayerController, etc.) are being saved/loaded separately by
- * player's FUniquePlayerID which loading or generating this subsystem is also responsible for. Most of the data's
- * saving/loading is done by serializing the UPROPERTY(SaveGame) fields of ISaveable actors/components/subsystems.
+ * A subsystem that handles saving and loading the game. It saves/loads all actors, all their components, and all world
+ * subsystems that implement the Saveable interface, and that can be currently saved/loaded, except  it doesn't save
+ * dynamically spawned actors which classes were not added in AllowedDynamicallySpawnedActorsClasses. Player-specific
+ * actors (e.g., PlayerState, Pawn, PlayerController, etc.) are being saved/loaded separately by player's
+ * FUniquePlayerID which loading or generating this subsystem is also responsible for. Most of the data's saving/loading
+ * is done by serializing the UPROPERTY(SaveGame) fields of ISaveable actors/components/subsystems.
  */
 UCLASS()
 class ESCAPECHRONICLES_API USaveGameSubsystem : public UWorldSubsystem
