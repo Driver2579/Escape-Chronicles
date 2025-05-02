@@ -95,7 +95,7 @@ struct FUniquePlayerIdManager
 	 */
 	FUniquePlayerID GenerateUniquePlayerIdForPIE()
 	{
-		return GenerateUniquePlayerID(++PIEIndex);
+		return GenerateUniquePlayerID(++LastOpenedPIEIndex);
 	}
 #endif
 
@@ -103,5 +103,5 @@ private:
 	UPROPERTY()
 	uint64 MaxGeneratedPlayerId = INDEX_NONE;
 
-	uint8 PIEIndex = INDEX_NONE;
+	uint8 LastOpenedPIEIndex = INDEX_NONE;
 };
