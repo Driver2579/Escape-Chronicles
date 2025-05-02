@@ -172,8 +172,14 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 			continue;
 		}
 
-		// Skip dynamically spawned actors and player-specific actors (player-specific actors are saved separately)
-		if (!Actor->HasAnyFlags(RF_WasLoaded) || IsPlayerSpecificActor(Actor))
+		/**
+		 * Skip dynamically spawned actors if they are not in the allowed list and player-specific actors
+		 * (player-specific actors are saved separately).
+		 */
+		const bool bCanSaveActor = (!Actor->HasAnyFlags(RF_WasLoaded) || IsAllowedDynamicallySpawnedActor(Actor)) &&
+			!IsPlayerSpecificActor(Actor);
+
+		if (!bCanSaveActor)
 		{
 			continue;
 		}
