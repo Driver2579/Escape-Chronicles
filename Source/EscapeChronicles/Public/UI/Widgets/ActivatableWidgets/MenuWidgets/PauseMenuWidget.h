@@ -3,18 +3,27 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MenuWidgetBase.h"
+#include "MenuWidget.h"
 #include "PauseMenuWidget.generated.h"
 
 class UTextButtonBaseWidget;
 
 // 
 UCLASS()
-class ESCAPECHRONICLES_API UPauseMenuWidget : public UMenuWidgetBase
+class ESCAPECHRONICLES_API UPauseMenuWidget : public UMenuWidget
 {
 	GENERATED_BODY()
-
+	
+protected:
+	virtual void NativeOnInitialized() override;
+	
 private:
+	UPROPERTY(EditAnywhere)  
+	FText ConfirmationExitWidgetText;
+	
+	UPROPERTY(EditAnywhere)  
+	TSubclassOf<class UYesNoPopup> ConfirmationExitWidgetClass;
+	
 	UPROPERTY(meta = (BindWidget))  
 	UTextButtonBaseWidget* ContinueButton;
 
@@ -23,4 +32,13 @@ private:
 
 	UPROPERTY(meta = (BindWidget))  
 	UTextButtonBaseWidget* ExitButton;
+
+	UFUNCTION()
+	void OnContinueButtonClicked();
+
+	UFUNCTION()
+	void OnOptionsButtonClicked();
+
+	UFUNCTION()
+	void OnExitButtonClicked();
 };

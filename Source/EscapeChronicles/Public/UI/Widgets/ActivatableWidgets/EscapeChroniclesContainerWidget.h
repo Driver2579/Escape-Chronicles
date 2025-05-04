@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CommonActivatableWidget.h"
-#include "EscapeChroniclesBaseWidget.generated.h"
+#include "EscapeChroniclesContainerWidget.generated.h"
 
 class UCommonActivatableWidgetStack;
 
 UCLASS()
-class ESCAPECHRONICLES_API UEscapeChroniclesBaseWidget : public UCommonActivatableWidget
+class ESCAPECHRONICLES_API UEscapeChroniclesContainerWidget : public UCommonActivatableWidget
 {
 	GENERATED_BODY()
 
@@ -16,6 +16,8 @@ public:
 	UCommonActivatableWidgetStack* GetWidgetStack() const { return WidgetStack; }
 	
 private:
+	// TODO: Add a separate stack for backgrounds
+	
 	UPROPERTY(meta = (BindWidget))
 	UCommonActivatableWidgetStack* WidgetStack;
 };

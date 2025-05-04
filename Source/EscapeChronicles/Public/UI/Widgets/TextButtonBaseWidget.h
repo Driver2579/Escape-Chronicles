@@ -12,6 +12,9 @@ class ESCAPECHRONICLES_API UTextButtonBaseWidget : public UCommonButtonBase
 {
 	GENERATED_BODY()
 
+public:
+	const FText& GetText() { return ButtonText; }
+	
 protected:
 	virtual void NativePreConstruct() override;
 	

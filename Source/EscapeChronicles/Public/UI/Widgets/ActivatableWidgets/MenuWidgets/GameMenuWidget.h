@@ -3,12 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "MenuWidgetBase.h"
+#include "MenuWidget.h"
 #include "GameMenuWidget.generated.h"
 
 //
 UCLASS()
-class ESCAPECHRONICLES_API UGameMenuWidget : public UMenuWidgetBase
+class ESCAPECHRONICLES_API UGameMenuWidget : public UMenuWidget
 {
 	GENERATED_BODY()
 	

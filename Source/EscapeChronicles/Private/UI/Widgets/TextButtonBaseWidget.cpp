@@ -8,7 +8,7 @@ void UTextButtonBaseWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
-	if (ensureAlways(DisplayedText))
+	if (DisplayedText)
 	{
 		DisplayedText->SetText(ButtonText);
 	}

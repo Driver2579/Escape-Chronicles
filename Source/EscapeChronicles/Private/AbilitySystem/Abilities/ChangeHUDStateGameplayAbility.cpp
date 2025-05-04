@@ -51,7 +51,7 @@ void UChangeHUDStateGameplayAbility::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	HUD->ChangeState(StateTag);
+	HUD->GoToMenu(StateTag);
 	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }

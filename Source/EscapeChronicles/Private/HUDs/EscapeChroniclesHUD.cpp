@@ -1,75 +1,91 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "HUDs/EscapeChroniclesHUD.h"
 
-#include "UI/Widgets/ActivatableWidgets/EscapeChroniclesBaseWidget.h"
+#include "UI/Widgets/ActivatableWidgets/EscapeChroniclesContainerWidget.h"
+#include "UI/Widgets/ActivatableWidgets/MenuWidgets/MenuWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
+
+AEscapeChroniclesHUD::AEscapeChroniclesHUD()
+{
+	PrimaryActorTick.bCanEverTick = false;
+}
 
 void AEscapeChroniclesHUD::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	if (ensureAlways(IsValid(BaseWidgetClass)))
+	if (ensureAlways(IsValid(ContainerWidgetClass)))
 	{
-		BaseWidget = CreateWidget<UEscapeChroniclesBaseWidget>(GetOwningPlayerController(),
-				BaseWidgetClass.Get());
+		ContainerWidget = CreateWidget<UEscapeChroniclesContainerWidget>(GetOwningPlayerController(),
+				ContainerWidgetClass.Get());
 	}
 	
-	if (ensureAlways(IsValid(BaseWidget)))
+	if (!ensureAlways(IsValid(ContainerWidget)))
 	{
-		BaseWidget->AddToViewport();
-		ChangeState(DefaultState);
+		return;
 	}
+
+	ContainerWidget->AddToViewport();
+
+	CurrentMenuTag = RootMenuTag;
 }
 
-void AEscapeChroniclesHUD::ChangeState(const FGameplayTag StateTag)
+void AEscapeChroniclesHUD::GoToMenu(FGameplayTag NewMenuTag)
 {
-	if (StateTag == CurrentStateTag)
-	{
-		return;
-	}
-	
-	const FHUDState* State = States.Find(StateTag);
-
-	if (!ensureAlways(State && IsValid(State->WidgetClass)))
+	if (!ensureAlways(NewMenuTag.IsValid()) || NewMenuTag == CurrentMenuTag)
 	{
 		return;
 	}
 
-	// === Change current widget ===
-	
-	UCommonActivatableWidgetStack* WidgetStack = BaseWidget->GetWidgetStack();
+	if (NewMenuTag == RootMenuTag)
+	{
+		GoToRootMenu();
+		
+		return;
+	}
 
-	if (!ensureAlways(WidgetStack))
+	const TSubclassOf<UMenuWidget>* StateWidget = Menus.Find(NewMenuTag);
+
+	if (!ensureAlways(StateWidget))
+	{
+		return;
+	}
+	
+	UCommonActivatableWidgetStack* WidgetStack = ContainerWidget->GetWidgetStack();
+
+	if (!ensureAlways(IsValid(WidgetStack)))
 	{
 		return;
 	}
 
 	WidgetStack->ClearWidgets();
-	WidgetStack->AddWidget(State->WidgetClass);
 	
-	// === Change input mode ===
-	
-	FInputModeDataBase* CurrentInputMode;
-	
-	switch (State->InputMode)
+	const UMenuWidget* MenuWidget = WidgetStack->AddWidget<UMenuWidget>(*StateWidget);
+
+	if (!ensureAlways(IsValid(MenuWidget)))
 	{
-		case EInputMode::GameOnly: CurrentInputMode = new FInputModeGameOnly(); break;
-		case EInputMode::UiOnly: CurrentInputMode = new FInputModeUIOnly(); break;
-		case EInputMode::GameAndUi: CurrentInputMode = new FInputModeGameAndUI(); break;
-		default: CurrentInputMode = new FInputModeGameOnly(); break;
+		return;
 	}
 
-	APlayerController* PlayerController = GetOwningPlayerController();
-
-	if (ensureAlways(IsValid(PlayerController)))
+	// Since when exiting this menu we will definitely get to the root widget, we must change CurrentMenuTag
+	MenuWidget->OnDeactivated().AddLambda([&]()
 	{
-		PlayerController->SetInputMode(*CurrentInputMode);
-		PlayerController->SetShowMouseCursor(State->bShowMouseCursor);
+		CurrentMenuTag = RootMenuTag;
+	});
+	
+	CurrentMenuTag = NewMenuTag;
+}
+
+void AEscapeChroniclesHUD::GoToRootMenu()
+{
+	UCommonActivatableWidgetStack* WidgetStack = ContainerWidget->GetWidgetStack();
+
+	if (!ensureAlways(IsValid(WidgetStack)))
+	{
+		return;
 	}
-	
-	// === Caching ===
-	
-	CurrentStateTag = StateTag;
+
+	WidgetStack->ClearWidgets();
+	CurrentMenuTag = RootMenuTag;
 }
