@@ -1,17 +1,21 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "MoverSimulationTypes.h"
+#include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
 class UCameraComponent;
-class UCharacterMoverComponent;
 class UNavMoverComponent;
+
+enum class EStanceMode : uint8;
+enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
@@ -21,11 +25,33 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 public:
 	AEscapeChroniclesCharacter();
 
+	// Returns CapsuleComponent subobject
+	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
+
+	// Returns MeshComponent subobject
+	USkeletalMeshComponent* GetMesh() const { return MeshComponent; }
+
+#if WITH_EDITORONLY_DATA
+	// Returns ArrowComponent subobject
+	class UArrowComponent* GetArrowComponent() const { return ArrowComponent; }
+#endif
+
+	// Returns CameraBoomComponent subobject
+	USpringArmComponent* GetCameraBoomComponent() const { return CameraBoomComponent; }
+
+	// Returns FollowCameraComponent subobject
+	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
+
+	// Returns CharacterMoverComponent subobject
+	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
+
+	// Returns NavMoverComponent subobject
+	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
+	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+
 	virtual void PostLoad() override;
-
-	virtual void BeginPlay() override;
-
-	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	virtual FVector GetNavAgentLocation() const override;
 
@@ -49,33 +75,26 @@ public:
 	// Should be called for jump input completion
 	void StopJumping();
 
-	// Returns CapsuleComponent subobject
-	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
+	// Should be called for crouch input trigger
+	void Crouch();
 
-	// Returns MeshComponent subobject
-	USkeletalMeshComponent* GetMesh() const { return MeshComponent; }
+	// Should be called for crouch input completion
+	void UnCrouch();
 
-#if WITH_EDITORONLY_DATA
-	// Returns ArrowComponent subobject
-	class UArrowComponent* GetArrowComponent() const { return ArrowComponent; }
-#endif
+	// Should be called for any input trigger that wants to override the ground speed mode (e.g., walk, jog, run)
+	void OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride);
 
-	// Returns CameraBoomComponent subobject
-	USpringArmComponent* GetCameraBoomComponent() const { return CameraBoomComponent; }
-
-	// Returns FollowCameraComponent subobject
-	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
-
-	// Returns CharacterMoverComponent subobject
-	UCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
-
-	// Returns NavMoverComponent subobject
-	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
-
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
-	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+	/**
+	 * Should be called for any input completion that wants to reset the ground speed mode after overriding it.
+	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
+	 */
+	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
 protected:
+	virtual void BeginPlay() override;
+
+	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
+
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bUseBaseRelativeMovement = true;
@@ -99,6 +118,37 @@ protected:
 
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
+
+	UFUNCTION()
+	void OnMoverPostMovement(const FMoverTimeStep& TimeStep, FMoverSyncState& SyncState,
+		FMoverAuxStateContext& AuxState);
+
+	UFUNCTION()
+	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep, const FMoverInputCmdContext& InputCmd);
+
+	UFUNCTION()
+	virtual void OnMovementModeChanged(const FName& PreviousMovementModeName, const FName& NewMovementModeName);
+
+	UFUNCTION()
+	virtual void OnStanceChanged(const EStanceMode OldStance, const EStanceMode NewStance);
+
+	virtual void OnGroundSpeedModeChanged(const EGroundSpeedMode OldGroundSpeedMode,
+		const EGroundSpeedMode NewGroundSpeedMode);
+
+	/**
+	 * Calls SyncMovementModesTagsWithAbilitySystem, SyncStanceTagsWithAbilitySystem and
+	 * SyncGroundSpeedModeTagsWithAbilitySystem. Could be overriden by child classes to add more similar functions.
+	 */
+	virtual void SyncCharacterMoverComponentTagsWithAbilitySystem() const;
+
+	// Synchronizes all movement modes' tags from CharacterMoverComponent with an ability system component
+	virtual void SyncMovementModesTagsWithAbilitySystem() const;
+
+	// Synchronizes all stances' tags from CharacterMoverComponent with an ability system component
+	void SyncStancesTagsWithAbilitySystem() const;
+
+	// Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component
+	void SyncGroundSpeedModeTagsWithAbilitySystem() const;
 
 private:
 	/**
@@ -126,7 +176,7 @@ private:
 	TObjectPtr<UCameraComponent> FollowCameraComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UCharacterMoverComponent> CharacterMoverComponent;
+	TObjectPtr<UEscapeChroniclesCharacterMoverComponent> CharacterMoverComponent;
 
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
@@ -139,4 +189,21 @@ private:
 
 	bool bIsJumpJustPressed = false;
 	bool bIsJumpPressed = false;
+
+	bool bWantsToBeCrouched = false;
+
+	/**
+	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
+	 * values that should be gotten when OnStanceChanged is called.
+	 */
+	void SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance, const EStanceMode NewStance) const;
+
+	EGroundSpeedMode DesiredGroundSpeedModeOverride;
+
+	/**
+	 * Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component based on
+	 * the passed values that should be gotten when OnGroundSpeedMode is called.
+	 */
+	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
+		const EGroundSpeedMode NewGroundSpeedMode) const;
 };
