@@ -33,7 +33,10 @@ public:
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	// Saves the game to the autosave slot
-	void SaveGame(const bool bAsync = true) { SaveGame(AutoSaveSlotName, bAsync); }
+	void SaveGame(const bool bAsync = true)
+	{
+		SaveGame(AutoSaveSlotName, bAsync);
+	}
 
 	/**
 	 * Saves the game to the specified slot name. The name of the level will be appended to this name.
@@ -53,7 +56,16 @@ public:
 	 */
 	virtual void LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync = true);
 
+	// Called right before the game is about to be saved
+	FSimpleMulticastDelegate OnSaveGameCalled;
+
+	// Called right before the game is about to be loaded
+	FSimpleMulticastDelegate OnLoadGameCalled;
+
+	// Called after the game was successfully saved
 	FSimpleMulticastDelegate OnGameSaved;
+
+	// Called after the game was successfully loaded
 	FSimpleMulticastDelegate OnGameLoaded;
 
 	// Usually happens due to unexpected errors (I have no idea what could happen, LOL)

@@ -27,13 +27,37 @@ void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& 
 		return;
 	}
 
-	SaveGameSubsystem->OnGameLoaded.AddUObject(this, &AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed);
-
-	SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
-		&AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed);
+	/**
+	 * We should reset the loading state each time the loading is called to make sure new joined players don't load the
+	 * old data if the game is currently asynchronously loading.
+	 */
+	SaveGameSubsystem->OnLoadGameCalled.AddUObject(this, &ThisClass::OnLoadGameCalled);
 
 	// Automatically try to load the game when it has started
 	SaveGameSubsystem->LoadGameAndInitializeUniquePlayerIDs();
+}
+
+void AEscapeChroniclesGameMode::OnLoadGameCalled()
+{
+	bInitialGameLoadFinishedOrFailed = false;
+
+	USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
+
+	// Make sure we bind the delegates only once
+	if (ensureAlways(IsValid(SaveGameSubsystem)))
+	{
+		if (!OnGameLoadedDelegateHandle.IsValid())
+		{
+			OnGameLoadedDelegateHandle = SaveGameSubsystem->OnGameLoaded.AddUObject(this,
+				&ThisClass::OnInitialGameLoadFinishedOrFailed);
+		}
+
+		if (!OnFailedToLoadGameDelegateHandle.IsValid())
+		{
+			OnFailedToLoadGameDelegateHandle = SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
+				&ThisClass::OnInitialGameLoadFinishedOrFailed);
+		}
+	}
 }
 
 FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerController,
