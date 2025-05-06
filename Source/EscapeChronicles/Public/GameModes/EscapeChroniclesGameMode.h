@@ -8,6 +8,8 @@
 #include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesGameMode.generated.h"
 
+// TODO: Create ScheduleEventManagerComponent here
+
 UCLASS(MinimalAPI)
 class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 {

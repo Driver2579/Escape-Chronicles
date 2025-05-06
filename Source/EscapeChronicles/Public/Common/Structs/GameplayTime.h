@@ -4,6 +4,7 @@
 
 #include "GameplayTime.generated.h"
 
+// A struct for the time used in the game. It has a day, hour, and minute. This struct also supports the SaveGame macro.
 USTRUCT()
 struct FGameplayTime
 {

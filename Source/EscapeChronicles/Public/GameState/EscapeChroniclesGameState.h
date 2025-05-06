@@ -8,9 +8,6 @@
 #include "Interfaces/Saveable.h"
 #include "EscapeChroniclesGameState.generated.h"
 
-/**
- * 
- */
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesGameState : public AGameStateBase, public ISaveable
 {
