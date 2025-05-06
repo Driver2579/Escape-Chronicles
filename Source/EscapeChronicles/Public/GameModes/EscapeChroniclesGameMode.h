@@ -21,12 +21,17 @@ public:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 
 protected:
+	virtual void OnLoadGameCalled();
+
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
 private:
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
 	FUniquePlayerIdManager UniquePlayerIdManager;
+
+	FDelegateHandle OnGameLoadedDelegateHandle;
+	FDelegateHandle OnFailedToLoadGameDelegateHandle;
 
 	// Whether the game has finished the loading regardless of whether it was successful or not
 	bool bInitialGameLoadFinishedOrFailed = false;

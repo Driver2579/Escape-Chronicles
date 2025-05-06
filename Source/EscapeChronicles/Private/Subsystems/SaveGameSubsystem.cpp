@@ -94,6 +94,8 @@ bool USaveGameSubsystem::IsPlayerSpecificActor(const AActor* Actor) const
 
 void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 {
+	OnSaveGameCalled.Broadcast();
+
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
 	/**
@@ -388,6 +390,8 @@ void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserInd
 
 void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync)
 {
+	OnLoadGameCalled.Broadcast();
+
 	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this);
 
 	// Add the level name to the slot name to know which slot for which level we need to load the game from
