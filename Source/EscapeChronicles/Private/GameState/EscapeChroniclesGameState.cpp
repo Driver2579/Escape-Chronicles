@@ -8,7 +8,7 @@ void AEscapeChroniclesGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, CurrentGameTime);
+	DOREPLIFETIME(ThisClass, CurrentGameDateTime);
 }
 
 void AEscapeChroniclesGameState::PostInitializeComponents()
@@ -19,7 +19,7 @@ void AEscapeChroniclesGameState::PostInitializeComponents()
 	 * Initialize the CurrentGameTime in PostInitializeComponents to make sure we don't reinitialize it after the game
 	 * is already loaded.
 	 */
-	CurrentGameTime = StartGameTime;
+	CurrentGameDateTime = StartGameDateTime;
 }
 
 void AEscapeChroniclesGameState::BeginPlay()
@@ -35,27 +35,27 @@ void AEscapeChroniclesGameState::BeginPlay()
 
 void AEscapeChroniclesGameState::RestartTickGameTimeTimer()
 {
-	GetWorld()->GetTimerManager().SetTimer(TickGameTimeTimerHandle, this, &ThisClass::TickGameTime,
+	GetWorld()->GetTimerManager().SetTimer(TickGameTimeTimerHandle, this, &ThisClass::TickGameDateTime,
 		GameTimeTickPeriod, true);
 }
 
-void AEscapeChroniclesGameState::SetCurrentGameTime(const FGameplayTime& NewTime)
+void AEscapeChroniclesGameState::SetCurrentGameDateTime(const FGameplayDateTime& NewGameTime)
 {
 	if (HasAuthority())
 	{
-		CurrentGameTime = NewTime;
-		OnCurrentTimeUpdated.Broadcast(NewTime);
+		CurrentGameDateTime = NewGameTime;
+		OnCurrentDateTimeUpdated.Broadcast(NewGameTime);
 	}
 }
 
-void AEscapeChroniclesGameState::TickGameTime()
+void AEscapeChroniclesGameState::TickGameDateTime()
 {
-	++CurrentGameTime;
-	OnCurrentTimeUpdated.Broadcast(CurrentGameTime);
+	++CurrentGameDateTime;
+	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
 
 	// TODO: Remove this once the UI is ready
-	UE_LOG(LogTemp, Display, TEXT("Current game time: Day: %d, Hour: %d, Minute: %d"), CurrentGameTime.Day,
-		CurrentGameTime.Hour, CurrentGameTime.Minute);
+	UE_LOG(LogTemp, Display, TEXT("Current game time: Day: %d, Hour: %d, Minute: %d"),
+		CurrentGameDateTime.Day, CurrentGameDateTime.Time.Hour, CurrentGameDateTime.Time.Minute);
 }
 
 void AEscapeChroniclesGameState::OnPreLoadObject()
@@ -64,13 +64,13 @@ void AEscapeChroniclesGameState::OnPreLoadObject()
 	RestartTickGameTimeTimer();
 
 	// Broadcast the current time to everyone after loading the game
-	OnCurrentTimeUpdated.Broadcast(CurrentGameTime);
+	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
 }
 
-void AEscapeChroniclesGameState::OnRep_CurrentTime()
+void AEscapeChroniclesGameState::OnRep_CurrentDateTime()
 {
 	// Restart the tick GameTime timer to synchronize the update time with the server
 	RestartTickGameTimeTimer();
 
-	OnCurrentTimeUpdated.Broadcast(CurrentGameTime);
+	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
 }

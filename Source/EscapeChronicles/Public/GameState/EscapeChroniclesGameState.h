@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
-#include "Common/Structs/GameplayTime.h"
+#include "Common/Structs/GameplayDateTime.h"
 #include "Interfaces/Saveable.h"
 #include "EscapeChroniclesGameState.generated.h"
 
@@ -20,28 +20,28 @@ public:
 
 	virtual void BeginPlay() override;
 
-	const FGameplayTime& GetCurrentGameTime() const { return CurrentGameTime; }
+	const FGameplayDateTime& GetCurrentGameDateTime() const { return CurrentGameDateTime; }
 
 	// Authority only
-	void SetCurrentGameTime(const FGameplayTime& NewTime);
+	void SetCurrentGameDateTime(const FGameplayDateTime& NewGameTime);
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentTimeUpdatedDelegate, const FGameplayTime& NewTime);
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentTimeUpdatedDelegate, const FGameplayDateTime& NewTime);
 
-	FOnCurrentTimeUpdatedDelegate OnCurrentTimeUpdated;
+	FOnCurrentTimeUpdatedDelegate OnCurrentDateTimeUpdated;
 
 protected:
 	// Adds a minute to	the current time
-	virtual void TickGameTime();
+	virtual void TickGameDateTime();
 
 	virtual void OnPreLoadObject() override;
 
 private:
 	// The time this game starts with
 	UPROPERTY(EditDefaultsOnly, Category="Game Time")
-	FGameplayTime StartGameTime;
+	FGameplayDateTime StartGameDateTime;
 
-	UPROPERTY(Transient, SaveGame, ReplicatedUsing="OnRep_CurrentTime")
-	FGameplayTime CurrentGameTime;
+	UPROPERTY(Transient, SaveGame, ReplicatedUsing="OnRep_CurrentDateTime")
+	FGameplayDateTime CurrentGameDateTime;
 
 	// How often the game time should be incremented by one minute
 	UPROPERTY(EditDefaultsOnly, Category="Game Time", meta=(ClampMin=0.1))
@@ -52,5 +52,5 @@ private:
 	void RestartTickGameTimeTimer();
 
 	UFUNCTION()
-	void OnRep_CurrentTime();
+	void OnRep_CurrentDateTime();
 };
