@@ -118,3 +118,9 @@ private:
 
 	void Normalize();
 };
+
+// This is required to use FGameplayTime as a key in TMap and TSet
+FORCEINLINE uint32 GetTypeHash(const FGameplayTime& GameplayTime)
+{
+	return FCrc::MemCrc32(&GameplayTime, sizeof(GameplayTime));
+}

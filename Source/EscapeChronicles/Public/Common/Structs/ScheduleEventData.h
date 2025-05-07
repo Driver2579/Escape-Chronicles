@@ -26,13 +26,14 @@ struct FScheduleEventData
 		return EventTag == Other.EventTag;
 	}
 
-	bool operator==(const FGameplayTag& OtherEventTag) const
-	{
-		return EventTag == OtherEventTag;
-	}
-
 	bool IsValid() const
 	{
 		return EventTag.IsValid() && !EventClass.IsNull();
 	}
 };
+
+// This is required to use FScheduleEventData as a key in TMap and TSet
+FORCEINLINE uint32 GetTypeHash(const FScheduleEventData& ScheduleEventData)
+{
+	return FCrc::MemCrc32(&ScheduleEventData, sizeof(ScheduleEventData));
+}

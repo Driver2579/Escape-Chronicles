@@ -33,6 +33,11 @@ public:
 	}
 
 	virtual void Tick(float DeltaTime) override {}
+
+	virtual TStatId GetStatId() const override
+	{
+		RETURN_QUICK_DECLARE_CYCLE_STAT(UScheduleEvent, STATGROUP_Tickables);
+	}
 	// ~End of FTickableGameObject interface
 
 	bool CanEverTick() const { return bCanEverTick; }
