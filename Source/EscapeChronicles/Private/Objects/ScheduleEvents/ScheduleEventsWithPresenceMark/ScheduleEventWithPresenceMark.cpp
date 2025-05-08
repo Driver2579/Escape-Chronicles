@@ -37,6 +37,13 @@ void UScheduleEventWithPresenceMark::OnEventStarted()
 	}
 }
 
+bool UScheduleEventWithPresenceMark::CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger,
+	AEscapeChroniclesPlayerState* PlayerToCheckIn)
+{
+	// Add the player to the list of checked-in players only if it's not already there
+	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID());
+}
+
 void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	// Don't check for overlaps if the event is paused
@@ -44,6 +51,11 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	{
 		return;
 	}
+
+#if DO_CHECK
+	check(IsValid(OverlappedActor));
+	check(OverlappedActor->IsA<ATriggerBase>());
+#endif
 
 	const AEscapeChroniclesCharacter* OverlappedCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
@@ -57,8 +69,10 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	AEscapeChroniclesPlayerState* PlayerState = OverlappedCharacter->GetPlayerStateChecked<
 		AEscapeChroniclesPlayerState>();
 
-	// Add the player to the list of checked-in players if it's not already there
-	if (!CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
+	ATriggerBase* PresenceMarkTrigger = Cast<ATriggerBase>(OverlappedActor);
+
+	// Add the player to the list of checked-in players only if we're allowed to
+	if (CanCheckInPlayer(PresenceMarkTrigger, PlayerState))
 	{
 		CheckedInPlayers.Add(PlayerState->GetUniquePlayerID());
 

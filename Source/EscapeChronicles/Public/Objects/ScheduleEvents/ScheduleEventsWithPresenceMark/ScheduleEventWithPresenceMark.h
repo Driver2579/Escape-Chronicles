@@ -27,6 +27,9 @@ public:
 protected:
 	virtual void OnEventStarted() override;
 
+	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
+	virtual bool CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
+
 	// Called when a player checks in during the event (overlaps with the PresenceMarkTrigger)
 	virtual void NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
 	{
