@@ -25,16 +25,38 @@ struct FScheduleEventData
 	UPROPERTY(EditDefaultsOnly, SaveGame, NotReplicated)
 	TSoftClassPtr<UScheduleEvent> EventClass;
 
+	/**
+	 * Could be null. Consider using CallOrRegister_OnEventInstanceCreated instead of this function if you need a valid
+	 * instance.
+	 */
+	UScheduleEvent* GetEventInstance() const { return EventInstance; }
+
 	// Must be called when the event instance is created
 	void SetEventInstance(UScheduleEvent* InEventInstance);
+
+	// Should be called after ending the event instance to destroy it
+	void ResetEventInstance()
+	{
+		EventInstance = nullptr;
+	}
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEventInstanceCreatedDelegate, UScheduleEvent* EventInstance);
 
 	/**
 	 * Calls the given Callback if the event instance is already created or registers it to be called when the event
 	 * instance is created.
+	 *
+	 * @return A handle for the delegate if it was registered.
+	 * @return Invalid handle if the event instance was already created and the callback was called.
+	 *
+	 * @remark Could be called multiple times, so remember to unregister it when you don't need it anymore.
 	 */
-	void CallOrRegister_OnEventInstanceCreated(const FOnEventInstanceCreatedDelegate::FDelegate& Callback);
+	FDelegateHandle CallOrRegister_OnEventInstanceCreated(const FOnEventInstanceCreatedDelegate::FDelegate& Callback);
+
+	void Unregister_OnEventInstanceCreated(const FDelegateHandle& Handle)
+	{
+		OnEventInstanceCreated.Remove(Handle);
+	}
 
 	// Compares events by their tags
 	bool operator==(const FScheduleEventData& Other) const

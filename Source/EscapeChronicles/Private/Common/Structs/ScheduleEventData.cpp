@@ -15,18 +15,19 @@ void FScheduleEventData::SetEventInstance(UScheduleEvent* InEventInstance)
 #endif
 
 	EventInstance = InEventInstance;
+
 	OnEventInstanceCreated.Broadcast(EventInstance);
 }
 
-void FScheduleEventData::CallOrRegister_OnEventInstanceCreated(
+FDelegateHandle FScheduleEventData::CallOrRegister_OnEventInstanceCreated(
 	const FOnEventInstanceCreatedDelegate::FDelegate& Callback)
 {
 	if (EventInstance)
 	{
 		Callback.ExecuteIfBound(EventInstance);
+
+		return FDelegateHandle();
 	}
-	else
-	{
-		OnEventInstanceCreated.Add(Callback);
-	}
+
+	return OnEventInstanceCreated.Add(Callback);
 }

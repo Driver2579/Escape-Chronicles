@@ -92,15 +92,15 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 	// Pause the current event if it exists
 	if (!EventsStack.IsEmpty())
 	{
-		const FScheduleEventData& CurrentEventData = GetCurrentActiveEventData();
+		UScheduleEvent* EventInstance = GetCurrentActiveEventData().GetEventInstance();
 
 		/**
 		 * The instance could still be loading. If it's valid already, then pause it now. Otherwise, it will be paused
 		 * automatically when it's ready if this event still won't be active when this happens.
 		 */
-		if (CurrentEventData.EventInstance)
+		if (IsValid(EventInstance))
 		{
-			CurrentEventData.EventInstance->PauseEvent();
+			EventInstance->PauseEvent();
 		}
 	}
 
@@ -118,7 +118,7 @@ void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const 
 #endif
 
 #if DO_ENSURE
-	ensureAlways(!EventData.EventInstance && !LoadEventInstancesHandles.Contains(EventData));
+	ensureAlways(!IsValid(EventData.GetEventInstance()) && !LoadEventInstancesHandles.Contains(EventData));
 	ensureAlways(EventsStack.Contains(EventData));
 #endif
 
@@ -148,17 +148,20 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 
 	FScheduleEventData& EventData = EventsStack[EventIndex];
 
-	// Create the new event of the given class and set its data as required
-	EventData.EventInstance = NewObject<UScheduleEvent>(this, EventData.EventClass.Get());
-	EventData.EventInstance->SetEventData(EventData);
+	// Create the new event of the given class
+	UScheduleEvent* EventInstance = NewObject<UScheduleEvent>(this, EventData.EventClass.Get());
+
+	// Set the references to each other as required
+	EventData.SetEventInstance(EventInstance);
+	EventInstance->SetEventData(EventData);
 
 	// Always start the event when it's created
-	EventData.EventInstance->StartEvent();
+	EventInstance->StartEvent();
 
 	// If the event is not the current active one, then pause it immediately
 	if (EventData != GetCurrentActiveEventData())
 	{
-		EventData.EventInstance->PauseEvent();
+		EventInstance->PauseEvent();
 	}
 }
 
@@ -214,18 +217,20 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 		 */
 		const FScheduleEventData& CurrentActiveEventData = GetCurrentActiveEventData();
 
+		UScheduleEvent* EventInstance = CurrentActiveEventData.GetEventInstance();
+
 		// Check if the event instance is created already
-		if (CurrentActiveEventData.EventInstance)
+		if (IsValid(EventInstance))
 		{
 			// Resume the event if it was paused before (which automatically means that it also was started before)
-			if (CurrentActiveEventData.EventInstance->IsPaused())
+			if (EventInstance->IsPaused())
 			{
-				CurrentActiveEventData.EventInstance->ResumeEvent();
+				EventInstance->ResumeEvent();
 			}
 			// Otherwise, start the event if it was never started before
 			else
 			{
-				CurrentActiveEventData.EventInstance->StartEvent();
+				EventInstance->StartEvent();
 			}
 		}
 		/**
@@ -241,10 +246,12 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 
 void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData)
 {
-	if (EventData.EventInstance)
+	UScheduleEvent* EventInstance = EventData.GetEventInstance();
+
+	if (IsValid(EventInstance))
 	{
-		EventData.EventInstance->EndEvent();
-		EventData.EventInstance = nullptr;
+		EventInstance->EndEvent();
+		EventData.ResetEventInstance();
 	}
 }
 
@@ -274,7 +281,7 @@ void UScheduleEventManagerComponent::OnPostLoadObject()
 	// Create instances for events that were added to the stack by the loading
 	for (FScheduleEventData& EventData : EventsStack)
 	{
-		if (!EventData.EventInstance && !LoadEventInstancesHandles.Contains(EventData))
+		if (!IsValid(EventData.GetEventInstance()) && !LoadEventInstancesHandles.Contains(EventData))
 		{
 			CreateEventInstanceAndStartOrPauseIt(EventData);
 		}
