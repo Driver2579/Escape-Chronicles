@@ -11,7 +11,8 @@
 
 struct FStreamableHandle;
 
-// TODO: Connect the system with GameState
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEventChangedDelegate, const FScheduleEventData& OldEventData,
+	const FScheduleEventData& NewEventData);
 
 /**
  * This component handles switching events for the game. There are two types of events in this component: scheduled and
@@ -21,6 +22,10 @@ struct FStreamableHandle;
  * event you pushed is always on top of the stack, so this would be the one that is active, until you manually remove
  * it, which will end it and unpause the event that is now on top of the stack (either the event you pushed before or
  * the scheduled event if there are no pushed events left).
+ *
+ * @remark This class is designed to be used on authority only. Nothing is replicated here. It is recommended to create
+ * this component in the GameMode or something similar, use it only on the server, and replicate the delegates via the
+ * GameState or something similar.
  */
 UCLASS(ClassGroup=(Custom))
 class ESCAPECHRONICLES_API UScheduleEventManagerComponent : public UActorComponent, public ISaveable
@@ -68,9 +73,6 @@ public:
 	 * before. This event will be considered as a current active event.
 	 */
 	void RemoveEvent(const FGameplayTag& EventTag);
-
-	DECLARE_DELEGATE_TwoParams(FOnEventChangedDelegate, const FScheduleEventData& OldEventData,
-		const FScheduleEventData& NewEventData);
 
 	/**
 	 * Called when an event that is set by the schedule is changed. The new event isn't necessarily active, it could be

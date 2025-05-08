@@ -2,6 +2,8 @@
 
 #include "GameState/EscapeChroniclesGameState.h"
 
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
+#include "GameModes/EscapeChroniclesGameMode.h"
 #include "Net/UnrealNetwork.h"
 
 void AEscapeChroniclesGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -9,6 +11,9 @@ void AEscapeChroniclesGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, CurrentGameDateTime);
+
+	DOREPLIFETIME(ThisClass, CurrentScheduledEventData);
+	DOREPLIFETIME(ThisClass, CurrentActiveEventData);
 }
 
 void AEscapeChroniclesGameState::PostInitializeComponents()
@@ -31,6 +36,39 @@ void AEscapeChroniclesGameState::BeginPlay()
 	 * clients.
 	 */
 	RestartTickGameTimeTimer();
+}
+
+void AEscapeChroniclesGameState::RegisterScheduleEventManagerData()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+#if DO_CHECK
+	check(AuthorityGameMode);
+	check(AuthorityGameMode.IsA<AEscapeChroniclesGameMode>());
+#endif
+
+	const AEscapeChroniclesGameMode* EscapeChroniclesGameMode = CastChecked<AEscapeChroniclesGameMode>(
+		AuthorityGameMode);
+
+	UScheduleEventManagerComponent* ScheduleEventManagerComponent =
+		EscapeChroniclesGameMode->GetScheduleEventManagerComponent();
+
+#if DO_CHECK
+	check(IsValid(ScheduleEventManagerComponent));
+#endif
+
+	// Synchronize current values with ScheduleEventManagerComponent
+	CurrentScheduledEventData = ScheduleEventManagerComponent->GetCurrentScheduledEventData();
+	CurrentActiveEventData = ScheduleEventManagerComponent->GetCurrentActiveEventData();
+
+	ScheduleEventManagerComponent->OnCurrentScheduledEventChanged.AddUObject(this,
+		&ThisClass::NotifyCurrentScheduledEventChanged);
+
+	ScheduleEventManagerComponent->OnCurrentActiveEventChanged.AddUObject(this,
+		&ThisClass::NotifyCurrentActiveEventChanged);
 }
 
 void AEscapeChroniclesGameState::RestartTickGameTimeTimer()
@@ -58,19 +96,57 @@ void AEscapeChroniclesGameState::TickGameDateTime()
 		CurrentGameDateTime.Day, CurrentGameDateTime.Time.Hour, CurrentGameDateTime.Time.Minute);
 }
 
+void AEscapeChroniclesGameState::OnRep_CurrentDateTime()
+{
+	// Restart the tick GameTime timer to synchronize the update time with the server
+	RestartTickGameTimeTimer();
+
+	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
+}
+
+void AEscapeChroniclesGameState::NotifyCurrentScheduledEventChanged(const FScheduleEventData& OldEventData,
+	const FScheduleEventData& NewEventData)
+{
+#if DO_ENSURE
+	ensureAlways(HasAuthority());
+#endif
+
+	// Update the CurrentScheduledEventData with a new value
+	CurrentScheduledEventData = NewEventData;
+
+	NetMulticast_BroadcastOnCurrentScheduledEventChangedDelegate(OldEventData, NewEventData);
+}
+
+void AEscapeChroniclesGameState::NotifyCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
+	const FScheduleEventData& NewEventData)
+{
+#if DO_ENSURE
+	ensureAlways(HasAuthority());
+#endif
+
+	// Update the CurrentActiveEventData with a new value
+	CurrentActiveEventData = NewEventData;
+
+	NetMulticast_BroadcastOnCurrentActiveEventChangedDelegate(OldEventData, NewEventData);
+}
+
+void AEscapeChroniclesGameState::NetMulticast_BroadcastOnCurrentScheduledEventChangedDelegate_Implementation(
+	const FScheduleEventData& OldEventData, const FScheduleEventData& NewEventData)
+{
+	OnCurrentScheduledEventChanged.Broadcast(OldEventData, NewEventData);
+}
+
+void AEscapeChroniclesGameState::NetMulticast_BroadcastOnCurrentActiveEventChangedDelegate_Implementation(
+	const FScheduleEventData& OldEventData, const FScheduleEventData& NewEventData)
+{
+	OnCurrentActiveEventChanged.Broadcast(OldEventData, NewEventData);
+}
+
 void AEscapeChroniclesGameState::OnPreLoadObject()
 {
 	// Restart tht tick GameTime timer once we load the game
 	RestartTickGameTimeTimer();
 
 	// Broadcast the current time to everyone after loading the game
-	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
-}
-
-void AEscapeChroniclesGameState::OnRep_CurrentDateTime()
-{
-	// Restart the tick GameTime timer to synchronize the update time with the server
-	RestartTickGameTimeTimer();
-
 	OnCurrentDateTimeUpdated.Broadcast(CurrentGameDateTime);
 }

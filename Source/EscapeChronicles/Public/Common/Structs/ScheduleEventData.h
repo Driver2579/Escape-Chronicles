@@ -22,7 +22,7 @@ struct FScheduleEventData
 	FGameplayTag EventTag;
 
 	// A class of the object dictates the behavior of the game while this event is active
-	UPROPERTY(EditDefaultsOnly, SaveGame)
+	UPROPERTY(EditDefaultsOnly, SaveGame, NotReplicated)
 	TSoftClassPtr<UScheduleEvent> EventClass;
 
 	// An actual instance of the event. Has to be created and started manually using the EventClass.

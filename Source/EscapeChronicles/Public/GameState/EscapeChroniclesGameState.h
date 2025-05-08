@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
-#include "Common/Structs/GameplayDateTime.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Structs/GameplayDateTime.h"
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "EscapeChroniclesGameState.generated.h"
 
 UCLASS()
@@ -29,13 +30,44 @@ public:
 
 	FOnCurrentTimeUpdatedDelegate OnCurrentDateTimeUpdated;
 
+	const FScheduleEventData& GetCurrentScheduledEventData() const { return CurrentScheduledEventData; }
+	const FScheduleEventData& GetCurrentActiveEventData() const { return CurrentActiveEventData; }
+
+	/**
+	 * This delegate duplicates the same delegate from the ScheduleEventManagerComponent except it's replicated to
+	 * clients.
+	 */
+	FOnEventChangedDelegate OnCurrentScheduledEventChanged;
+
+	/**
+	 * This delegate duplicates the same delegate from the ScheduleEventManagerComponent except it's replicated to
+	 * clients.
+	 */
+	FOnEventChangedDelegate OnCurrentActiveEventChanged;
+
 protected:
 	// Adds a minute to	the current time
 	virtual void TickGameDateTime();
 
+	/**
+	 * Called on servers when OnCurrentScheduledEventChanged is called in ScheduleEventManagerComponent. Broadcasts the
+	 * same delegate via the NetMulticast.
+	 */
+	virtual void NotifyCurrentScheduledEventChanged(const FScheduleEventData& OldEventData,
+		const FScheduleEventData& NewEventData);
+
+	/**
+	 * Called on servers when OnCurrentActiveEventChanged is called in ScheduleEventManagerComponent. Broadcasts the
+	 * same delegate via the NetMulticast.
+	 */
+	virtual void NotifyCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
+		const FScheduleEventData& NewEventData);
+
 	virtual void OnPreLoadObject() override;
 
 private:
+	void RegisterScheduleEventManagerData();
+
 	// The time this game starts with
 	UPROPERTY(EditDefaultsOnly, Category="Game Time")
 	FGameplayDateTime StartGameDateTime;
@@ -53,4 +85,20 @@ private:
 
 	UFUNCTION()
 	void OnRep_CurrentDateTime();
+
+	// Duplicates the value from the ScheduleEventManagerComponent but replicated to clients
+	UPROPERTY(Transient, Replicated)
+	FScheduleEventData CurrentScheduledEventData;
+
+	// Duplicates the value from the ScheduleEventManagerComponent but replicated to clients
+	UPROPERTY(Transient, Replicated)
+	FScheduleEventData CurrentActiveEventData;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_BroadcastOnCurrentScheduledEventChangedDelegate(const FScheduleEventData& OldEventData,
+		const FScheduleEventData& NewEventData);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_BroadcastOnCurrentActiveEventChangedDelegate(const FScheduleEventData& OldEventData,
+		const FScheduleEventData& NewEventData);
 };

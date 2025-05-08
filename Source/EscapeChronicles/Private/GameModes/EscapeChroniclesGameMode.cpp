@@ -2,6 +2,7 @@
 
 #include "EscapeChronicles/Public/GameModes/EscapeChroniclesGameMode.h"
 
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -14,6 +15,9 @@ AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
+
+	ScheduleEventManagerComponent = CreateDefaultSubobject<UScheduleEventManagerComponent>(
+		TEXT("Schedule Event Manager"));
 }
 
 void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)

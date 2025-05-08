@@ -8,7 +8,9 @@
 #include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesGameMode.generated.h"
 
-// TODO: Create ScheduleEventManagerComponent here
+class UScheduleEventManagerComponent;
+
+struct FScheduleEventData;
 
 UCLASS(MinimalAPI)
 class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
@@ -17,6 +19,11 @@ class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 
 public:
 	AEscapeChroniclesGameMode();
+
+	UScheduleEventManagerComponent* GetScheduleEventManagerComponent() const
+	{
+		return ScheduleEventManagerComponent;
+	}
 
 	FUniquePlayerIdManager& GetUniquePlayerIdManager() { return UniquePlayerIdManager; }
 
@@ -29,6 +36,9 @@ protected:
 		const FString& Options, const FString& Portal = L"") override;
 
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UScheduleEventManagerComponent> ScheduleEventManagerComponent;
+
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
