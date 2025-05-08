@@ -4,7 +4,7 @@
 
 #include "Engine/AssetManager.h"
 #include "GameState/EscapeChroniclesGameState.h"
-#include "Objects/ScheduleEvent.h"
+#include "Objects/ScheduleEvents/ScheduleEvent.h"
 
 UScheduleEventManagerComponent::UScheduleEventManagerComponent()
 {

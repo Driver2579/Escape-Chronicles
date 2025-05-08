@@ -5,15 +5,26 @@
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 #include "Common/Structs/ScheduleEventData.h"
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "ScheduleEvent.generated.h"
 
-// The base class for event instances. Children of this class are what actually dictate the behavior during the event.
+class UScheduleEventManagerComponent;
+
+/**
+ * The base class for event instances. Children of this class are what actually dictate the behavior during the event.
+ * @remark Instances of this class should be created only from the UScheduleEventManagerComponent.
+ */
 UCLASS(Abstract, Blueprintable)
 class ESCAPECHRONICLES_API UScheduleEvent : public UObject, public FTickableGameObject
 {
 	GENERATED_BODY()
 
 public:
+	UScheduleEventManagerComponent* GetScheduleEventManagerComponent() const
+	{
+		return CastChecked<UScheduleEventManagerComponent>(GetOuter());
+	}
+
 	// ~FTickableGameObject interface
 	virtual UWorld* GetTickableGameObjectWorld() const override
 	{
@@ -88,11 +99,19 @@ protected:
 		bCanEverTick = bEnabled;
 	}
 
+	// TODO: Remove the logs once the UI is ready
+
 	// Called when the event is started. This is where you should start the event's logic.
-	virtual void OnEventStarted() {}
+	virtual void OnEventStarted()
+	{
+		UE_LOG(LogTemp, Display, TEXT("Event %s started"), *EventData.EventTag.ToString());
+	}
 
 	// Called when the event is ended. This is where you should clear the event's logic.
-	virtual void OnEventEnded() {}
+	virtual void OnEventEnded()
+	{
+		UE_LOG(LogTemp, Display, TEXT("Event %s ended"), *EventData.EventTag.ToString());
+	}
 
 	/**
 	 * Called when the event is paused. Usually, you would like to duplicate or implement the similar logic to the
@@ -100,13 +119,19 @@ protected:
 	 * the event's logic but keep something passive).
 	 * @remark Keep in mind that sometimes this could be called immediately after the OnEventStarted method.
 	 */
-	virtual void OnEventPaused() {}
+	virtual void OnEventPaused()
+	{
+		UE_LOG(LogTemp, Display, TEXT("Event %s paused"), *EventData.EventTag.ToString());
+	}
 
 	/**
 	 * Called when the event is resumed. This is where you should revert your changes made in the OnEventPaused method
 	 * or simply restart the event's logic like you would do in the OnEventStarted method.
 	 */
-	virtual void OnEventResumed() {}
+	virtual void OnEventResumed()
+	{
+		UE_LOG(LogTemp, Display, TEXT("Event %s resumed"), *EventData.EventTag.ToString());
+	}
 
 private:
 	// Whether this object is registered for ticking
