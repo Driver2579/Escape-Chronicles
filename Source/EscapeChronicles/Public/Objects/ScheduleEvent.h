@@ -7,9 +7,7 @@
 #include "Common/Structs/ScheduleEventData.h"
 #include "ScheduleEvent.generated.h"
 
-/**
- * 
- */
+// The base class for event instances. Children of this class are what actually dictate the behavior during the event.
 UCLASS(Abstract, Blueprintable)
 class ESCAPECHRONICLES_API UScheduleEvent : public UObject, public FTickableGameObject
 {
@@ -32,6 +30,7 @@ public:
 		return bTickEnabled;
 	}
 
+	// Called only if the event is active, isn't paused, and bCanEverTick is true
 	virtual void Tick(float DeltaTime) override {}
 
 	virtual TStatId GetStatId() const override
@@ -57,40 +56,74 @@ public:
 
 	bool IsActive() const { return bActive; }
 
-	virtual void StartEvent();
-	virtual void EndEvent();
+	// Starts the event if it was not started before. Should be called when the event is created.
+	void StartEvent();
+
+	// Ends the event if it was started. Should be called when the event is no longer needed.
+	void EndEvent();
 
 	bool IsPaused() const { return bPaused; }
 
-	virtual void PauseEvent();
-	virtual void ResumeEvent();
+	/**
+	 * Pauses the event if it was started and if it isn't already paused. Should be called when you want to override the
+	 * event with another one, but don't want to completely end it yet.
+	 */
+	void PauseEvent();
+
+	/**
+	 * Resumes the event if it's still active and if it is currently paused. Should be called when you want to revert
+	 * the state of the event to the one before it was paused.
+	 */
+	void ResumeEvent();
 
 protected:
+	// Can be called only from the constructor
 	void SetCanEverTick(const bool bEnabled)
 	{
 #if DO_ENSURE
 		ensureAlwaysMsgf(HasAnyFlags(RF_NeedInitialization),
-			TEXT("You can only set bCanEverTick in the constructor"));
+			TEXT("You can only set bCanEverTick in the constructor!"));
 #endif
 
 		bCanEverTick = bEnabled;
 	}
 
+	// Called when the event is started. This is where you should start the event's logic.
 	virtual void OnEventStarted() {}
+
+	// Called when the event is ended. This is where you should clear the event's logic.
 	virtual void OnEventEnded() {}
 
+	/**
+	 * Called when the event is paused. Usually, you would like to duplicate or implement the similar logic to the
+	 * OnEventEnded method, but you could also implement your custom logic here (for example, only clearing some part of
+	 * the event's logic but keep something passive).
+	 * @remark Keep in mind that sometimes this could be called immediately after the OnEventStarted method.
+	 */
 	virtual void OnEventPaused() {}
+
+	/**
+	 * Called when the event is resumed. This is where you should revert your changes made in the OnEventPaused method
+	 * or simply restart the event's logic like you would do in the OnEventStarted method.
+	 */
 	virtual void OnEventResumed() {}
 
 private:
 	// Whether this object is registered for ticking
 	bool bCanEverTick = false;
 
-	// Whether this object currently can tick
+	/**
+	 * Whether this object currently can tick (if bCanEverTick is true as well). This is set to true while the event is
+	 * active and not paused.
+	 */
 	bool bTickEnabled = false;
 
+	// Event data that owns this event instance
 	FScheduleEventData EventData;
 
+	// Whether this event was started and not ended yet
 	bool bActive = false;
+
+	// Whether this event was started and is currently paused
 	bool bPaused = false;
 };

@@ -8,12 +8,16 @@ void UScheduleEvent::StartEvent()
 	ensureAlways(EventData.IsValid());
 #endif
 
+	// Don't start the event if it's already active
 	if (bActive)
 	{
 		return;
 	}
 
+	// Mark that the event is active now
 	bActive = true;
+
+	// Enable the tick (this still will not tick if bCanEverTick is false)
 	bTickEnabled = true;
 
 	OnEventStarted();
@@ -21,12 +25,16 @@ void UScheduleEvent::StartEvent()
 
 void UScheduleEvent::EndEvent()
 {
+	// Don't end the event if it wasn't started
 	if (!bActive)
 	{
 		return;
 	}
 
+	// Disable the tick
 	bTickEnabled = false;
+
+	// Mark that the event is not active anymore
 	bActive = false;
 
 	OnEventEnded();
@@ -34,12 +42,16 @@ void UScheduleEvent::EndEvent()
 
 void UScheduleEvent::PauseEvent()
 {
+	// Don't pause the event if it wasn't started or if it's already paused
 	if (!bActive || bPaused)
 	{
 		return;
 	}
 
+	// Mark that the event is now paused
 	bPaused = true;
+
+	// Disable the tick
 	bTickEnabled = false;
 
 	OnEventPaused();
@@ -47,12 +59,16 @@ void UScheduleEvent::PauseEvent()
 
 void UScheduleEvent::ResumeEvent()
 {
+	// Don't resume the event if it was ended or if it isn't paused
 	if (!bActive || !bPaused)
 	{
 		return;
 	}
 
+	// Enable the tick back (this still will not tick if bCanEverTick is false)
 	bTickEnabled = true;
+
+	// Mark that the event isn't paused anymore
 	bPaused = false;
 
 	OnEventResumed();

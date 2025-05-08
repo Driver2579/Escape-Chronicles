@@ -11,10 +11,17 @@
 
 struct FStreamableHandle;
 
-// TODO: Add docs to different classes
 // TODO: Connect the system with GameState
 
-// TODO: Provide the class description
+/**
+ * This component handles switching events for the game. There are two types of events in this component: scheduled and
+ * non-scheduled events. Scheduled events are events that are switched automatically when the game time changes.
+ * Non-scheduled events could override the scheduled events if you manually push them on top of the stack. There is only
+ * one event that is active at a time - the event that is on the top of the stack. Other events are paused. The last
+ * event you pushed is always on top of the stack, so this would be the one that is active, until you manually remove
+ * it, which will end it and unpause the event that is now on top of the stack (either the event you pushed before or
+ * the scheduled event if there are no pushed events left).
+ */
 UCLASS(ClassGroup=(Custom))
 class ESCAPECHRONICLES_API UScheduleEventManagerComponent : public UActorComponent, public ISaveable
 {
@@ -62,12 +69,12 @@ public:
 	 */
 	void RemoveEvent(const FGameplayTag& EventTag);
 
-	DECLARE_DELEGATE_TwoParams(FOnEventChangedDelegate, const FScheduleEventData& OldEentData,
+	DECLARE_DELEGATE_TwoParams(FOnEventChangedDelegate, const FScheduleEventData& OldEventData,
 		const FScheduleEventData& NewEventData);
 
 	/**
-	 * Called when an event that is set by the schedule is changed. Isn't necessarily active, could be paused due to the
-	 * override by another event.
+	 * Called when an event that is set by the schedule is changed. The new event isn't necessarily active, it could be
+	 * started and instantly paused due to the override by another event.
 	 */
 	FOnEventChangedDelegate OnCurrentScheduledEventChanged;
 
@@ -109,8 +116,8 @@ private:
 	/**
 	 * The stack of events that are currently set, but only one event is active at a time. These events should always be
 	 * valid. These events are sorted by the priority in which they should be activated. The first one is always a
-	 * scheduled event and the last one is always the current active event, but still prefer getters to get them instead
-	 * of the direct access by index.
+	 * scheduled event, and the last one is always the current active event, but still prefer getters to get them
+	 * instead of the direct access by index.
 	 */
 	UPROPERTY(Transient, SaveGame)
 	TArray<FScheduleEventData> EventsStack;
