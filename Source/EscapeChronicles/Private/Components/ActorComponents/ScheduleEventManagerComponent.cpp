@@ -19,19 +19,30 @@ void UScheduleEventManagerComponent::BeginPlay()
 
 	if (ensureAlways(IsValid(GameState)))
 	{
-		GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentTimeUpdated);
+		OnCurrentDateTimeUpdated(GameState->GetCurrentGameDateTime());
+
+		GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentDateTimeUpdated);
 	}
 }
 
-void UScheduleEventManagerComponent::OnCurrentTimeUpdated(const FGameplayDateTime& NewDateTime)
+void UScheduleEventManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& NewDateTime)
 {
+	// Don't do anything if there are no scheduled events
+	if (ScheduledEvents.IsEmpty())
+	{
+		return;
+	}
+
 	// Try to find the event that starts at the given time
 	const FScheduleEventData* NewScheduledEvent = ScheduledEvents.Find(NewDateTime.Time);
 
-	// If the event is not found, try to find the event that is closest to the given time
+	// If the event is not found, find the event that is closest to the given time
 	if (!NewScheduledEvent)
 	{
 		FGameplayTime MaximumScheduledTimeLessThanCurrentTime;
+		FGameplayTime MaximumScheduledTime;
+
+		const FScheduleEventData* LatestScheduledEventInADay = nullptr;
 
 		for (const TPair<FGameplayTime, FScheduleEventData>& ScheduledEvent : ScheduledEvents)
 		{
@@ -44,20 +55,33 @@ void UScheduleEventManagerComponent::OnCurrentTimeUpdated(const FGameplayDateTim
 				MaximumScheduledTimeLessThanCurrentTime = ScheduledEvent.Key;
 				NewScheduledEvent = &ScheduledEvent.Value;
 			}
+
+			/**
+			 * We could fail to find an event if it should've started yesterday (for example, if should start at 23:00
+			 * but now is 1:00). So we also need to find an event that is closest to the end of the day (basically, an
+			 * event from the previous day).
+			 */
+			if (ScheduledEvent.Key >= MaximumScheduledTime)
+			{
+				MaximumScheduledTime = ScheduledEvent.Key;
+				LatestScheduledEventInADay = &ScheduledEvent.Value;
+			}
 		}
 
-		/**
-		 * If we still don't have an event, then we shouldn't do anything. Just wait for the next time tick when we are
-		 * going to recheck it again.
-		 */
+		// If we didn't find the closest event in the current day, then use the last event of the previous day
 		if (!NewScheduledEvent)
 		{
-			return;
+			NewScheduledEvent = LatestScheduledEventInADay;
 		}
 	}
 
+#if DO_CHECK
+	// We should've found an event by now
+	check(NewScheduledEvent);
+#endif
+
 	// Make sure we don't restart the same event
-	if (*NewScheduledEvent == GetCurrentScheduledEventData())
+	if (!EventsStack.IsEmpty() && *NewScheduledEvent == GetCurrentScheduledEventData())
 	{
 		return;
 	}

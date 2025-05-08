@@ -88,7 +88,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Handles switching between scheduled events
-	virtual void OnCurrentTimeUpdated(const FGameplayDateTime& NewDateTime);
+	virtual void OnCurrentDateTimeUpdated(const FGameplayDateTime& NewDateTime);
 
 	virtual void OnPreLoadObject() override;
 	virtual void OnPostLoadObject() override;

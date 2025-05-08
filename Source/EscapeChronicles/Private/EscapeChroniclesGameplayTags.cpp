@@ -52,4 +52,13 @@ namespace EscapeChroniclesGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Guard, "Role.Guard", "The character is a guard");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_NPC, "Role.NPC", "The character is controlled by an AI");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Player, "Role.Player", "The character is controlled by a real player");
+
+	// === Schedule events tags ===
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Bedtime, "ScheduleEvent.Bedtime", "Bedtime event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_RollCall, "ScheduleEvent.RollCall", "Roll Call event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Meal, "ScheduleEvent.Meal", "Meal event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Shower, "ScheduleEvent.Shower", "Shower event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Break, "ScheduleEvent.Break", "Break event");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Alert, "ScheduleEvent.Alert", "Alert event");
 }
