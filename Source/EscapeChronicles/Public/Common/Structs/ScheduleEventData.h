@@ -25,9 +25,16 @@ struct FScheduleEventData
 	UPROPERTY(EditDefaultsOnly, SaveGame, NotReplicated)
 	TSoftClassPtr<UScheduleEvent> EventClass;
 
-	// An actual instance of the event. Has to be created and started manually using the EventClass.
-	UPROPERTY(Transient)
-	TObjectPtr<UScheduleEvent> EventInstance;
+	// Must be called when the event instance is created
+	void SetEventInstance(UScheduleEvent* InEventInstance);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnEventInstanceCreatedDelegate, UScheduleEvent* EventInstance);
+
+	/**
+	 * Calls the given Callback if the event instance is already created or registers it to be called when the event
+	 * instance is created.
+	 */
+	void CallOrRegister_OnEventInstanceCreated(const FOnEventInstanceCreatedDelegate::FDelegate& Callback);
 
 	// Compares events by their tags
 	bool operator==(const FScheduleEventData& Other) const
@@ -40,6 +47,13 @@ struct FScheduleEventData
 	{
 		return EventTag.IsValid() && !EventClass.IsNull();
 	}
+
+protected:
+	// An actual instance of the event. Has to be created and started manually using the EventClass.
+	UPROPERTY(Transient)
+	TObjectPtr<UScheduleEvent> EventInstance;
+
+	FOnEventInstanceCreatedDelegate OnEventInstanceCreated;
 };
 
 // This is required to use FScheduleEventData as a key in TMap and TSet

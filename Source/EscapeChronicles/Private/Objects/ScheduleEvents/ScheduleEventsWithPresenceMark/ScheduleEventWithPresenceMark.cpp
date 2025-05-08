@@ -62,7 +62,7 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	{
 		CheckedInPlayers.Add(PlayerState->GetUniquePlayerID());
 
-		OnPlayerCheckedIn(PlayerState);
+		NotifyPlayerCheckedIn(PlayerState);
 	}
 }
 
@@ -91,10 +91,11 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 		// Call OnPlayerMissedEvent for each player that didn't check in during the event
 		if (!CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
 		{
-			OnPlayerMissedEvent(PlayerState);
+			NotifyPlayerMissedEvent(PlayerState);
 		}
 	}
 
+	// Forget about all the checked-in players
 	CheckedInPlayers.Empty();
 
 	Super::OnEventEnded();

@@ -19,11 +19,19 @@ class ESCAPECHRONICLES_API UScheduleEventWithPresenceMark : public UScheduleEven
 {
 	GENERATED_BODY()
 
+public:
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerCheckedInDelegate, AEscapeChroniclesPlayerState* CheckedInPlayer);
+
+	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
+
 protected:
 	virtual void OnEventStarted() override;
 
 	// Called when a player checks in during the event (overlaps with the PresenceMarkTrigger)
-	virtual void OnPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer) {}
+	virtual void NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
+	{
+		OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
+	}
 
 	virtual void OnEventEnded() override;
 
@@ -31,7 +39,7 @@ protected:
 	 * Called at the end of the event for each player that didn't check in during the event (didn't overlap with the
 	 * PresenceMarkTrigger)
 	 */
-	virtual void OnPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) {}
+	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) {}
 
 private:
 	// The class of the trigger that is used to check in players
