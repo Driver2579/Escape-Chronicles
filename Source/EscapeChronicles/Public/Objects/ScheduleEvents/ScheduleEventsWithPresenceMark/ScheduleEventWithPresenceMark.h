@@ -36,6 +36,8 @@ protected:
 		OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
 	}
 
+	virtual void OnEventResumed() override;
+
 	virtual void OnEventEnded() override;
 
 	/**
@@ -51,6 +53,12 @@ private:
 
 	// The list of triggers that are used to check in players
 	TArray<TWeakObjectPtr<ATriggerBase>> PresenceMarkTriggers;
+
+	/**
+	 * Collects all players that are currently overlapping with the given trigger and calls
+	 * OnPresenceMarkTriggerBeginOverlap for them.
+	 */
+	void TriggerBeginOverlapForOverlappingCharacters(ATriggerBase* PresenceMarkTrigger);
 
 	UFUNCTION()
 	void OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);

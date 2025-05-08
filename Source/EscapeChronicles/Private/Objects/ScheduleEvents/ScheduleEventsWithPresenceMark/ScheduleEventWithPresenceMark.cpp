@@ -20,20 +20,37 @@ void UScheduleEventWithPresenceMark::OnEventStarted()
 	{
 		ATriggerBase* PresenceMarkTrigger = *It;
 
-		TArray<AActor*> OverlappingCharacters;
-		PresenceMarkTrigger->GetOverlappingActors(OverlappingCharacters, AEscapeChroniclesCharacter::StaticClass());
-
 		// Count overlaps that happened before the event started
-		for (AActor* OverlappingCharacter : OverlappingCharacters)
-		{
-			OnPresenceMarkTriggerBeginOverlap(PresenceMarkTrigger, OverlappingCharacter);
-		}
+		TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger);
 
 		// Listen for new overlaps
 		PresenceMarkTrigger->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnPresenceMarkTriggerBeginOverlap);
 
 		// Add the trigger to the list of triggers to remove the delegate binding when the event ends
 		PresenceMarkTriggers.Add(PresenceMarkTrigger);
+	}
+}
+
+void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters(ATriggerBase* PresenceMarkTrigger)
+{
+#if DO_CHECK
+	check(IsValid(PresenceMarkTrigger));
+#endif
+
+	TArray<AActor*> OverlappingCharacters;
+	PresenceMarkTrigger->GetOverlappingActors(OverlappingCharacters, AEscapeChroniclesCharacter::StaticClass());
+
+	for (AActor* OverlappingCharacter : OverlappingCharacters)
+	{
+#if DO_CHECK
+		check(IsValid(OverlappingCharacter));
+#endif
+
+#if DO_ENSURE
+		ensureAlways(OverlappingCharacter->IsA<AEscapeChroniclesCharacter>());
+#endif
+
+		OnPresenceMarkTriggerBeginOverlap(PresenceMarkTrigger, OverlappingCharacter);
 	}
 }
 
@@ -77,6 +94,23 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 		CheckedInPlayers.Add(PlayerState->GetUniquePlayerID());
 
 		NotifyPlayerCheckedIn(PlayerState);
+	}
+}
+
+void UScheduleEventWithPresenceMark::OnEventResumed()
+{
+	Super::OnEventResumed();
+
+	/**
+	 * Trigger overlaps for all characters that are currently overlapping with the triggers because we didn't count
+	 * overlaps while the event was paused.
+	 */
+	for (TWeakObjectPtr PresenceMarkTrigger : PresenceMarkTriggers)
+	{
+		if (PresenceMarkTrigger.IsValid())
+		{
+			TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger.Get());
+		}
 	}
 }
 
