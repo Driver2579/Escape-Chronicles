@@ -114,7 +114,7 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 	SaveGameObject->SetLevelName(CurrentLevelName);
 
 	// Add the level name to the slot name to know which slot for which level we need to load the game from when loading
-	SlotName += SlotNameSplitter + CurrentLevelName;
+	SlotName += SlotNameSeparator + CurrentLevelName;
 
 	const UWorld* World = GetWorld();
 
@@ -195,13 +195,15 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 
 	if (bAsync)
 	{
-		UGameplayStatics::AsyncSaveGameToSlot(SaveGameObject, SlotName, 0,
+		UGameplayStatics::AsyncSaveGameToSlot(SaveGameObject, SlotName, GetPlatformUserIndex(),
 			FAsyncSaveGameToSlotDelegate::CreateUObject(this, &USaveGameSubsystem::OnSavingFinished));
 	}
 	else
 	{
-		const bool bSuccess = UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, 0);
-		OnSavingFinished(SlotName, 0, bSuccess);
+		const int32 PlatformUserIndex = GetPlatformUserIndex();
+
+		const bool bSuccess = UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, PlatformUserIndex);
+		OnSavingFinished(SlotName, PlatformUserIndex, bSuccess);
 	}
 }
 
@@ -395,9 +397,11 @@ void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, 
 	const FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(this);
 
 	// Add the level name to the slot name to know which slot for which level we need to load the game from
-	SlotName += SlotNameSplitter + CurrentLevelName;
+	SlotName += SlotNameSeparator + CurrentLevelName;
 
-	if (!UGameplayStatics::DoesSaveGameExist(SlotName, 0))
+	const int32 PlatformUserIndex = GetPlatformUserIndex();
+
+	if (!UGameplayStatics::DoesSaveGameExist(SlotName, PlatformUserIndex))
 	{
 		OnFailedToLoadGame.Broadcast();
 
@@ -406,13 +410,13 @@ void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, 
 
 	if (bAsync)
 	{
-		UGameplayStatics::AsyncLoadGameFromSlot(SlotName, 0,
+		UGameplayStatics::AsyncLoadGameFromSlot(SlotName, PlatformUserIndex,
 			FAsyncLoadGameFromSlotDelegate::CreateUObject(this, &ThisClass::OnLoadingSaveGameObjectFinished));
 	}
 	else
 	{
-		USaveGame* SaveGameObject = UGameplayStatics::LoadGameFromSlot(SlotName, 0);
-		OnLoadingSaveGameObjectFinished(SlotName, 0, SaveGameObject);
+		USaveGame* SaveGameObject = UGameplayStatics::LoadGameFromSlot(SlotName, PlatformUserIndex);
+		OnLoadingSaveGameObjectFinished(SlotName, PlatformUserIndex, SaveGameObject);
 	}
 }
 
@@ -788,8 +792,7 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 	Object->Serialize(Ar);
 }
 
-bool USaveGameSubsystem::LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlayerIdForPlayer(
-	AEscapeChroniclesPlayerState* PlayerState) const
+bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
@@ -804,4 +807,16 @@ bool USaveGameSubsystem::LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlay
 	PlayerState->GenerateUniquePlayerIdIfInvalid();
 
 	return false;
+}
+
+int32 USaveGameSubsystem::GetPlatformUserIndex() const
+{
+	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
+
+	if (!IsValid(LocalPlayer))
+	{
+		return 0;
+	}
+
+	return LocalPlayer->GetPlatformUserIndex();
 }
