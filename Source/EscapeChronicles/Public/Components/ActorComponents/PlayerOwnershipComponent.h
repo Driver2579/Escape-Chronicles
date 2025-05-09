@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Common/Structs/UniquePlayerID.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Structs/UniquePlayerID.h"
 #include "PlayerOwnershipComponent.generated.h"
 
 enum class EControlledCharacterType : uint8;
