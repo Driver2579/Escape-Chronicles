@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystemInterface.h"
 #include "MoverSimulationTypes.h"
+#include "AbilitySystemInterface.h"
+#include "Interfaces/Saveable.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
@@ -18,7 +19,8 @@ enum class EStanceMode : uint8;
 enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
-class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
+class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface,
+	public ISaveable
 {
 	GENERATED_BODY()
 

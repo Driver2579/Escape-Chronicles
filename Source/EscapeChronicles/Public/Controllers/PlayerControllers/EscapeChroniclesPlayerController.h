@@ -31,6 +31,8 @@ public:
 	// Adds all input mapping contexts and binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
 
+	virtual void OnUnPossess() override;
+
 protected:
 	virtual void SetupInputComponent() override;
 
