@@ -152,16 +152,18 @@ private:
 
 	/**
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save game
-	 * object. Also, generates a UniquePlayerID for the given PlayerState if it doesn't have one.
+	 * object. If the player generates a UniquePlayerID for the given PlayerState if it doesn't have one.
+	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static bool LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(
-		const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState);
+	static bool LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+		AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
 	 * Loads the UniquePlayerID and associated save data for the given PlayerState from the given SaveGameObject. If
 	 * failed to load, generates a new FUniquePlayerID for the given PlayerState if it wasn't generated before.
+	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static const FPlayerSaveData* LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(
+	static const FPlayerSaveData* LoadOrGenerateUniquePlayerIdAndLoadSaveData(
 		const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
@@ -169,8 +171,8 @@ private:
 	 * PlayerID in the given FUniquePlayerID if it's different from the one in the save data (only the LocalPlayerID is
 	 * used for the search).
 	 */
-	static const FPlayerSaveData* LoadOfflinePlayerSaveDataAndPlayerID(
-		const UEscapeChroniclesSaveGame* SaveGameObject, FUniquePlayerID& InOutUniquePlayerID);
+	static const FPlayerSaveData* LoadOfflinePlayerSaveDataAndPlayerID(const UEscapeChroniclesSaveGame* SaveGameObject,
+		FUniquePlayerID& InOutUniquePlayerID);
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
 	static void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData);

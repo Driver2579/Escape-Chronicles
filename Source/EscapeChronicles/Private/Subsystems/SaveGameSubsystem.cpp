@@ -546,7 +546,7 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Then load players
 	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
 	{
-		LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(CurrentSaveGameObject, PlayerState);
+		LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
 	}
 
 	// TODO: Also load bots once bots are implemented
@@ -554,8 +554,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	OnGameLoaded.Broadcast();
 }
 
-bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(
-	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
+bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
@@ -567,8 +567,7 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdFor
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(SaveGameObject,
-		PlayerState);
+	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveData(SaveGameObject, PlayerState);
 
 	// Don't load the player if he doesn't have anything to load
 	if (!PlayerSaveData)
@@ -618,7 +617,7 @@ bool USaveGameSubsystem::LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdFor
 	return true;
 }
 
-const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveData(
 	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
@@ -798,8 +797,7 @@ bool USaveGameSubsystem::LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlay
 
 	if (CurrentSaveGameObject)
 	{
-		return LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(CurrentSaveGameObject,
-			PlayerState);
+		return LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
 	}
 
 	// Just Generate a UniquePlayerID for the player if we don't have a save game object
