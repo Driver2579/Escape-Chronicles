@@ -9,6 +9,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"

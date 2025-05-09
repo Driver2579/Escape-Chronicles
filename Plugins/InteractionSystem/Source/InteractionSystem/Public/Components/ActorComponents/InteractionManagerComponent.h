@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/BoxComponent.h"
 #include "InteractionManagerComponent.generated.h"
 
 class UInteractableComponent;

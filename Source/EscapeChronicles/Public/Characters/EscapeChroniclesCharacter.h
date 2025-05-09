@@ -178,7 +178,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> InteractionZone;
-	
+
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoomComponent;
