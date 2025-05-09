@@ -287,7 +287,7 @@ void AEscapeChroniclesPlayerController::OnUnPossess()
 
 	USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
-	if (ensureAlways(SaveGameSubsystem))
+	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
 		// Save the game synchronously because we may close the game before the async save is finished
 		SaveGameSubsystem->SaveGame(false);

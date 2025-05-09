@@ -69,6 +69,9 @@ private:
 	 */
 	void OnPlayerToLoadPawnChanged(APawn* NewPawn) const;
 
-	// Loads the player from the last save game object that was saved or loaded if any
-	void LoadPlayerOrGenerateUniquePlayerIdForPlayer(const APlayerController* PlayerController) const;
+	/**
+	 * Loads the player from the last save game object that was saved or loaded if any, or if failed to load, then
+	 * generates the new FUniquePlayerID for this player.
+	 */
+	void LoadPlayerOrGenerateUniquePlayerId(const APlayerController* PlayerController) const;
 };

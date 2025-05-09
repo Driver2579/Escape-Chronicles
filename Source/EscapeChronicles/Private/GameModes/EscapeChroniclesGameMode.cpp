@@ -26,7 +26,7 @@ void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& 
 
 	USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
-	if (!ensureAlways(SaveGameSubsystem))
+	if (!ensureAlways(IsValid(SaveGameSubsystem)))
 	{
 		return;
 	}
@@ -47,20 +47,23 @@ void AEscapeChroniclesGameMode::OnLoadGameCalled()
 
 	USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
-	// Make sure we bind the delegates only once
-	if (ensureAlways(IsValid(SaveGameSubsystem)))
+	if (!ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		if (!OnGameLoadedDelegateHandle.IsValid())
-		{
-			OnGameLoadedDelegateHandle = SaveGameSubsystem->OnGameLoaded.AddUObject(this,
-				&ThisClass::OnInitialGameLoadFinishedOrFailed);
-		}
+		return;
+	}
 
-		if (!OnFailedToLoadGameDelegateHandle.IsValid())
-		{
-			OnFailedToLoadGameDelegateHandle = SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
-				&ThisClass::OnInitialGameLoadFinishedOrFailed);
-		}
+	// === Subscribe to delegates but make sure we bind the delegates only once ===
+
+	if (!OnGameLoadedDelegateHandle.IsValid())
+	{
+		OnGameLoadedDelegateHandle = SaveGameSubsystem->OnGameLoaded.AddUObject(this,
+			&ThisClass::OnInitialGameLoadFinishedOrFailed);
+	}
+
+	if (!OnFailedToLoadGameDelegateHandle.IsValid())
+	{
+		OnFailedToLoadGameDelegateHandle = SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
+			&ThisClass::OnInitialGameLoadFinishedOrFailed);
 	}
 }
 
@@ -116,7 +119,7 @@ void AEscapeChroniclesGameMode::LoadPlayerNowOrWhenPawnIsPossessed(APlayerContro
 	// If the controller already possesses a pawn, then we can already load the player
 	if (IsValid(PlayerController->GetPawn()))
 	{
-		LoadPlayerOrGenerateUniquePlayerIdForPlayer(PlayerController);
+		LoadPlayerOrGenerateUniquePlayerId(PlayerController);
 	}
 	// Otherwise, wait for the pawn to be possessed
 	else
@@ -143,11 +146,10 @@ void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn) const
 	// Stop listening for the new pawn possessed event because we needed it only for the first pawn
 	PlayerController->GetOnNewPawnNotifier().RemoveAll(this);
 
-	LoadPlayerOrGenerateUniquePlayerIdForPlayer(PlayerController);
+	LoadPlayerOrGenerateUniquePlayerId(PlayerController);
 }
 
-void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerIdForPlayer(
-	const APlayerController* PlayerController) const
+void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerId(const APlayerController* PlayerController) const
 {
 #if DO_CHECK
 	check(IsValid(PlayerController));
@@ -162,7 +164,7 @@ void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerIdForPlayer(
 
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlayerIdForPlayer(
+		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerId(
 			CastChecked<AEscapeChroniclesPlayerState>(PlayerController->PlayerState));
 	}
 }

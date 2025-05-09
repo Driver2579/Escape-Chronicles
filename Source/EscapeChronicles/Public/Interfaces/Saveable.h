@@ -8,7 +8,7 @@
 class UEscapeChroniclesSaveGame;
 
 UINTERFACE()
-class USaveable : public UInterface
+class ESCAPECHRONICLES_API USaveable : public UInterface
 {
 	GENERATED_BODY()
 };

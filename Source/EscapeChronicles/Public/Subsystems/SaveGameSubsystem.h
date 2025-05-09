@@ -81,13 +81,15 @@ public:
 	 * wasn't generated before.
 	 * @return True if the player was loaded.
 	 */
-	bool LoadPlayerFromCurrentSaveGameObjectOrGenerateUniquePlayerIdForPlayer(
-		AEscapeChroniclesPlayerState* PlayerState) const;
+	bool LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const;
 
 protected:
 	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked();
 
+	// Saves all fields marked with "SaveGame" of the given object to the given byte array
 	static void SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData);
+
+	// Loads all fields marked with "SaveGame" of the given object from the given byte array
 	static void LoadObjectSaveGameFields(UObject* Object, const TArray<uint8>& InByteData);
 
 private:
@@ -108,9 +110,12 @@ private:
 		SaveGame(true);
 	}
 
-	// The character that is going to split the slot name. Example: "SlotName_LevelName" where "_" is a splitter.
+	/**
+	 * The character that is going to separate the slot name from the level name. Example: "SlotName_LevelName" where
+	 * "_" is a separator.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category="Slot Names")
-	FString SlotNameSplitter = TEXT("_");
+	FString SlotNameSeparator = TEXT("_");
 
 	/**
 	 * List of classes that are allowed to be saved even if they were dynamically spawned. Should be used for some
@@ -152,16 +157,18 @@ private:
 
 	/**
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save game
-	 * object. Also, generates a UniquePlayerID for the given PlayerState if it doesn't have one.
+	 * object. If the player generates a UniquePlayerID for the given PlayerState if it doesn't have one.
+	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static bool LoadPlayerFromSaveGameObjectOrGenerateUniquePlayerIdForPlayerChecked(
-		const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState);
+	static bool LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+		AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
 	 * Loads the UniquePlayerID and associated save data for the given PlayerState from the given SaveGameObject. If
 	 * failed to load, generates a new FUniquePlayerID for the given PlayerState if it wasn't generated before.
+	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static const FPlayerSaveData* LoadOrGenerateUniquePlayerIdForPlayerAndLoadSaveData(
+	static const FPlayerSaveData* LoadOrGenerateUniquePlayerIdAndLoadSaveData(
 		const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
@@ -169,9 +176,14 @@ private:
 	 * PlayerID in the given FUniquePlayerID if it's different from the one in the save data (only the LocalPlayerID is
 	 * used for the search).
 	 */
-	static const FPlayerSaveData* LoadOfflinePlayerSaveDataAndPlayerID(
-		const UEscapeChroniclesSaveGame* SaveGameObject, FUniquePlayerID& InOutUniquePlayerID);
+	static const FPlayerSaveData* LoadOfflinePlayerSaveDataAndPlayerID(const UEscapeChroniclesSaveGame* SaveGameObject,
+		FUniquePlayerID& InOutUniquePlayerID);
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
 	static void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData);
+
+	/**
+	 * @return The PlatformUserIndex from the first found ULocalPlayer.
+	 */
+	int32 GetPlatformUserIndex() const;
 };
