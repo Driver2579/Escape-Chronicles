@@ -5,16 +5,45 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameFramework/HUD.h"
-#include "UI/Widgets/ActivatableWidgets/EscapeChroniclesContainerWidget.h"
-#include "Widgets/CommonActivatableWidgetContainer.h"
 #include "EscapeChroniclesHUD.generated.h"
 
-class UMenuWidget;
-class UEscapeChroniclesActivatableWidget;
+class URootContainerWidget;
+class UCommonActivatableWidget;
+
+UENUM(BlueprintType)
+enum class  ERouteInputMode : uint8 {
+	Game,       // Input handled by game only (no UI interaction)
+	Ui,         // Input handled by UI only (game paused or ignored)
+	GameAndUi   // Hybrid mode (e.g. for menus that don't ignored the game)
+};
+
+// Defines a HUD route configuration including
+USTRUCT(BlueprintType)
+struct ESCAPECHRONICLES_API FHUDRoute
+{
+	GENERATED_BODY()
+
+	// Widget class to instantiate when this route is activated 
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UCommonActivatableWidget> WidgetClass;
+
+	// Input mode to set when this route is active 
+	UPROPERTY(EditDefaultsOnly)
+	ERouteInputMode InputMode;
+
+	// Should mouse cursor be visible when this route is active 
+	UPROPERTY(EditDefaultsOnly)
+	bool bCursorVisible;
+};
 
 /**
- * This HUD works with one widget which is a container for all the others on the screen. Works like a state machine
- * changing the widget on the zero layer, and it is also convenient to add new widgets on top.
+ * HUD based state-machine that manages widget navigation.
+ * 
+ * Features:
+ * - Single root container widget (URootWidget) managing all UI layers;
+ * - Route-based navigation using GameplayTags;
+ * - Automatic input mode management;
+ * - Stackless navigation (previous widgets are hidden when moving forward);
  */
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesHUD : public AHUD
@@ -22,42 +51,49 @@ class ESCAPECHRONICLES_API AEscapeChroniclesHUD : public AHUD
 	GENERATED_BODY()
 public:
 	AEscapeChroniclesHUD();
-	
-	FGameplayTag GetCurrentMenuTag() const { return CurrentMenuTag; }
-	
-	void GoToMenu(FGameplayTag NewMenuTag);
-	void GoToRootMenu();
 
-	template <typename T = UEscapeChroniclesActivatableWidget>
-	T* AddWidget(TSubclassOf<UEscapeChroniclesActivatableWidget> WidgetClass)
-	{
-		UCommonActivatableWidgetStack* WidgetStack = ContainerWidget->GetWidgetStack();
+	/**
+	 * Navigates to the specified route.
+	 * @param RouteName GameplayTag identifying the desired route (must exist in Routes map).
+	 * @note Will deactivate all currently active widgets in the root container.
+	 */
+	void GoTo(const FGameplayTag& RouteName);
 
-		if (ensureAlways(IsValid(WidgetStack)))
-		{
-			return WidgetStack->AddWidget<T>(WidgetClass);
-		}
-
-		return nullptr;
-	}
+	// Returns to the root state of the HUD 
+	void GoToRoot() const;
 	
 protected:
 	virtual void BeginPlay() override;
 	
 private:
+	// Widget class used as the root container for all UI elements 
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UEscapeChroniclesContainerWidget> ContainerWidgetClass;
+	TSubclassOf<URootContainerWidget> RootWidgetClass;
 
-	UPROPERTY()
-	TObjectPtr<UEscapeChroniclesContainerWidget> ContainerWidget;
+	// Instance of the root widget created at BeginPlay 
+	UPROPERTY(Transient)
+	TObjectPtr<URootContainerWidget> RootWidget;
 
-	// === Menus ===
-	
+	// Default input mode when no routes are active 
 	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag RootMenuTag;
-	
+	ERouteInputMode RootInputMode;
+
+	// Default cursor visibility when no routes are active 
 	UPROPERTY(EditDefaultsOnly)
-	TMap<FGameplayTag, TSubclassOf<UMenuWidget>> Menus;
+	bool bRootCursorVisible;
 	
-	FGameplayTag CurrentMenuTag;
+	/**
+	 * Route definitions mapping GameplayTags to widget configurations.
+	 * @tparam FGameplayTag Route.
+	 * @tparam TSubclassOf<UCommonActivatableWidget>> The widget that will open.
+	 */
+	UPROPERTY(EditDefaultsOnly)
+	TMap<FGameplayTag, FHUDRoute> Routes;
+
+	/**
+	 * Updates the player's input mode and cursor visibility
+	 * @param NewInputMode Desired input mode
+	 * @param bNewCursorVisible Should cursor be visible
+	 */
+	void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 };
