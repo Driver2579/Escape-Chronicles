@@ -60,6 +60,7 @@ public:
 
 	/**
 	 * @return OwningPlayer if it's valid. Otherwise, nullptr.
+	 * @remark Consider using CallOrRegister_OnOwningPlayerInitialized to guarantee that you get a valid OwningPlayer.
 	 */
 	const FUniquePlayerID* GetOwningPlayer() const
 	{
@@ -72,7 +73,15 @@ public:
 	 * which case there should be no owning player. Also, the group may have its own rules for setting the owning
 	 * player, which you must follow.
 	 */
-	void SetOwningPlayer(const FUniquePlayerID& NewOwningPlayer) { OwningPlayer = NewOwningPlayer; }
+	void InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwningPlayerInitializedDelegate, const FUniquePlayerID& OwningPlayer);
+
+	/**
+	 * Calls the given callback if OwningPlayer is already initialized or registers the callback to be called when the
+	 * OwningPlayer is initialized.
+	 */
+	void CallOrRegister_OnOwningPlayerInitialized(const FOnOwningPlayerInitializedDelegate::FDelegate& Callback);
 
 private:
 	/**
@@ -86,4 +95,7 @@ private:
 	// Player that owns an actor that owns this component
 	UPROPERTY(Transient, Replicated, SaveGame)
 	FUniquePlayerID OwningPlayer;
+
+	// Called when the OwningPlayer is set
+	FOnOwningPlayerInitializedDelegate OnOwningPlayerInitialized;
 };

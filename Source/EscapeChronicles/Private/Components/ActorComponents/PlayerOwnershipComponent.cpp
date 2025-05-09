@@ -40,3 +40,30 @@ TPair<FName, FPlayerOwnershipComponentGroupTableRow*> UPlayerOwnershipComponent:
 
 	return Result;
 }
+
+void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer)
+{
+#if DO_ENSURE
+	ensureAlways(!OwningPlayer.IsValid());
+	ensureAlways(NewOwningPlayer.IsValid());
+#endif
+
+	OwningPlayer = NewOwningPlayer;
+
+	// Broadcast the delegate and clear it because we don't need it anymore
+	OnOwningPlayerInitialized.Broadcast(OwningPlayer);
+	OnOwningPlayerInitialized.Clear();
+}
+
+void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
+	const FOnOwningPlayerInitializedDelegate::FDelegate& Callback)
+{
+	if (OwningPlayer.IsValid())
+	{
+		Callback.ExecuteIfBound(OwningPlayer);
+	}
+	else
+	{
+		OnOwningPlayerInitialized.Add(Callback);
+	}
+}
