@@ -1,39 +1,58 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Components/ActorComponents/DayNightCycleManagerComponent.h"
+#include "Actors/Light/Sky.h"
 
-#include "Engine/DirectionalLight.h"
+#include "Components/DirectionalLightComponent.h"
 #include "GameState/EscapeChroniclesGameState.h"
 
-UDayNightCycleManagerComponent::UDayNightCycleManagerComponent()
+ASky::ASky()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = true;
+
+	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+
+	SunDirectionalLightComponent = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("Sun"));
+	SunDirectionalLightComponent->SetupAttachment(RootComponent);
+
+	MoonDirectionalLightComponent = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("Moon"));
+	MoonDirectionalLightComponent->SetupAttachment(RootComponent);
+
+	// Set the moon intensity to be very low
+	MoonDirectionalLightComponent->Intensity = 0.2;
+
+	// Set the moon temperature to be twice more as the sun temperature
+	MoonDirectionalLightComponent->bUseTemperature = true;
+	MoonDirectionalLightComponent->Temperature = SunDirectionalLightComponent->Temperature * 2;
+
+	// Set the moon to be a secondary light source for the atmosphere
+	MoonDirectionalLightComponent->AtmosphereSunLightIndex = 1;
+	MoonDirectionalLightComponent->ForwardShadingPriority = 1;
 }
 
-void UDayNightCycleManagerComponent::BeginPlay()
+void ASky::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	// Update the moon rotation based on the sun rotation
+	UpdateMoonRotation(SunDirectionalLightComponent->GetRelativeRotation());
+}
+
+void ASky::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// Don't do anything and disable the tick if no SunLight is set
-	if (!ensureAlways(SunLight))
-	{
-		SetComponentTickEnabledAsync(false);
-
-		return;
-	}
 
 	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
 
 	// Don't do anything and disable the tick if we don't have the required GameState
 	if (!ensureAlways(IsValid(GameState)))
 	{
-		SetComponentTickEnabledAsync(false);
+		SetActorTickEnabled(false);
 
 		return;
 	}
 
 	// Remember the initial rotation of the sun to rotate only pitch
-	InitialSunRotation = SunLight->GetActorRotation();
+	InitialSunRelativeRotation = SunDirectionalLightComponent->GetRelativeRotation();
 
 	// Calculate alphas for sunrise and sunset time of the day (from 0:00-23:59 to 0-1)
 	SunriseDayTimeAlpha = static_cast<float>(SunriseTime.ToTotalMinutes()) / FGameplayTime::MaxMinutesInDay;
@@ -50,8 +69,7 @@ void UDayNightCycleManagerComponent::BeginPlay()
 	GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentDateTimeUpdated);
 }
 
-void UDayNightCycleManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime,
-	const FGameplayDateTime& NewDateTime)
+void ASky::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime)
 {
 	SetCurrentTimeAndPredictNextOne(NewDateTime.Time);
 
@@ -59,7 +77,7 @@ void UDayNightCycleManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDat
 	DeltaSecondsSinceLastTimeUpdate = 0;
 }
 
-void UDayNightCycleManagerComponent::SetCurrentTimeAndPredictNextOne(const FGameplayTime& NewTime)
+void ASky::SetCurrentTimeAndPredictNextOne(const FGameplayTime& NewTime)
 {
 	// Remember the new time
 	CurrentTime = NewTime;
@@ -69,10 +87,9 @@ void UDayNightCycleManagerComponent::SetCurrentTimeAndPredictNextOne(const FGame
 	++PredictedNextTime;
 }
 
-void UDayNightCycleManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
+void ASky::Tick(float DeltaTime)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	Super::Tick(DeltaTime);
 
 	UpdateSunPitchRotation(DeltaSecondsSinceLastTimeUpdate);
 
@@ -80,7 +97,7 @@ void UDayNightCycleManagerComponent::TickComponent(float DeltaTime, ELevelTick T
 	DeltaSecondsSinceLastTimeUpdate += DeltaTime;
 }
 
-void UDayNightCycleManagerComponent::UpdateSunPitchRotation(const float DeltaSecondsBetweenTimeUpdates) const
+void ASky::UpdateSunPitchRotation(const float DeltaSecondsBetweenTimeUpdates) const
 {
 	const float CurrentTimeTotalMinutes = CurrentTime.ToTotalMinutes();
 	float PredictedNextTimeTotalMinutes = PredictedNextTime.ToTotalMinutes();
@@ -151,11 +168,19 @@ void UDayNightCycleManagerComponent::UpdateSunPitchRotation(const float DeltaSec
 	// Calculate the sun rotation angle based on the alpha and the full rotation (0° at alpha 0, 360° at alpha 1)
 	const float SunRotationAngle = SunRotationAngleAlpha * 360;
 
-#if DO_CHECK
-	check(SunLight);
-#endif
+	// Create the rotation for the sun with a new pitch
+	const FRotator SunRotation = FRotator(SunRotationAngle, InitialSunRelativeRotation.Yaw,
+		InitialSunRelativeRotation.Roll);
 
-	// Set the new pitch rotation of the sun
-	const FRotator SunRotation = FRotator(SunRotationAngle, InitialSunRotation.Yaw, InitialSunRotation.Roll);
-	SunLight->SetActorRotation(SunRotation);
+	// Set the new rotation for the sun
+	SunDirectionalLightComponent->SetRelativeRotation(SunRotation);
+
+	// Update the moon rotation based on the sun rotation
+	UpdateMoonRotation(SunRotation);
+}
+
+void ASky::UpdateMoonRotation(const FRotator& SunRelativeRotation) const
+{
+	MoonDirectionalLightComponent->SetRelativeRotation(
+		FRotator(SunRelativeRotation.Pitch + 180, SunRelativeRotation.Yaw, SunRelativeRotation.Roll));
 }
