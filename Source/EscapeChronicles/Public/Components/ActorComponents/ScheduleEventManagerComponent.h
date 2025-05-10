@@ -88,7 +88,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	// Handles switching between scheduled events
-	virtual void OnCurrentDateTimeUpdated(const FGameplayDateTime& NewDateTime);
+	virtual void OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime);
 
 	virtual void OnPreLoadObject() override;
 	virtual void OnPostLoadObject() override;
@@ -114,6 +114,8 @@ private:
 
 	// Ends the event and removes it from the EventData
 	static void EndEvent(FScheduleEventData& EventData);
+
+	void UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData);
 
 	/**
 	 * The stack of events that are currently set, but only one event is active at a time. These events should always be

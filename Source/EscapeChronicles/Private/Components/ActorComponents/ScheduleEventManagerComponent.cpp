@@ -19,13 +19,14 @@ void UScheduleEventManagerComponent::BeginPlay()
 
 	if (ensureAlways(IsValid(GameState)))
 	{
-		OnCurrentDateTimeUpdated(GameState->GetCurrentGameDateTime());
+		OnCurrentDateTimeUpdated(FGameplayDateTime(), GameState->GetCurrentGameDateTime());
 
 		GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentDateTimeUpdated);
 	}
 }
 
-void UScheduleEventManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& NewDateTime)
+void UScheduleEventManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime,
+	const FGameplayDateTime& NewDateTime)
 {
 	// Don't do anything if there are no scheduled events
 	if (ScheduledEvents.IsEmpty())
@@ -165,10 +166,13 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	// Find the reference to the event data by its copy
 	const int32 EventIndex = EventsStack.Find(EventDataCopy);
 
-#if DO_CHECK
-	checkf(EventIndex != INDEX_NONE,
+	const bool bFoundEventIndex = ensureAlwaysMsgf(EventIndex != INDEX_NONE,
 		TEXT("You must add an EventData to EventsStack before creating its instance!"));
-#endif
+
+	if (!bFoundEventIndex)
+	{
+		return;
+	}
 
 	FScheduleEventData& EventData = EventsStack[EventIndex];
 
@@ -210,24 +214,9 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 	check(EventsStack.IsValidIndex(Index));
 #endif
 
-	// End the event before removing it
+	// End and unload the event before removing it
 	EndEvent(EventsStack[Index]);
-
-	// Try to find the loading handle for the event to clear it
-	TSharedPtr<FStreamableHandle>* LoadEventInstanceHandle = LoadEventInstancesHandles.Find(EventsStack[Index]);
-
-	if (LoadEventInstanceHandle)
-	{
-		// Unload the event's instance's class or unload it if it's still loading
-		if (LoadEventInstanceHandle->IsValid())
-		{
-			LoadEventInstanceHandle->Get()->CancelHandle();
-			LoadEventInstanceHandle->Reset();
-		}
-
-		// Remove the handle from the map if it is in the map
-		LoadEventInstancesHandles.Remove(EventsStack[Index]);
-	}
+	UnloadOrCancelLoadingEventInstance(EventsStack[Index]);
 
 	// Once everything related to the event is cleared, remove it from the stack
 	EventsStack.RemoveAt(Index, AllowShrinking);
@@ -279,6 +268,28 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData)
 	}
 }
 
+void UScheduleEventManagerComponent::UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData)
+{
+	// Try to find the loading handle for the event to clear it
+	TSharedPtr<FStreamableHandle>* LoadEventInstanceHandle = LoadEventInstancesHandles.Find(EventData);
+
+	// Return if there is nothing to clear
+	if (!LoadEventInstanceHandle)
+	{
+		return;
+	}
+
+	// Unload the event's instance's class or cancel its loading it if it's still loading
+	if (LoadEventInstanceHandle->IsValid())
+	{
+		LoadEventInstanceHandle->Get()->CancelHandle();
+		LoadEventInstanceHandle->Reset();
+	}
+
+	// Remove the handle from the map if it is in the map
+	LoadEventInstancesHandles.Remove(EventData);
+}
+
 void UScheduleEventManagerComponent::OnPreLoadObject()
 {
 	/**
@@ -290,12 +301,13 @@ void UScheduleEventManagerComponent::OnPreLoadObject()
 
 void UScheduleEventManagerComponent::OnPostLoadObject()
 {
-	// End all events that are not in the EventsStack after loading anymore
+	// End and unload all events that are not in the EventsStack after loading anymore
 	for (FScheduleEventData& EventData : EventsStackBeforeLoadingGame)
 	{
 		if (!EventsStack.Contains(EventData))
 		{
 			EndEvent(EventData);
+			UnloadOrCancelLoadingEventInstance(EventData);
 		}
 	}
 

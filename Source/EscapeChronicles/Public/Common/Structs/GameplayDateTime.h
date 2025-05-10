@@ -121,6 +121,8 @@ struct FGameplayTime
 
 	static constexpr uint8 MaxMinutePlusOne = MaxMinute + 1;
 	static constexpr uint8 MaxHourPlusOne = MaxHour + 1;
+
+	static constexpr uint16 MaxMinutesInDay = MaxHourPlusOne * MaxMinutePlusOne;
 };
 
 // This is required to use FGameplayTime as a key in TMap and TSet
@@ -236,10 +238,8 @@ struct FGameplayDateTime
 
 	uint64 ToTotalMinutes() const
 	{
-		return Day * MaxMinutesInDay + Time.ToTotalMinutes();
+		return Day * FGameplayTime::MaxMinutesInDay + Time.ToTotalMinutes();
 	}
-
-	static constexpr uint16 MaxMinutesInDay = FGameplayTime::MaxHourPlusOne * FGameplayTime::MaxMinutePlusOne;
 };
 
 // This is required to use FGameplayDateTime as a key in TMap and TSet

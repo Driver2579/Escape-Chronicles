@@ -121,8 +121,8 @@ void FGameplayDateTime::FromTotalMinutes(uint64 TotalMinutes)
 {
 	TotalMinutes = FMath::Max<uint64>(0, TotalMinutes);
 
-	Day = TotalMinutes / MaxMinutesInDay;
-	TotalMinutes %= MaxMinutesInDay;
+	Day = TotalMinutes / FGameplayTime::MaxMinutesInDay;
+	TotalMinutes %= FGameplayTime::MaxMinutesInDay;
 
 	Time.FromTotalMinutes(TotalMinutes);
 }

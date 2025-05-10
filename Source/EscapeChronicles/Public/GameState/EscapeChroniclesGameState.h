@@ -21,14 +21,17 @@ public:
 
 	virtual void BeginPlay() override;
 
+	float GetGameTimeTickPeriod() const { return GameTimeTickPeriod; }
+
 	const FGameplayDateTime& GetCurrentGameDateTime() const { return CurrentGameDateTime; }
 
 	// Authority only
-	void SetCurrentGameDateTime(const FGameplayDateTime& NewGameTime);
+	void SetCurrentGameDateTime(const FGameplayDateTime& NewGameDateTime);
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentTimeUpdatedDelegate, const FGameplayDateTime& NewTime);
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCurrentDateTimeUpdatedDelegate, const FGameplayDateTime& OldDateTime,
+		const FGameplayDateTime& NewDateTime);
 
-	FOnCurrentTimeUpdatedDelegate OnCurrentDateTimeUpdated;
+	FOnCurrentDateTimeUpdatedDelegate OnCurrentDateTimeUpdated;
 
 	const FScheduleEventData& GetCurrentScheduledEventData() const { return CurrentScheduledEventData; }
 	const FScheduleEventData& GetCurrentActiveEventData() const { return CurrentActiveEventData; }
@@ -64,6 +67,7 @@ protected:
 		const FScheduleEventData& NewEventData);
 
 	virtual void OnPreLoadObject() override;
+	virtual void OnPostLoadObject() override;
 
 private:
 	void RegisterScheduleEventManagerData();
@@ -84,7 +88,7 @@ private:
 	void RestartTickGameTimeTimer();
 
 	UFUNCTION()
-	void OnRep_CurrentDateTime();
+	void OnRep_CurrentDateTime(const FGameplayDateTime& OldValue);
 
 	// Duplicates the value from the ScheduleEventManagerComponent but replicated to clients
 	UPROPERTY(Transient, Replicated)
@@ -101,4 +105,6 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_BroadcastOnCurrentActiveEventChangedDelegate(const FScheduleEventData& OldEventData,
 		const FScheduleEventData& NewEventData);
+
+	TSharedPtr<FGameplayDateTime> GameDateTimeBeforeLoading;
 };
