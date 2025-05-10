@@ -12,9 +12,10 @@ void UPunchingDamageAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshCom
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
 	ElapsedTime = 0;
-	bIsTargetFound = false;
+	bIsTargetDamaged = false;
+	StateOwner = MeshComp->GetOwner();
 	
-	TryToDamage(MeshComp);
+	FindAndDamageTarget(MeshComp);
 }
 
 void UPunchingDamageAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
@@ -24,7 +25,7 @@ void UPunchingDamageAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp
 
 	if (TickInterval <= 0.0f)
 	{
-		TryToDamage(MeshComp);
+		FindAndDamageTarget(MeshComp);
 		
 		return;
 	}
@@ -33,7 +34,7 @@ void UPunchingDamageAnimNotifyState::NotifyTick(USkeletalMeshComponent* MeshComp
 
 	while (ElapsedTime >= TickInterval)
 	{
-		TryToDamage(MeshComp);
+		FindAndDamageTarget(MeshComp);
 		
 		ElapsedTime -= TickInterval;
 	}
@@ -44,17 +45,12 @@ void UPunchingDamageAnimNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp,
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-	TryToDamage(MeshComp);
+	FindAndDamageTarget(MeshComp);
 }
 
-void UPunchingDamageAnimNotifyState::TryToDamage(const USkeletalMeshComponent* MeshComp)
+void UPunchingDamageAnimNotifyState::FindAndDamageTarget(const USkeletalMeshComponent* MeshComp)
 {
-	if (bIsTargetFound)
-	{
-		return;
-	}
-	
-	if (!ensureAlways(IsValid(MeshComp)))
+	if (bIsTargetDamaged)
 	{
 		return;
 	}
@@ -68,55 +64,44 @@ void UPunchingDamageAnimNotifyState::TryToDamage(const USkeletalMeshComponent* M
 	}
 #endif
 	
-	AActor* Owner = MeshComp->GetOwner();
-
-	if (!ensureAlways(IsValid(Owner)))
-	{
-		return;
-	}
-	
 	FCollisionQueryParams CollisionParams;
-	CollisionParams.AddIgnoredActor(Owner);
-	
-	FHitResult HitResult;
-	/*
-	const bool bHit = MeshComp->GetWorld()->SweepSingleByChannel(HitResult, SocketLocation, SocketLocation,
-		FQuat::Identity, ECC_WorldStatic, FCollisionShape::MakeSphere(Radius), CollisionParams);
-		*/
+	CollisionParams.AddIgnoredActor(StateOwner.Get());
 	
 	TArray<FOverlapResult> OverlappedActors;
-	bool bHit = MeshComp->GetWorld()->OverlapMultiByObjectType(
-		OverlappedActors,
-		SocketLocation,
-		FQuat::Identity,
-		FCollisionObjectQueryParams(ECC_Pawn),
-		FCollisionShape::MakeSphere(Radius),
-		CollisionParams
-	);
+	const bool bOverlapped = MeshComp->GetWorld()->OverlapMultiByObjectType(OverlappedActors, SocketLocation,
+		FQuat::Identity, FCollisionObjectQueryParams(ECC_Pawn), FCollisionShape::MakeSphere(Radius),
+		CollisionParams);
 	
-	if (!bHit)
+	if (!bOverlapped)
 	{
 		return;
 	}
 	
-	const AEscapeChroniclesCharacter* TargetCharacter = nullptr; // = Cast<AEscapeChroniclesCharacter>(HitResult.GetActor());
+	const AEscapeChroniclesCharacter* TargetCharacter = nullptr;
 
 	for (FOverlapResult& OverlappedActor : OverlappedActors)
 	{
-		const AEscapeChroniclesCharacter* Casted = Cast<AEscapeChroniclesCharacter>(OverlappedActor.GetActor());
+		const AEscapeChroniclesCharacter* CastedCharacter = Cast<AEscapeChroniclesCharacter>(
+			OverlappedActor.GetActor());
 
-		if (IsValid(Casted))
+		if (IsValid(CastedCharacter))
 		{
-			TargetCharacter = Casted;
+			TargetCharacter = CastedCharacter;
 		}
 	}
 	
-	if (!IsValid(TargetCharacter))
+	DamageTarget(TargetCharacter);
+}
+
+void UPunchingDamageAnimNotifyState::DamageTarget(const AEscapeChroniclesCharacter* TargetCharacter)
+{
+	if (!TargetCharacter)
 	{
 		return;
 	}
-
-	const AEscapeChroniclesPlayerState* TargetPlayerState = TargetCharacter->GetPlayerState<AEscapeChroniclesPlayerState>();
+	
+	const AEscapeChroniclesPlayerState* TargetPlayerState =
+		TargetCharacter->GetPlayerState<AEscapeChroniclesPlayerState>();
 
 	if (!IsValid(TargetPlayerState))
 	{
@@ -130,13 +115,15 @@ void UPunchingDamageAnimNotifyState::TryToDamage(const USkeletalMeshComponent* M
 		return;
 	}
 
+	// === Application of gameplay effect ===
+	
 	FGameplayEffectContextHandle ContextHandle = TargetAbilitySystemComponent->MakeEffectContext();
-	ContextHandle.AddInstigator(Owner, Owner);
+	ContextHandle.AddInstigator(StateOwner.Get(), StateOwner.Get());
 
 	const FGameplayEffectSpecHandle SpecHandle = TargetAbilitySystemComponent->MakeOutgoingSpec(DamagingEffectClass,
 		DamagingEffectLevel, ContextHandle);
 	
 	TargetAbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetAbilitySystemComponent);
 
-	bIsTargetFound = true;
+	bIsTargetDamaged = true;
 }

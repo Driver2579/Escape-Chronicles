@@ -46,7 +46,9 @@ private:
 #endif
 	
 	float ElapsedTime = 0.0f;
-	bool bIsTargetFound = false;
-
-	void TryToDamage(const USkeletalMeshComponent* MeshComp);
+	bool bIsTargetDamaged = false;
+	TWeakObjectPtr<AActor> StateOwner = nullptr;
+	
+	void FindAndDamageTarget(const USkeletalMeshComponent* MeshComp);
+	void DamageTarget(const class AEscapeChroniclesCharacter* TargetCharacter);
 };
