@@ -11,7 +11,7 @@
 #if WITH_EDITOR
 EDataValidationResult FPlayerOwnershipComponentGroupTableRow::IsDataValid(FDataValidationContext& Context) const
 {
-	EDataValidationResult Result = EDataValidationResult::Valid;;
+	EDataValidationResult Result = EDataValidationResult::Valid;
 
 	if (AllowedControlledCharacterTypes.IsEmpty())
 	{
@@ -28,7 +28,7 @@ void UPlayerOwnershipComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, OwningPlayer);
+	DOREPLIFETIME(ThisClass, OwningPlayerContainer);
 }
 
 TPair<FName, FPlayerOwnershipComponentGroupTableRow*> UPlayerOwnershipComponent::GetGroup() const
@@ -41,26 +41,42 @@ TPair<FName, FPlayerOwnershipComponentGroupTableRow*> UPlayerOwnershipComponent:
 	return Result;
 }
 
-void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer)
+void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer,
+	const EControlledCharacterType ControlledCharacterType)
 {
 #if DO_ENSURE
-	ensureAlways(!OwningPlayer.IsValid());
+	ensureAlways(!OwningPlayerContainer.OwningPlayer.IsValid());
 	ensureAlways(NewOwningPlayer.IsValid());
+
+	ensureAlways(OwningPlayerContainer.ControlledCharacterType == EControlledCharacterType::None);
+
+	const TPair<FName, FPlayerOwnershipComponentGroupTableRow*> Group = GetGroup();
+
+#if DO_CHECK
+	check(Group.Value);
 #endif
 
-	OwningPlayer = NewOwningPlayer;
+	ensureAlwaysMsgf(Group.Value->AllowedControlledCharacterTypes.Contains(ControlledCharacterType),
+		TEXT("The given ControlledCharacterType is not allowed to be set as the OwningPlayer for this "
+			"component instance!"));
+#endif
 
-	// Broadcast the delegate and clear it because we don't need it anymore
-	OnOwningPlayerInitialized.Broadcast(OwningPlayer);
+	OwningPlayerContainer.OwningPlayer = NewOwningPlayer;
+
+	// Broadcast the delegate
+	OnOwningPlayerInitialized.Broadcast(OwningPlayerContainer.OwningPlayer,
+		OwningPlayerContainer.ControlledCharacterType);
+
+	// Clear the delegate because we don't need it anymore
 	OnOwningPlayerInitialized.Clear();
 }
 
 void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 	const FOnOwningPlayerInitializedDelegate::FDelegate& Callback)
 {
-	if (OwningPlayer.IsValid())
+	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
-		Callback.ExecuteIfBound(OwningPlayer);
+		Callback.ExecuteIfBound(OwningPlayerContainer.OwningPlayer, OwningPlayerContainer.ControlledCharacterType);
 	}
 	else
 	{

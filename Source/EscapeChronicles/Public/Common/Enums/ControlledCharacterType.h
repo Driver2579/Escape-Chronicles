@@ -11,5 +11,6 @@ enum class EControlledCharacterType : uint8
 	// Character is controlled by a human player
 	RealPlayer,
 
-	NumberOfTypes UMETA(Hidden)
+	NumberOfTypes UMETA(Hidden),
+	None UMETA(Hidden)
 };
