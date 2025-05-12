@@ -83,3 +83,15 @@ void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 		OnOwningPlayerInitialized.Add(Callback);
 	}
 }
+
+void UPlayerOwnershipComponent::OnPostLoadObject()
+{
+	// Broadcast the delegate if we loaded a valid OwningPlayer and clear the delegate because we don't need it anymore
+	if (OwningPlayerContainer.OwningPlayer.IsValid())
+	{
+		OnOwningPlayerInitialized.Broadcast(OwningPlayerContainer.OwningPlayer,
+			OwningPlayerContainer.ControlledCharacterType);
+
+		OnOwningPlayerInitialized.Clear();
+	}
+}

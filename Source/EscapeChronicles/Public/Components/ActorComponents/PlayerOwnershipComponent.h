@@ -112,6 +112,9 @@ public:
 	 */
 	void CallOrRegister_OnOwningPlayerInitialized(const FOnOwningPlayerInitializedDelegate::FDelegate& Callback);
 
+protected:
+	virtual void OnPostLoadObject() override;
+
 private:
 	/**
 	 * The group of this component instance. All components' instances of the same group share the same settings and
