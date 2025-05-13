@@ -3,11 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Common/Enums/ControlledCharacterType.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Enums/ControlledCharacterType.h"
 #include "Common/Structs/UniquePlayerID.h"
 #include "PlayerOwnershipComponent.generated.h"
+
+class AEscapeChroniclesPlayerState;
 
 enum class EControlledCharacterType : uint8;
 
@@ -32,6 +34,31 @@ struct FPlayerOwnershipComponentGroupTableRow : public FTableRowBase
 #endif
 };
 
+// A helper struct for the group of the UPlayerOwnershipComponent
+struct FPlayerOwnershipComponentGroup
+{
+	// The name of the group. All components with the same group name must have the same OwningPlayer.
+	FName GroupName;
+
+	/**
+	 * The settings of the group. The group settings must be used to determine whether the player can be set as an
+	 * OwningPlayer or not.
+	 * @remark Shouldn't be null unless the component was set up wrong
+	 */
+	FPlayerOwnershipComponentGroupTableRow* GroupSettings = nullptr;
+
+	bool operator==(const FPlayerOwnershipComponentGroup& Other) const
+	{
+		return GroupName == Other.GroupName;
+	}
+};
+
+// This is required to use FPlayerOwnershipComponentGroup as a key in TMap and TSet
+FORCEINLINE uint32 GetTypeHash(const FPlayerOwnershipComponentGroup& Group)
+{
+	return FCrc::MemCrc32(&Group, sizeof(Group));
+}
+
 // Internal struct for the UPlayerOwnershipComponent that holds the OwningPlayer
 USTRUCT()
 struct FPlayerOwnershipComponentOwningPlayerContainer
@@ -39,11 +66,11 @@ struct FPlayerOwnershipComponentOwningPlayerContainer
 	GENERATED_BODY()
 
 	// Player that owns an actor that owns this component
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(Transient)
 	FUniquePlayerID OwningPlayer;
 
 	// The type of the player that owns this component
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(Transient)
 	EControlledCharacterType ControlledCharacterType = EControlledCharacterType::None;
 };
 
@@ -65,14 +92,8 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/**
-	 * Should be used to filter which OwningPlayer to set on the component.
-	 * @return The pair that contains the group name and the group settings. All components with the same group name
-	 * must have the same OwningPlayer. The group settings must be used to determine whether you can set the player as
-	 * an OwningPlayer or not.
-	 * @remark The group settings shouldn't be null unless the component was set up wrong.
-	 */
-	TPair<FName, FPlayerOwnershipComponentGroupTableRow*> GetGroup() const;
+	// Should be used to filter which OwningPlayer to set on the component
+	FPlayerOwnershipComponentGroup GetGroup() const;
 
 	/**
 	 * @return OwningPlayer if it's valid. Otherwise, nullptr.
@@ -93,10 +114,18 @@ public:
 	}
 
 	/**
-	 * Should be used by the GameMode when the new player is connected to the game or a bot is spawned. All components
-	 * that share the same group must have the same owning player. The only exclusion is when the group is empty, in
-	 * which case there should be no owning player. Also, the group may have its own rules for setting the owning
-	 * player, which you must follow.
+	 * Selects the group of UPlayerOwnershipComponents for the given player and sets this player as an owning player for
+	 * all UPlayerOwnershipComponents on the scene that share the same group.
+	 * @remark This must be called for all not spectating players and bots when they are spawned!
+	 */
+	static void RegisterPlayer(const AEscapeChroniclesPlayerState* PlayerState);
+
+	/**
+	 * This function is used by the RegisterPlayer function to initialize the owning player, but it should be called
+	 * manually if this component is spawned dynamically. All components that share the same group must have the same
+	 * owning player. The only exclusion is when the group is empty, in which case there should be no owning player.
+	 * Also, the group may have its own rules for setting the owning player, which you must follow (you can check if the
+	 * player matches the rules of the group by using the CanAssignOwningPlayerToGroup function).
 	 * @param NewOwningPlayer An ID of the owning player.
 	 * @param ControlledCharacterType A type of the owning player.
 	 */
@@ -121,12 +150,19 @@ private:
 	 * must share the same OwningPlayer.
 	 * @remark You must use the same DataTable for all components on the level.
 	 */
-	UPROPERTY(EditInstanceOnly, meta=(RequiredAssetDataTags="RowStructure=PlayerOwnershipComponentGroupTableRow"))
-	FDataTableRowHandle Group;
+	UPROPERTY(EditInstanceOnly, DisplayName="Group",
+		meta=(RequiredAssetDataTags="RowStructure=PlayerOwnershipComponentGroupTableRow"))
+	FDataTableRowHandle GroupData;
 
 	// Data about the player that owns the actor that owns this component
-	UPROPERTY(Transient, Replicated, SaveGame)
+	UPROPERTY(Transient, Replicated)
 	FPlayerOwnershipComponentOwningPlayerContainer OwningPlayerContainer;
+
+	static EControlledCharacterType GetControlledCharacterTypeFromPlayerState(
+		const AEscapeChroniclesPlayerState* PlayerState);
+
+	static bool CanAssignOwningPlayerToGroup(const AEscapeChroniclesPlayerState* OwningPlayerState,
+		const FPlayerOwnershipComponentGroup& Group);
 
 	// Called when the OwningPlayer is set
 	FOnOwningPlayerInitializedDelegate OnOwningPlayerInitialized;
