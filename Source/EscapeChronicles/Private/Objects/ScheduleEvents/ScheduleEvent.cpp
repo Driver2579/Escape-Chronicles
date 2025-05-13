@@ -2,7 +2,7 @@
 
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
 
-void UScheduleEvent::StartEvent()
+void UScheduleEvent::StartEvent(const bool bStartPaused)
 {
 #if DO_ENSURE
 	ensureAlways(EventData.IsValid());
@@ -20,7 +20,14 @@ void UScheduleEvent::StartEvent()
 	// Enable the tick (this still will not tick if bCanEverTick is false)
 	bTickEnabled = true;
 
-	OnEventStarted();
+	// Notify that the event has started
+	OnEventStarted(bStartPaused);
+
+	// Pause an event if it was requested
+	if (bStartPaused)
+	{
+		PauseEvent();
+	}
 }
 
 void UScheduleEvent::EndEvent()
@@ -38,6 +45,9 @@ void UScheduleEvent::EndEvent()
 	bActive = false;
 
 	OnEventEnded();
+
+	// Mark that the event isn't paused anymore (because it isn't even active anymore)
+	bPaused = false;
 }
 
 void UScheduleEvent::PauseEvent()

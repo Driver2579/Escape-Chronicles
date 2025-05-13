@@ -67,8 +67,11 @@ public:
 
 	bool IsActive() const { return bActive; }
 
-	// Starts the event if it was not started before. Should be called when the event is created.
-	void StartEvent();
+	/**
+	 * Starts the event if it was not started before. Should be called when the event is created.
+	 * @param bStartPaused If true, then the event will be started in a paused state.
+	 */
+	void StartEvent(const bool bStartPaused = false);
 
 	// Ends the event if it was started. Should be called when the event is no longer needed.
 	void EndEvent();
@@ -101,8 +104,11 @@ protected:
 
 	// TODO: Remove the logs once the UI is ready
 
-	// Called when the event is started. This is where you should start the event's logic.
-	virtual void OnEventStarted()
+	/**
+	 * Called when the event is started. This is where you should start the event's logic.
+	 * @param bStartPaused If true, then the event will be paused after this method is called.
+	 */
+	virtual void OnEventStarted(const bool bStartPaused)
 	{
 		UE_LOG(LogTemp, Display, TEXT("Event %s started"), *EventData.EventTag.ToString());
 	}

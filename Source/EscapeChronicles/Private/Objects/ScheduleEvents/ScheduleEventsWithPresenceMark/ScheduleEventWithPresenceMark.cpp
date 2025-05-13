@@ -4,12 +4,23 @@
 
 #include "EngineUtils.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Engine/AssetManager.h"
 #include "Engine/TriggerBase.h"
+#include "GameFramework/GameStateBase.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-void UScheduleEventWithPresenceMark::OnEventStarted()
+void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 {
-	Super::OnEventStarted();
+	Super::OnEventStarted(bStartPaused);
+
+#if DO_ENSURE
+	ensureAlways(!CheckedInGameplayEffectClass.IsNull());
+#endif
+
+	// Asynchronously load the gameplay effect as soon as possible to avoid delays
+	LoadCheckedInGameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		CheckedInGameplayEffectClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnCheckedInGameplayEffectClassLoaded));
 
 #if DO_ENSURE
 	ensureAlways(IsValid(PresenceMarkTriggerClass));
@@ -20,8 +31,11 @@ void UScheduleEventWithPresenceMark::OnEventStarted()
 	{
 		ATriggerBase* PresenceMarkTrigger = *It;
 
-		// Count overlaps that happened before the event started
-		TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger);
+		// Count overlaps that happened before the event started if the event isn't started paused
+		if (!bStartPaused)
+		{
+			TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger);
+		}
 
 		// Listen for new overlaps
 		PresenceMarkTrigger->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnPresenceMarkTriggerBeginOverlap);
@@ -35,6 +49,12 @@ void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters
 {
 #if DO_CHECK
 	check(IsValid(PresenceMarkTrigger));
+#endif
+
+#if DO_ENSURE
+	ensureAlwaysMsgf(!IsPaused(),
+		TEXT("There is no need to call this function if the event is paused. It will not do anything and will "
+			"only waste performance."));
 #endif
 
 	TArray<AActor*> OverlappingCharacters;
@@ -52,13 +72,6 @@ void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters
 
 		OnPresenceMarkTriggerBeginOverlap(PresenceMarkTrigger, OverlappingCharacter);
 	}
-}
-
-bool UScheduleEventWithPresenceMark::CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger,
-	AEscapeChroniclesPlayerState* PlayerToCheckIn)
-{
-	// Add the player to the list of checked-in players only if it's not already there
-	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID());
 }
 
 void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
@@ -91,10 +104,99 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	// Add the player to the list of checked-in players only if we're allowed to
 	if (CanCheckInPlayer(PresenceMarkTrigger, PlayerState))
 	{
-		CheckedInPlayers.Add(PlayerState->GetUniquePlayerID());
-
 		NotifyPlayerCheckedIn(PlayerState);
 	}
+}
+
+bool UScheduleEventWithPresenceMark::CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger,
+	AEscapeChroniclesPlayerState* PlayerToCheckIn)
+{
+	// Add the player to the list of checked-in players only if it's not already there
+	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID());
+}
+
+void UScheduleEventWithPresenceMark::NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
+{
+	CheckedInPlayers.Add(CheckedInPlayer->GetUniquePlayerID());
+
+	/**
+	 * Apply the checked-in gameplay effect to the player if the gameplay effect's class is already loaded. It will be
+	 * applied once it's loaded otherwise.
+	 */
+	if (CheckedInGameplayEffectClass.IsValid())
+	{
+		ApplyCheckedInGameplayEffect(CheckedInPlayer);
+	}
+
+	OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
+}
+
+void UScheduleEventWithPresenceMark::OnCheckedInGameplayEffectClassLoaded()
+{
+	// Don't do anything if there are no checked-in players
+	if (CheckedInPlayers.IsEmpty())
+	{
+		return;
+	}
+
+	AGameStateBase* GameState = GetWorld()->GetGameState();
+
+#if DO_CHECK
+	check(IsValid(GameState));
+#endif
+
+	// Apply the checked-in gameplay effect to all players that are already checked in
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = Cast<AEscapeChroniclesPlayerState>(
+			PlayerState);
+
+		if (!IsValid(EscapeChroniclesPlayerState))
+		{
+			continue;
+		}
+
+		const FUniquePlayerID& UniquePlayerID = EscapeChroniclesPlayerState->GetUniquePlayerID();
+
+		/**
+		 * Check if UniquePlayerID of currently iterated PlayerState is valid and is within the list of checked-in
+		 * players.
+		 */
+		const bool bPlayerCheckedIn = UniquePlayerID.IsValid() &&
+			CheckedInPlayers.Contains(EscapeChroniclesPlayerState->GetUniquePlayerID());
+
+		// If the player is checked in, then apply the gameplay effect to him
+		if (bPlayerCheckedIn)
+		{
+			ApplyCheckedInGameplayEffect(EscapeChroniclesPlayerState);
+		}
+	}
+}
+
+void UScheduleEventWithPresenceMark::ApplyCheckedInGameplayEffect(const AEscapeChroniclesPlayerState* CheckedInPlayer)
+{
+#if DO_CHECK
+	check(IsValid(CheckedInPlayer));
+	check(CheckedInGameplayEffectClass.IsValid());
+#endif
+
+	UAbilitySystemComponent* AbilitySystemComponent = CheckedInPlayer->GetAbilitySystemComponent();
+
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Apply the gameplay effect and remember its handle
+	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+		CheckedInGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1,
+		AbilitySystemComponent->MakeEffectContext());
+
+#if DO_ENSURE
+	ensureAlways(ActiveGameplayEffectHandle.IsValid());
+#endif
+
+	// Remember the handle to remove the gameplay effect when the event ends
+	CheckedInGameplayEffectHandles.Add(AbilitySystemComponent, ActiveGameplayEffectHandle);
 }
 
 void UScheduleEventWithPresenceMark::OnEventResumed()
@@ -128,23 +230,51 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	// Forget about all the triggers we collected
 	PresenceMarkTriggers.Empty();
 
-	// Iterate all characters in the world to check which of them didn't check in during the event
-	for (TActorIterator<AEscapeChroniclesCharacter> It(GetWorld()); It; ++It)
+	/**
+	 * Iterate all characters in the world to check which of them didn't check in during the event, but only if the
+	 * event wasn't ended while paused.
+	 */
+	if (!IsPaused())
 	{
-		const AEscapeChroniclesCharacter* Character = *It;
-
-		// Get the PlayerState of the character to get his FUniquePlayerID
-		AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerStateChecked<AEscapeChroniclesPlayerState>();
-
-		// Call OnPlayerMissedEvent for each player that didn't check in during the event
-		if (!CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
+		for (TActorIterator<AEscapeChroniclesCharacter> It(GetWorld()); It; ++It)
 		{
-			NotifyPlayerMissedEvent(PlayerState);
+			const AEscapeChroniclesCharacter* Character = *It;
+
+			// Get the PlayerState of the character to get his FUniquePlayerID
+			AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerStateChecked<AEscapeChroniclesPlayerState>();
+
+			// Call OnPlayerMissedEvent for each player that didn't check in during the event
+			if (!CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
+			{
+				NotifyPlayerMissedEvent(PlayerState);
+			}
 		}
 	}
 
 	// Forget about all the checked-in players
 	CheckedInPlayers.Empty();
+
+	/**
+	 * Remove checked-in gameplay effects that were added by this event from the players that checked in during the
+	 * event because event is over.
+	 */
+	for (const auto& GameplayEffectHandlePair : CheckedInGameplayEffectHandles)
+	{
+		if (GameplayEffectHandlePair.Key.IsValid() && GameplayEffectHandlePair.Value.IsValid())
+		{
+			GameplayEffectHandlePair.Key->RemoveActiveGameplayEffect(GameplayEffectHandlePair.Value, 1);
+		}
+	}
+
+	// Clear an array of gameplay effect handles
+	CheckedInGameplayEffectHandles.Empty();
+
+	// Unload the checked-in gameplay effect class if it's loaded or cancel its loading if it's still loading
+	if (LoadCheckedInGameplayEffectHandle.IsValid())
+	{
+		LoadCheckedInGameplayEffectHandle->CancelHandle();
+		LoadCheckedInGameplayEffectHandle.Reset();
+	}
 
 	Super::OnEventEnded();
 }

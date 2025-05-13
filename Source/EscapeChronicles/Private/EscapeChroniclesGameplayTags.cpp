@@ -61,4 +61,7 @@ namespace EscapeChroniclesGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Shower, "ScheduleEvent.Shower", "Shower event");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Break, "ScheduleEvent.Break", "Break event");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ScheduleEvent_Alert, "ScheduleEvent.Alert", "Alert event");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_CheckedIn, "Status.CheckedIn",
+		"The character has checked in during the scheduled event");
 }

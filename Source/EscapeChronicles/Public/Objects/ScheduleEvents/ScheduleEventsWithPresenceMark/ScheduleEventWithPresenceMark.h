@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
 #include "Common/Structs/UniquePlayerID.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "ScheduleEventWithPresenceMark.generated.h"
 
+class UAbilitySystemComponent;
+class UGameplayEffect;
 class AEscapeChroniclesPlayerState;
 class ATriggerBase;
 
@@ -25,16 +28,17 @@ public:
 	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
 
 protected:
-	virtual void OnEventStarted() override;
+	virtual void OnEventStarted(const bool bStartPaused) override;
 
 	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
 	virtual bool CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
 
-	// Called when a player checks in during the event (overlaps with the PresenceMarkTrigger)
-	virtual void NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
-	{
-		OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
-	}
+	/**
+	 * Called when a player checks in during the event (overlaps with the PresenceMarkTrigger). Adds the player to the
+	 * list of checked-in players, applies the checked-in gameplay effect to the player if the gameplay effect is loaded
+	 * already (it will be applied once loaded otherwise), and broadcasts the delegate that the player has checked in.
+	 */
+	virtual void NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer);
 
 	virtual void OnEventResumed() override;
 
@@ -42,7 +46,7 @@ protected:
 
 	/**
 	 * Called at the end of the event for each player that didn't check in during the event (didn't overlap with the
-	 * PresenceMarkTrigger)
+	 * PresenceMarkTrigger) if the event isn't paused during the end.
 	 */
 	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) {}
 
@@ -65,4 +69,20 @@ private:
 
 	// The list of players that checked in during the event
 	TArray<FUniquePlayerID> CheckedInPlayers;
+
+	/**
+	 * Gameplay effect that is applied to the player when he check in and removed when the event is ended. Must add the
+	 * Status_CheckedIn tag to the player.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects")
+	TSoftClassPtr<UGameplayEffect> CheckedInGameplayEffectClass;
+
+	TSharedPtr<FStreamableHandle> LoadCheckedInGameplayEffectHandle;
+
+	void OnCheckedInGameplayEffectClassLoaded();
+
+	void ApplyCheckedInGameplayEffect(const AEscapeChroniclesPlayerState* CheckedInPlayer);
+
+	// The map of checked-in gameplay effect handles for each checked-in player
+	TMap<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle> CheckedInGameplayEffectHandles;
 };

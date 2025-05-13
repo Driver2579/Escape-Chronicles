@@ -183,13 +183,14 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	EventData.SetEventInstance(EventInstance);
 	EventInstance->SetEventData(EventData);
 
-	// Always start the event when it's created
-	EventInstance->StartEvent();
-
-	// If the event is not the current active one, then pause it immediately
-	if (EventData != GetCurrentActiveEventData())
+	// Always start the event when it's created, but start it paused if the event is not the current active one
+	if (EventData == GetCurrentActiveEventData())
 	{
-		EventInstance->PauseEvent();
+		EventInstance->StartEvent(false);
+	}
+	else
+	{
+		EventInstance->StartEvent(true);
 	}
 }
 
