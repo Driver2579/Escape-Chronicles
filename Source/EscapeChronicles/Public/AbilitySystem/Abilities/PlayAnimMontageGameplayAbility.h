@@ -25,15 +25,34 @@ protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
-	EPlayingMethod PlayingMethod = EPlayingMethod::Queue;
-	
-	UPROPERTY(EditDefaultsOnly)
-	TArray<TObjectPtr<UAnimMontage>> AvailableMontages;
+	FGameplayTag GameplayEventTag;
 
-	int32 LastPlayedMontage = 0;
+	UPROPERTY(EditDefaultsOnly)
+	EPlayingMethod PlayingMethod = EPlayingMethod::Queue;
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<TSoftObjectPtr<UAnimMontage>> AvailableMontages;
+
+	TSharedPtr<struct FStreamableHandle> LoadCurrentAnimMontageHandle;
 	
-	void PlayRandomMontage(UAnimInstance* AnimInstance);
-	void PlayQueueMontage(UAnimInstance* AnimInstance);
+	int32 LastPlayedMontageIndex = 0;
+
+	void PlayRandomMontage();
+	void PlayQueueMontage();
+
+	void LoadAndPlayAnimMontage(int32 Index);
+	
+	void OnAnimMontageLoaded(const int32 Index);
+
+	void OnDeployBombAnimMontageBlendingOut(UAnimMontage* AnimMontage, bool bInterrupted);
+
+	void OnAnimMontageEnded(UAnimMontage* AnimMontage, bool bInterrupted);
+
+	UFUNCTION()
+	void Test(FGameplayEventData Payload);
 };

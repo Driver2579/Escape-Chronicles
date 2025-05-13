@@ -12,6 +12,7 @@
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
+#include "Net/UnrealNetwork.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -473,6 +474,18 @@ void AEscapeChroniclesCharacter::UnCrouch()
 	bWantsToBeCrouched = false;
 }
 
+void AEscapeChroniclesCharacter::BlockPunches()
+{
+	UE_LOG(LogTemp, Error, TEXT("BlockPunches"));
+	bIsBlockingPunches = true;
+}
+
+void AEscapeChroniclesCharacter::UnBlockPunches()
+{
+	UE_LOG(LogTemp, Error, TEXT("UnBlockPunches"));
+	bIsBlockingPunches = false;
+}
+
 void AEscapeChroniclesCharacter::OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride)
 {
 #if DO_ENSURE
@@ -575,8 +588,15 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 		CharacterMoverComponent->IsRunGroundSpeedModeActive() ? 1 : 0);
 }
 
+void AEscapeChroniclesCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, bIsBlockingPunches);
+}
+
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
-	const EStanceMode NewStance) const
+                                                                  const EStanceMode NewStance) const
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
