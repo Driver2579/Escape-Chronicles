@@ -5,6 +5,7 @@
 #include "Engine/AssetManager.h"
 #include "GameState/EscapeChroniclesGameState.h"
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
+#include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/ScheduleEventWithPresenceMark.h"
 
 UScheduleEventManagerComponent::UScheduleEventManagerComponent()
 {
@@ -183,6 +184,22 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	EventData.SetEventInstance(EventInstance);
 	EventInstance->SetEventData(EventData);
 
+	UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark = Cast<UScheduleEventWithPresenceMark>(EventInstance);
+
+	/**
+	 * Try to find the save data for the event if it's an event with a presence mark and apply it before we start an
+	 * event if the save data was found.
+	 */
+	if (ScheduleEventWithPresenceMark)
+	{
+		const FScheduleEventWithPresenceMarkSaveData* SaveData = SavedEventsWithPresenceMark.Find(EventData.EventTag);
+
+		if (SaveData)
+		{
+			ScheduleEventWithPresenceMark->SetCheckedInPlayers(SaveData->CheckedInPlayers);
+		}
+	}
+
 	// Always start the event when it's created, but start it paused if the event is not the current active one
 	if (EventData == GetCurrentActiveEventData())
 	{
@@ -262,11 +279,19 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData)
 {
 	UScheduleEvent* EventInstance = EventData.GetEventInstance();
 
-	if (IsValid(EventInstance))
+	if (!IsValid(EventInstance))
 	{
-		EventInstance->EndEvent();
-		EventData.ResetEventInstance();
+		return;
 	}
+
+	// If it's an event with a presence mark, then remove its save data if it exists
+	if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
+	{
+		SavedEventsWithPresenceMark.Remove(EventData.EventTag);
+	}
+
+	EventInstance->EndEvent();
+	EventData.ResetEventInstance();
 }
 
 void UScheduleEventManagerComponent::UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData)
@@ -280,15 +305,35 @@ void UScheduleEventManagerComponent::UnloadOrCancelLoadingEventInstance(const FS
 		return;
 	}
 
-	// Unload the event's instance's class or cancel its loading it if it's still loading
 	if (LoadEventInstanceHandle->IsValid())
 	{
+		// Unload the event's instance's class or cancel its loading it if it's still loading
 		LoadEventInstanceHandle->Get()->CancelHandle();
 		LoadEventInstanceHandle->Reset();
 	}
 
 	// Remove the handle from the map if it is in the map
 	LoadEventInstancesHandles.Remove(EventData);
+}
+
+void UScheduleEventManagerComponent::OnPreSaveObject()
+{
+	for (const FScheduleEventData& EventData : EventsStack)
+	{
+		const UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark = Cast<UScheduleEventWithPresenceMark>(
+			EventData.GetEventInstance());
+
+		if (!IsValid(ScheduleEventWithPresenceMark))
+		{
+			continue;
+		}
+
+		// Save the checked-in players of the event
+		FScheduleEventWithPresenceMarkSaveData SaveData;
+		SaveData.CheckedInPlayers = ScheduleEventWithPresenceMark->GetCheckedInPlayers();
+
+		SavedEventsWithPresenceMark.Add(EventData.EventTag, SaveData);
+	}
 }
 
 void UScheduleEventManagerComponent::OnPreLoadObject()

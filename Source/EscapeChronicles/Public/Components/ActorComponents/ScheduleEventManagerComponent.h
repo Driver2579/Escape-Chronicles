@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Common/Structs/ScheduleEventData.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Structs/ScheduleEventData.h"
 #include "Common/Structs/GameplayDateTime.h"
+#include "Common/Structs/SaveData/ScheduleEventWithPresenceMarkSaveData.h"
 #include "ScheduleEventManagerComponent.generated.h"
 
 struct FStreamableHandle;
@@ -90,6 +91,8 @@ protected:
 	// Handles switching between scheduled events
 	virtual void OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime);
 
+	virtual void OnPreSaveObject() override;
+
 	virtual void OnPreLoadObject() override;
 	virtual void OnPostLoadObject() override;
 
@@ -112,8 +115,8 @@ private:
 	void RemoveEventByIndex(const int32 Index, const EAllowShrinking AllowShrinking = EAllowShrinking::Yes,
 		const bool bStartOrResumeLastEvent = true);
 
-	// Ends the event and removes it from the EventData
-	static void EndEvent(FScheduleEventData& EventData);
+	// Ends the event, removes it from the EventData and removes the save data for this event if any
+	void EndEvent(FScheduleEventData& EventData);
 
 	void UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData);
 
@@ -125,6 +128,17 @@ private:
 	 */
 	UPROPERTY(Transient, SaveGame)
 	TArray<FScheduleEventData> EventsStack;
+
+	/**
+	 * Save data for events with a presence mark. All newly created events with presence mark should check if they are
+	 * in this list and get the data from it if they are.
+	 * @tparam KeyType Event tag of the event with a UScheduleEventWithPresenceMark instance's class.
+	 * @tparam ValueType Save data for the event.
+	 * @remark The event should be removed from this list once it's ended to avoid new events using the save data for
+	 * old event.
+	 */
+	UPROPERTY(Transient, SaveGame)
+	TMap<FGameplayTag, FScheduleEventWithPresenceMarkSaveData> SavedEventsWithPresenceMark;
 
 	/**
 	 * @tparam KeyType An event that has a class that is currently being loaded or that is already loaded.

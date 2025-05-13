@@ -23,6 +23,15 @@ class ESCAPECHRONICLES_API UScheduleEventWithPresenceMark : public UScheduleEven
 	GENERATED_BODY()
 
 public:
+	// Should be used when the game is saved
+	const TArray<FUniquePlayerID>& GetCheckedInPlayers() const { return CheckedInPlayers; }
+
+	// Should be called when the game is loaded
+	void SetCheckedInPlayers(const TArray<FUniquePlayerID>& InCheckedInPlayers)
+	{
+		CheckedInPlayers = InCheckedInPlayers;
+	}
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerCheckedInDelegate, AEscapeChroniclesPlayerState* CheckedInPlayer);
 
 	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
