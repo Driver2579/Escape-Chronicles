@@ -82,12 +82,6 @@ public:
 
 	// Should be called for crouch input completion
 	void UnCrouch();
-
-	// Should be called for block punches input trigger
-	void BlockPunches();
-
-	// Should be called for block punches input trigger
-	void UnBlockPunches();
 	
 	// Should be called for any input trigger that wants to override the ground speed mode (e.g., walk, jog, run)
 	void OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride);
@@ -158,8 +152,6 @@ protected:
 	// Synchronizes all ground speed modes' tags from CharacterMoverComponent with an ability system component
 	void SyncGroundSpeedModeTagsWithAbilitySystem() const;
 
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-	
 private:
 	/**
 	 * The CapsuleComponent being used for movement collision (by CharacterMovement). Always treated as being vertically
@@ -201,9 +193,6 @@ private:
 	bool bIsJumpPressed = false;
 
 	bool bWantsToBeCrouched = false;
-
-	UPROPERTY(Transient, BlueprintReadOnly, Replicated, meta=(AllowPrivateAccess="true"))
-	bool bIsBlockingPunches = false;
 
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed

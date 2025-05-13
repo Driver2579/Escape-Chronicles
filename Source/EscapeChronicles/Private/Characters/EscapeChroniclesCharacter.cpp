@@ -474,18 +474,6 @@ void AEscapeChroniclesCharacter::UnCrouch()
 	bWantsToBeCrouched = false;
 }
 
-void AEscapeChroniclesCharacter::BlockPunches()
-{
-	UE_LOG(LogTemp, Error, TEXT("BlockPunches"));
-	bIsBlockingPunches = true;
-}
-
-void AEscapeChroniclesCharacter::UnBlockPunches()
-{
-	UE_LOG(LogTemp, Error, TEXT("UnBlockPunches"));
-	bIsBlockingPunches = false;
-}
-
 void AEscapeChroniclesCharacter::OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride)
 {
 #if DO_ENSURE
@@ -587,14 +575,6 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 	AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Mode_Running,
 		CharacterMoverComponent->IsRunGroundSpeedModeActive() ? 1 : 0);
 }
-
-void AEscapeChroniclesCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, bIsBlockingPunches);
-}
-
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
                                                                   const EStanceMode NewStance) const
 {
