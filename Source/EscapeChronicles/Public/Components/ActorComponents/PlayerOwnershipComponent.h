@@ -163,6 +163,12 @@ private:
 	static EControlledCharacterType GetControlledCharacterTypeFromPlayerState(
 		const AEscapeChroniclesPlayerState* PlayerState);
 
+	/**
+	 * Checks if the given player can be set as the OwningPlayer for components from the given group by checking the
+	 * group settings.
+	 * @reamrk This function doesn't check if there is already an OwningPlayer set for the given group, so you need to
+	 * check it manually.
+	 */
 	static bool CanAssignOwningPlayerToGroup(const AEscapeChroniclesPlayerState* OwningPlayerState,
 		const FPlayerOwnershipComponentGroup& Group);
 
