@@ -142,8 +142,16 @@ public:
 	/**
 	 * Calls the given callback if OwningPlayer is already initialized or registers the callback to be called when the
 	 * OwningPlayer is initialized.
+	 * @return DelegateHandle for the callback. Invalid if the callback was called immediately.
 	 */
-	void CallOrRegister_OnOwningPlayerInitialized(const FOnOwningPlayerInitializedDelegate::FDelegate& Callback);
+	FDelegateHandle CallOrRegister_OnOwningPlayerInitialized(
+		const FOnOwningPlayerInitializedDelegate::FDelegate& Callback);
+
+	// This should be called when you don't need to listen for the OwningPlayer initialization anymore
+	void Unregister_OnOwningPlayerInitialized(const FDelegateHandle& DelegateHandle)
+	{
+		OnOwningPlayerInitialized.Remove(DelegateHandle);
+	}
 
 protected:
 	virtual void OnPostLoadObject() override;

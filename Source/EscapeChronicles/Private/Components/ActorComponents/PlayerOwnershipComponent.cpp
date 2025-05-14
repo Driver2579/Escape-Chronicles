@@ -281,17 +281,17 @@ void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& Ne
 	OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer, Group);
 }
 
-void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
+FDelegateHandle UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 	const FOnOwningPlayerInitializedDelegate::FDelegate& Callback)
 {
 	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
 		Callback.ExecuteIfBound(this, OwningPlayerContainer.OwningPlayer, GetGroup());
+
+		return FDelegateHandle();
 	}
-	else
-	{
-		OnOwningPlayerInitialized.Add(Callback);
-	}
+
+	return OnOwningPlayerInitialized.Add(Callback);
 }
 
 void UPlayerOwnershipComponent::OnPostLoadObject()
