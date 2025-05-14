@@ -107,6 +107,13 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 	TArray<FPlayerOwnershipComponentGroup> Groups;
 	GroupedComponents.GetKeys(Groups);
 
+	const bool bPlayerAlreadyHasGroup = !GroupNameForPlayer.IsNone();
+
+	// This property is needed only for the "ensure" macro, so we wrap it with DO_ENSURE
+#if DO_ENSURE
+	bool bFoundGroup = false;
+#endif
+
 	for (const FPlayerOwnershipComponentGroup& Group : Groups)
 	{
 #if DO_CHECK
@@ -118,7 +125,7 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		 * group. If we didn't fail the check, then we can assign the player to this group (which means that we need to
 		 * set this player as the OwningPlayer for all components in this group).
 		 */
-		if (GroupNameForPlayer.IsNone())
+		if (bPlayerAlreadyHasGroup)
 		{
 			if (!CanAssignOwningPlayerToGroup(PlayerState, Group))
 			{
@@ -139,23 +146,88 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		TArray<UPlayerOwnershipComponent*> PlayerOwnershipComponents;
 		GroupedComponents.MultiFind(Group, PlayerOwnershipComponents);
 
-		for (UPlayerOwnershipComponent* PlayerOwnershipComponent : PlayerOwnershipComponents)
+		// If the player doesn't have a group yet, then we need to find an empty group for him
+		if (!bPlayerAlreadyHasGroup)
 		{
+			bool bGroupHasNoPlayers = true;
+
+			// Make sure that none of the components in this group have the OwningPlayer set yet
+			for (const UPlayerOwnershipComponent* PlayerOwnershipComponent : PlayerOwnershipComponents)
+			{
 #if DO_CHECK
-			check(IsValid(PlayerOwnershipComponent));
+				check(IsValid(PlayerOwnershipComponent));
 #endif
 
-			// Initialize the OwningPlayer for the component if it doesn't already have one
-			if (!PlayerOwnershipComponent->GetOwningPlayer())
+				/**
+				 * A component from this group already has an OwningPlayer set, so we can stop iterating through the
+				 * group.
+				 */
+				if (PlayerOwnershipComponent->GetOwningPlayer())
+				{
+					bGroupHasNoPlayers = false;
+
+					break;
+				}
+			}
+
+			// If the group already has an OwningPlayer set, then we have to skip this group
+			if (!bGroupHasNoPlayers)
 			{
+				continue;
+			}
+
+			/**
+			 * Initialize the OwningPlayer for all components in this group (we have already checked that they have no
+			 * OwningPlayers).
+			 */
+			for (UPlayerOwnershipComponent* PlayerOwnershipComponent : PlayerOwnershipComponents)
+			{
+#if DO_CHECK
+				check(IsValid(PlayerOwnershipComponent));
+#endif
+
 				PlayerOwnershipComponent->InitializeOwningPlayer(PlayerState->GetUniquePlayerID(),
 					GetControlledCharacterTypeFromPlayerState(PlayerState));
 			}
+
+#if DO_ENSURE
+			bFoundGroup = true;
+#endif
+		}
+		/**
+		 * Otherwise, we have already found a group this player belongs to above, so we simply need to initialize the
+		 * OwningPlayer for the components that don't have it set yet (some of them for sure do).
+		 */
+		else
+		{
+			for (UPlayerOwnershipComponent* PlayerOwnershipComponent : PlayerOwnershipComponents)
+			{
+				// Initialize the OwningPlayer for the component if it doesn't already have one
+				if (!PlayerOwnershipComponent->GetOwningPlayer())
+				{
+					PlayerOwnershipComponent->InitializeOwningPlayer(PlayerState->GetUniquePlayerID(),
+						GetControlledCharacterTypeFromPlayerState(PlayerState));
+				}
+			}
+
+#if DO_ENSURE
+			bFoundGroup = true;
+#endif
 		}
 
-		// We found a group for the given player and initialized everything we could, so we can break the loop now
+		/**
+		 * We found a group for the given player and initialized everything we could, so we can break the loop now.
+		 * P.S.: If we get here without assigning the player to the group, then it's an exception.
+		 */
 		break;
 	}
+
+#if DO_ENSURE
+	ensureAlwaysMsgf(bFoundGroup,
+		TEXT("No group was found for player %s! Consider adding more groups to the level that this player can "
+			"be assigned to"),
+		*PlayerState->GetPlayerName());
+#endif
 }
 
 EControlledCharacterType UPlayerOwnershipComponent::GetControlledCharacterTypeFromPlayerState(
