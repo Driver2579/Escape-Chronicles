@@ -117,8 +117,8 @@ public:
 	 * Selects the group of UPlayerOwnershipComponents for the given player and sets this player as an owning player for
 	 * all UPlayerOwnershipComponents on the scene that share the same group.
 	 * @remark This must be called for all not spectating players and bots when they are spawned!
-	 * @remark The only situation when this function isn't necessary to call is if both the player and the component are
-	 * about to be loaded (or have just loaded).
+	 * @remark It's best to call it AFTER the game is loaded. Otherwise, you may register the player for the group, and
+	 * he may be immediately overriden after loading the game.
 	 */
 	static void RegisterPlayer(const AEscapeChroniclesPlayerState* PlayerState);
 

@@ -125,7 +125,7 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		 * group. If we didn't fail the check, then we can assign the player to this group (which means that we need to
 		 * set this player as the OwningPlayer for all components in this group).
 		 */
-		if (bPlayerAlreadyHasGroup)
+		if (!bPlayerAlreadyHasGroup)
 		{
 			if (!CanAssignOwningPlayerToGroup(PlayerState, Group))
 			{
