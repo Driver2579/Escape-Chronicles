@@ -113,14 +113,6 @@ void AEscapeChroniclesPlayerState::PostInitializeComponents()
 	OnPawnSet.AddDynamic(this, &ThisClass::OnPawnChanged);
 }
 
-void AEscapeChroniclesPlayerState::BeginPlay()
-{
-	Super::BeginPlay();
-
-	// Register the player in the player ownership system
-	UPlayerOwnershipComponent::RegisterPlayer(this);
-}
-
 void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn)
 {
 	// Don't do anything if the new pawn is invalid (for example, if it was removed instead of being set)
@@ -204,7 +196,7 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 		return;
 	}
 
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
 #else
 	// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build
@@ -216,4 +208,7 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 	{
 		UniquePlayerID.NetID = GetUniqueId()->ToString();
 	}
+
+	// Register the player in the player ownership system because we have a valid UniquePlayerID now
+	UPlayerOwnershipComponent::RegisterPlayer(this);
 }

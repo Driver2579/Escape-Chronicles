@@ -53,8 +53,6 @@ public:
 	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 
 protected:
-	virtual void BeginPlay() override;
-
 	UFUNCTION()
 	virtual void OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn);
 
