@@ -50,6 +50,14 @@ protected:
 
 	virtual void OnEventStarted(const bool bStartPaused) override;
 
+	const TArray<TWeakObjectPtr<AActor>>& GetPresenceMarkTriggers() const { return PresenceMarkTriggers; }
+
+	/**
+	 * Collects all players that are currently overlapping with the given trigger and calls
+	 * OnPresenceMarkTriggerComponentBeginOverlap for them.
+	 */
+	void TriggerBeginOverlapForOverlappingCharacters(const AActor* PresenceMarkTrigger);
+
 	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const;
@@ -78,12 +86,6 @@ private:
 
 	// The list of triggers that are used to check in players
 	TArray<TWeakObjectPtr<AActor>> PresenceMarkTriggers;
-
-	/**
-	 * Collects all players that are currently overlapping with the given trigger and calls
-	 * OnPresenceMarkTriggerComponentBeginOverlap for them.
-	 */
-	void TriggerBeginOverlapForOverlappingCharacters(const AActor* PresenceMarkTrigger);
 
 	UFUNCTION()
 	void OnPresenceMarkTriggerComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ScheduleEventWithPresenceMark.h"
+#include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "BedtimeScheduleEvent.generated.h"
 
 /**
@@ -18,6 +19,18 @@ public:
 	UBedtimeScheduleEvent();
 
 protected:
+	virtual void OnEventStarted(const bool bStartPaused) override;
+
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const override;
+
+	virtual void OnEventEnded() override;
+
+private:
+	TMap<TWeakObjectPtr<UPlayerOwnershipComponent>, FDelegateHandle> OnOwningPlayerInitializedDelegateHandles;
+
+	void OnPrisonerChamberZoneOwningPlayerInitialized(UPlayerOwnershipComponent* PlayerOwnershipComponent,
+		const FUniquePlayerID& OwningPlayer, const FPlayerOwnershipComponentGroup& Group);
+
+	void UnregisterOnOwningPlayerInitializedDelegates();
 };
