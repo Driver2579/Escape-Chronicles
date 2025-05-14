@@ -3,7 +3,6 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 #include "Common/DataAssets/AbilitySystemSet.h"
-#include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
@@ -208,7 +207,4 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 	{
 		UniquePlayerID.NetID = GetUniqueId()->ToString();
 	}
-
-	// Register the player in the player ownership system because we have a valid UniquePlayerID now
-	UPlayerOwnershipComponent::RegisterPlayer(this);
 }
