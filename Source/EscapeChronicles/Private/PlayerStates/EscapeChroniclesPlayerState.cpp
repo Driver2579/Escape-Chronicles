@@ -3,6 +3,7 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
@@ -110,6 +111,14 @@ void AEscapeChroniclesPlayerState::PostInitializeComponents()
 	}
 
 	OnPawnSet.AddDynamic(this, &ThisClass::OnPawnChanged);
+}
+
+void AEscapeChroniclesPlayerState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Register the player in the player ownership system
+	UPlayerOwnershipComponent::RegisterPlayer(this);
 }
 
 void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn)

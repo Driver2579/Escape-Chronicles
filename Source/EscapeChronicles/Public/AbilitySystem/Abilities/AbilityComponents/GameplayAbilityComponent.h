@@ -320,4 +320,15 @@ protected:
 	}
 
 	// === End of UGameplayAbility interface ===
+
+	// Calls EndAbility on the owner
+	void CallEndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo, const bool bReplicateEndAbility, const bool bWasCancelled)
+	{
+#if DO_CHECK
+		check(IsValid(GetOwner()));
+#endif
+
+		GetOwner()->EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	}
 };
