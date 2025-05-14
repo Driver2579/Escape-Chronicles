@@ -21,7 +21,7 @@ void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& Ne
 	OwningPlayer = NewOwningPlayer;
 
 	// Broadcast the delegate and clear it because we don't need it anymore
-	OnOwningPlayerInitialized.Broadcast(OwningPlayer);
+	OnOwningPlayerInitialized.Broadcast(this, OwningPlayer);
 	OnOwningPlayerInitialized.Clear();
 }
 
@@ -30,7 +30,7 @@ void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 {
 	if (OwningPlayer.IsValid())
 	{
-		Callback.ExecuteIfBound(OwningPlayer);
+		Callback.ExecuteIfBound(this, OwningPlayer);
 	}
 	else
 	{
