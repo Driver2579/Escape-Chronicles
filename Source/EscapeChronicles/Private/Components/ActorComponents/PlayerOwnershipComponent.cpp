@@ -278,7 +278,7 @@ void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& Ne
 	OwningPlayerContainer.OwningPlayer = NewOwningPlayer;
 
 	// Broadcast the delegate
-	OnOwningPlayerInitialized.Broadcast(OwningPlayerContainer.OwningPlayer,
+	OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer,
 		OwningPlayerContainer.ControlledCharacterType);
 }
 
@@ -287,7 +287,7 @@ void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 {
 	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
-		Callback.ExecuteIfBound(OwningPlayerContainer.OwningPlayer, OwningPlayerContainer.ControlledCharacterType);
+		Callback.ExecuteIfBound(this, OwningPlayerContainer.OwningPlayer, OwningPlayerContainer.ControlledCharacterType);
 	}
 	else
 	{
@@ -300,7 +300,7 @@ void UPlayerOwnershipComponent::OnPostLoadObject()
 	// Broadcast the delegate if we loaded a valid OwningPlayer
 	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
-		OnOwningPlayerInitialized.Broadcast(OwningPlayerContainer.OwningPlayer,
+		OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer,
 			OwningPlayerContainer.ControlledCharacterType);
 	}
 }
