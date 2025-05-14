@@ -11,7 +11,6 @@
 class UAbilitySystemComponent;
 class UGameplayEffect;
 class AEscapeChroniclesPlayerState;
-class ATriggerBase;
 
 /**
  * The base class for events that require a presence mark from players by colliding with one of the PresenceMarkTriggers
@@ -37,10 +36,21 @@ public:
 	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
 
 protected:
+	// Can be called only from the constructor
+	void SetPresenceMarkTriggerClass(const TSubclassOf<AActor>& NewPresenceMarkTriggerClass)
+	{
+#if DO_ENSURE
+			ensureAlwaysMsgf(HasAnyFlags(RF_NeedInitialization),
+				TEXT("You can only set PresenceMarkTriggerClass in the constructor!"));
+#endif
+
+			PresenceMarkTriggerClass = NewPresenceMarkTriggerClass;
+	}
+
 	virtual void OnEventStarted(const bool bStartPaused) override;
 
 	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
-	virtual bool CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
+	virtual bool CanCheckInPlayer(AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
 
 	/**
 	 * Called when a player checks in during the event (overlaps with the PresenceMarkTrigger). Adds the player to the
@@ -62,18 +72,26 @@ protected:
 private:
 	// The class of the trigger that is used to check in players
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<ATriggerBase> PresenceMarkTriggerClass;
+	TSubclassOf<AActor> PresenceMarkTriggerClass;
 
 	// The list of triggers that are used to check in players
-	TArray<TWeakObjectPtr<ATriggerBase>> PresenceMarkTriggers;
+	TArray<TWeakObjectPtr<AActor>> PresenceMarkTriggers;
 
 	/**
 	 * Collects all players that are currently overlapping with the given trigger and calls
-	 * OnPresenceMarkTriggerBeginOverlap for them.
+	 * OnPresenceMarkTriggerComponentBeginOverlap for them.
 	 */
-	void TriggerBeginOverlapForOverlappingCharacters(ATriggerBase* PresenceMarkTrigger);
+	void TriggerBeginOverlapForOverlappingCharacters(AActor* PresenceMarkTrigger);
 
 	UFUNCTION()
+	void OnPresenceMarkTriggerComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	/**
+	 * This function only exists for TriggerBeginOverlapForOverlappingCharacters function to work with the whole actor
+	 * instead of checking for overlaps with every component because there is no need to do it there. In contains an
+	 * actual implementation of the OnPresenceMarkTriggerComponentBeginOverlap function.
+	 */
 	void OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
 
 	// The list of players that checked in during the event

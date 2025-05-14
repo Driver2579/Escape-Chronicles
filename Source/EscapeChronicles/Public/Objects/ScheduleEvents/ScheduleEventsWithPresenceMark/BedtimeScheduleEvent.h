@@ -14,5 +14,9 @@ class ESCAPECHRONICLES_API UBedtimeScheduleEvent : public UScheduleEventWithPres
 {
 	GENERATED_BODY()
 
-	
+public:
+	UBedtimeScheduleEvent();
+
+protected:
+	virtual bool CanCheckInPlayer(AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn) override;
 };

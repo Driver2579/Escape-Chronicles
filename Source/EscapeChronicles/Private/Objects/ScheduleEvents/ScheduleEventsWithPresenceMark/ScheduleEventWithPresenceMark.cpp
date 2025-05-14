@@ -5,7 +5,6 @@
 #include "EngineUtils.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Engine/AssetManager.h"
-#include "Engine/TriggerBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
@@ -29,7 +28,7 @@ void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 	// Iterate all PresenceMarkTriggers of the specified class
 	for (TActorIterator It(GetWorld(), PresenceMarkTriggerClass); It; ++It)
 	{
-		ATriggerBase* PresenceMarkTrigger = *It;
+		AActor* PresenceMarkTrigger = *It;
 
 		// Count overlaps that happened before the event started if the event isn't started paused
 		if (!bStartPaused)
@@ -37,15 +36,26 @@ void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 			TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger);
 		}
 
-		// Listen for new overlaps
-		PresenceMarkTrigger->OnActorBeginOverlap.AddDynamic(this, &ThisClass::OnPresenceMarkTriggerBeginOverlap);
+		/**
+		 * Listen for new overlaps for every component individually because child actors may want to check in the player
+		 * if he overlaps with an exact component instead of the whole actor.
+		 */
+		PresenceMarkTrigger->ForEachComponent<UPrimitiveComponent>(false,
+			[this](UPrimitiveComponent* Component)
+			{
+				if (IsValid(Component))
+				{
+					Component->OnComponentBeginOverlap.AddDynamic(this,
+						&ThisClass::OnPresenceMarkTriggerComponentBeginOverlap);
+				}
+			});
 
 		// Add the trigger to the list of triggers to remove the delegate binding when the event ends
 		PresenceMarkTriggers.Add(PresenceMarkTrigger);
 	}
 }
 
-void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters(ATriggerBase* PresenceMarkTrigger)
+void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters(AActor* PresenceMarkTrigger)
 {
 #if DO_CHECK
 	check(IsValid(PresenceMarkTrigger));
@@ -74,6 +84,19 @@ void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters
 	}
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerComponentBeginOverlap(
+	UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+	bool bFromSweep, const FHitResult& SweepResult)
+{
+#if DO_CHECK
+	check(IsValid(OverlappedComponent));
+	check(IsValid(OverlappedComponent->GetOwner()));
+#endif
+
+	OnPresenceMarkTriggerBeginOverlap(OverlappedComponent->GetOwner(), OtherActor);
+}
+
 void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
 {
 	// Don't check for overlaps if the event is paused
@@ -84,7 +107,6 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 
 #if DO_CHECK
 	check(IsValid(OverlappedActor));
-	check(OverlappedActor->IsA<ATriggerBase>());
 #endif
 
 	const AEscapeChroniclesCharacter* OverlappedCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
@@ -99,16 +121,14 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	AEscapeChroniclesPlayerState* PlayerState = OverlappedCharacter->GetPlayerStateChecked<
 		AEscapeChroniclesPlayerState>();
 
-	ATriggerBase* PresenceMarkTrigger = Cast<ATriggerBase>(OverlappedActor);
-
 	// Add the player to the list of checked-in players only if we're allowed to
-	if (CanCheckInPlayer(PresenceMarkTrigger, PlayerState))
+	if (CanCheckInPlayer(OverlappedActor, PlayerState))
 	{
 		NotifyPlayerCheckedIn(PlayerState);
 	}
 }
 
-bool UScheduleEventWithPresenceMark::CanCheckInPlayer(ATriggerBase* PresenceMarkTrigger,
+bool UScheduleEventWithPresenceMark::CanCheckInPlayer(AActor* PresenceMarkTrigger,
 	AEscapeChroniclesPlayerState* PlayerToCheckIn)
 {
 	// Add the player to the list of checked-in players only if it's not already there
@@ -223,7 +243,15 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	{
 		if (PresenceMarkTrigger.IsValid())
 		{
-			PresenceMarkTrigger->OnActorBeginOverlap.RemoveDynamic(this, &ThisClass::OnPresenceMarkTriggerBeginOverlap);
+			PresenceMarkTrigger->ForEachComponent<UPrimitiveComponent>(false,
+			[this](UPrimitiveComponent* Component)
+			{
+				if (IsValid(Component))
+				{
+					Component->OnComponentBeginOverlap.RemoveDynamic(this,
+						&ThisClass::OnPresenceMarkTriggerComponentBeginOverlap);
+				}
+			});
 		}
 	}
 
