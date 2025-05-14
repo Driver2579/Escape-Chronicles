@@ -8,6 +8,7 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "ScheduleEventWithPresenceMark.generated.h"
 
+class AEscapeChroniclesCharacter;
 class UAbilitySystemComponent;
 class UGameplayEffect;
 class AEscapeChroniclesPlayerState;
@@ -50,7 +51,8 @@ protected:
 	virtual void OnEventStarted(const bool bStartPaused) override;
 
 	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
-	virtual bool CanCheckInPlayer(AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
+	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
+		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const;
 
 	/**
 	 * Called when a player checks in during the event (overlaps with the PresenceMarkTrigger). Adds the player to the
@@ -81,7 +83,7 @@ private:
 	 * Collects all players that are currently overlapping with the given trigger and calls
 	 * OnPresenceMarkTriggerComponentBeginOverlap for them.
 	 */
-	void TriggerBeginOverlapForOverlappingCharacters(AActor* PresenceMarkTrigger);
+	void TriggerBeginOverlapForOverlappingCharacters(const AActor* PresenceMarkTrigger);
 
 	UFUNCTION()
 	void OnPresenceMarkTriggerComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -89,10 +91,20 @@ private:
 
 	/**
 	 * This function only exists for TriggerBeginOverlapForOverlappingCharacters function to work with the whole actor
-	 * instead of checking for overlaps with every component because there is no need to do it there. In contains an
+	 * instead of checking for overlaps with every component because there is no need to do it there. It contains an
 	 * actual implementation of the OnPresenceMarkTriggerComponentBeginOverlap function.
 	 */
-	void OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor);
+	void OnPresenceMarkTriggerBeginOverlap(const AActor* OverlappedActor, AActor* OtherActor);
+
+	TMap<TWeakObjectPtr<APawn>, FDelegateHandle> OverlappingPawnPlayerStateChangedDelegateHandles;
+
+	void OnOverlappingCharacterPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState);
+
+	UFUNCTION()
+	void OnPresenceMarkTriggerEndOverlap(AActor* OverlappedActor, AActor* OtherActor);
+
+	// Calls NotifyPlayerCheckedIn for the player if CanCheckInPlayer returns true
+	bool TryCheckInPlayer(const AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
 
 	// The list of players that checked in during the event
 	TArray<FUniquePlayerID> CheckedInPlayers;

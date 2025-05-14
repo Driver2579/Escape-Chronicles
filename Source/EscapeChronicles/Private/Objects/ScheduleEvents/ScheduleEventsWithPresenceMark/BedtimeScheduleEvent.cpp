@@ -13,8 +13,8 @@ UBedtimeScheduleEvent::UBedtimeScheduleEvent()
 	SetPresenceMarkTriggerClass(APrisonerChamberZone::StaticClass());
 }
 
-bool UBedtimeScheduleEvent::CanCheckInPlayer(AActor* PresenceMarkTrigger,
-	AEscapeChroniclesPlayerState* PlayerToCheckIn)
+bool UBedtimeScheduleEvent::CanCheckInPlayer(const AActor* PresenceMarkTrigger,
+	const AEscapeChroniclesPlayerState* PlayerToCheckIn) const
 {
 	if (!Super::CanCheckInPlayer(PresenceMarkTrigger, PlayerToCheckIn))
 	{

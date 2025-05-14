@@ -18,5 +18,6 @@ public:
 	UBedtimeScheduleEvent();
 
 protected:
-	virtual bool CanCheckInPlayer(AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn) override;
+	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
+		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const override;
 };

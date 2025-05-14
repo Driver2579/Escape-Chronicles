@@ -43,19 +43,26 @@ void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 		PresenceMarkTrigger->ForEachComponent<UPrimitiveComponent>(false,
 			[this](UPrimitiveComponent* Component)
 			{
-				if (IsValid(Component))
-				{
-					Component->OnComponentBeginOverlap.AddDynamic(this,
-						&ThisClass::OnPresenceMarkTriggerComponentBeginOverlap);
-				}
+#if DO_CHECK
+				check(IsValid(Component));
+#endif
+
+				Component->OnComponentBeginOverlap.AddDynamic(this,
+					&ThisClass::OnPresenceMarkTriggerComponentBeginOverlap);
 			});
+
+		/**
+		 * Also listen for end overlaps for the whole actor because we need to know when the player stops overlapping
+		 * with it.
+		 */
+		PresenceMarkTrigger->OnActorEndOverlap.AddDynamic(this, &ThisClass::OnPresenceMarkTriggerEndOverlap);
 
 		// Add the trigger to the list of triggers to remove the delegate binding when the event ends
 		PresenceMarkTriggers.Add(PresenceMarkTrigger);
 	}
 }
 
-void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters(AActor* PresenceMarkTrigger)
+void UScheduleEventWithPresenceMark::TriggerBeginOverlapForOverlappingCharacters(const AActor* PresenceMarkTrigger)
 {
 #if DO_CHECK
 	check(IsValid(PresenceMarkTrigger));
@@ -97,7 +104,8 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerComponentBeginOverlap(
 	OnPresenceMarkTriggerBeginOverlap(OverlappedComponent->GetOwner(), OtherActor);
 }
 
-void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* OverlappedActor, AActor* OtherActor)
+void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(const AActor* OverlappedActor,
+	AActor* OtherActor)
 {
 	// Don't check for overlaps if the event is paused
 	if (IsPaused())
@@ -109,7 +117,7 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 	check(IsValid(OverlappedActor));
 #endif
 
-	const AEscapeChroniclesCharacter* OverlappedCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
+	AEscapeChroniclesCharacter* OverlappedCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
 	// Check if the overlapped actor is a valid character
 	if (!IsValid(OverlappedCharacter))
@@ -117,19 +125,115 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerBeginOverlap(AActor* O
 		return;
 	}
 
-	// Get the PlayerState of the character to remember checked in players by their FUniquePlayerIDs
-	AEscapeChroniclesPlayerState* PlayerState = OverlappedCharacter->GetPlayerStateChecked<
-		AEscapeChroniclesPlayerState>();
+	// Get the PlayerState of the character to remember checked-in players by their FUniquePlayerIDs
+	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		OverlappedCharacter->GetPlayerState(), ECastCheckedType::NullAllowed);
 
-	// Add the player to the list of checked-in players only if we're allowed to
-	if (CanCheckInPlayer(OverlappedActor, PlayerState))
+	// If the PlayerState isn't valid, then wait for it to be initialized before checking-in the player
+	if (!IsValid(PlayerState))
 	{
-		NotifyPlayerCheckedIn(PlayerState);
+		/**
+		 * Subscribe to the PlayerState changed delegate to check in the player when the PlayerState is initialized if
+		 * we didn't already subscribe before and remember the delegate handle to unsubscribe from it when the player
+		 * stops overlapping with the trigger.
+		 */
+		if (!OverlappingPawnPlayerStateChangedDelegateHandles.Contains(OverlappedCharacter))
+		{
+			const FDelegateHandle DelegateHandle = OverlappedCharacter->OnPlayerStateChangedDelegate.AddUObject(this,
+				&ThisClass::OnOverlappingCharacterPlayerStateChanged);
+
+			OverlappingPawnPlayerStateChangedDelegateHandles.Add(OverlappedCharacter, DelegateHandle);
+		}
+
+		return;
+	}
+
+	TryCheckInPlayer(OverlappedActor, PlayerState);
+}
+
+void UScheduleEventWithPresenceMark::OnOverlappingCharacterPlayerStateChanged(APlayerState* NewPlayerState,
+	APlayerState* OldPlayerState)
+{
+	// Don't do anything if the new player state is not valid
+	if (!IsValid(NewPlayerState))
+	{
+		return;
+	}
+
+#if DO_CHECK
+	check(IsValid(NewPlayerState->GetPawn()));
+	check(NewPlayerState->GetPawn()->IsA<AEscapeChroniclesCharacter>());
+#endif
+
+	AEscapeChroniclesCharacter* Character = CastChecked<AEscapeChroniclesCharacter>(NewPlayerState->GetPawn());
+
+#if DO_ENSURE
+	ensureAlways(IsValid(PresenceMarkTriggerClass));
+#endif
+
+	// Get all overlapping triggers to try to check in the player with all of them
+	TSet<AActor*> OverlappingPresenceMarkTriggers;
+	Character->GetOverlappingActors(OverlappingPresenceMarkTriggers, PresenceMarkTriggerClass);
+
+#if DO_ENSURE
+	// The character should overlap with at least one trigger by now...
+	ensureAlways(!OverlappingPresenceMarkTriggers.IsEmpty());
+#endif
+
+#if DO_CHECK
+	check(NewPlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
+
+	AEscapeChroniclesPlayerState* CastedPlayerState = CastChecked<AEscapeChroniclesPlayerState>(NewPlayerState);
+
+	// Try to check in the player with any of the overlapping triggers
+	for (const AActor* OverlappingPresenceMarkTrigger : OverlappingPresenceMarkTriggers)
+	{
+		if (TryCheckInPlayer(OverlappingPresenceMarkTrigger, CastedPlayerState))
+		{
+			break;
+		}
+	}
+
+	// Get the delegate handle that was used to subscribe to the PlayerState changed event and remove it from the map
+	const FDelegateHandle DelegateHandle = OverlappingPawnPlayerStateChangedDelegateHandles.FindAndRemoveChecked(
+		Character);
+
+#if DO_ENSURE
+	ensureAlways(DelegateHandle.IsValid());
+#endif
+
+	// Unsubscribe from the PlayerState changed event
+	Character->OnPlayerStateChangedDelegate.Remove(DelegateHandle);
+}
+
+void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerEndOverlap(AActor* OverlappedActor, AActor* OtherActor)
+{
+	AEscapeChroniclesCharacter* OverlappingCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
+
+	if (!IsValid(OverlappingCharacter))
+	{
+		return;
+	}
+
+	// Try to find the delegate handle that was used to subscribe to the PlayerState changed event if any
+	const FDelegateHandle* DelegateHandle = OverlappingPawnPlayerStateChangedDelegateHandles.Find(
+		OverlappingCharacter);
+
+	// If the delegate handle is found, then unsubscribe from the event and remove it from the map
+	if (DelegateHandle)
+	{
+#if DO_ENSURE
+		ensureAlways(DelegateHandle->IsValid());
+#endif
+
+		OverlappingCharacter->OnPlayerStateChangedDelegate.Remove(*DelegateHandle);
+		OverlappingPawnPlayerStateChangedDelegateHandles.Remove(OverlappingCharacter);
 	}
 }
 
-bool UScheduleEventWithPresenceMark::CanCheckInPlayer(AActor* PresenceMarkTrigger,
-	AEscapeChroniclesPlayerState* PlayerToCheckIn)
+bool UScheduleEventWithPresenceMark::CanCheckInPlayer(const AActor* PresenceMarkTrigger,
+	const AEscapeChroniclesPlayerState* PlayerToCheckIn) const
 {
 	// Add the player to the list of checked-in players only if it's not already there
 	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID());
@@ -149,6 +253,20 @@ void UScheduleEventWithPresenceMark::NotifyPlayerCheckedIn(AEscapeChroniclesPlay
 	}
 
 	OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
+}
+
+bool UScheduleEventWithPresenceMark::TryCheckInPlayer(const AActor* PresenceMarkTrigger,
+	AEscapeChroniclesPlayerState* PlayerToCheckIn)
+{
+	// Add the player to the list of checked-in players only if we're allowed to
+	if (!CanCheckInPlayer(PresenceMarkTrigger, PlayerToCheckIn))
+	{
+		return false;
+	}
+
+	NotifyPlayerCheckedIn(PlayerToCheckIn);
+
+	return true;
 }
 
 void UScheduleEventWithPresenceMark::OnCheckedInGameplayEffectClassLoaded()
