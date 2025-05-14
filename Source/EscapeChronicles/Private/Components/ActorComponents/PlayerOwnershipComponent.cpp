@@ -257,14 +257,14 @@ bool UPlayerOwnershipComponent::CanAssignOwningPlayerToGroup(const AEscapeChroni
 void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer,
 	const EControlledCharacterType ControlledCharacterType)
 {
+	const FPlayerOwnershipComponentGroup Group = GetGroup();
+
 #if DO_ENSURE
 	// Make sure owning player is initialized only once
 	ensureAlways(!OwningPlayerContainer.OwningPlayer.IsValid());
 	ensureAlways(OwningPlayerContainer.ControlledCharacterType == EControlledCharacterType::None);
 
 	ensureAlways(NewOwningPlayer.IsValid());
-
-	const FPlayerOwnershipComponentGroup Group = GetGroup();
 
 #if DO_CHECK
 	check(Group.GroupSettings);
@@ -278,8 +278,7 @@ void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& Ne
 	OwningPlayerContainer.OwningPlayer = NewOwningPlayer;
 
 	// Broadcast the delegate
-	OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer,
-		OwningPlayerContainer.ControlledCharacterType);
+	OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer, Group);
 }
 
 void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
@@ -287,7 +286,7 @@ void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
 {
 	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
-		Callback.ExecuteIfBound(this, OwningPlayerContainer.OwningPlayer, OwningPlayerContainer.ControlledCharacterType);
+		Callback.ExecuteIfBound(this, OwningPlayerContainer.OwningPlayer, GetGroup());
 	}
 	else
 	{
@@ -300,7 +299,6 @@ void UPlayerOwnershipComponent::OnPostLoadObject()
 	// Broadcast the delegate if we loaded a valid OwningPlayer
 	if (OwningPlayerContainer.OwningPlayer.IsValid())
 	{
-		OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer,
-			OwningPlayerContainer.ControlledCharacterType);
+		OnOwningPlayerInitialized.Broadcast(this, OwningPlayerContainer.OwningPlayer, GetGroup());
 	}
 }

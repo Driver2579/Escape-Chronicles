@@ -77,7 +77,7 @@ struct FPlayerOwnershipComponentOwningPlayerContainer
 
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnOwningPlayerInitializedDelegate,
 	UPlayerOwnershipComponent* PlayerOwnershipComponent, const FUniquePlayerID& OwningPlayer,
-	EControlledCharacterType ControlledCharacterType);
+	const FPlayerOwnershipComponentGroup& Group);
 
 /**
  * This component adds ownership of the player to the actor that owns this component. The ownership is represented by an
