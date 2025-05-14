@@ -10,6 +10,7 @@
 #include "PlayerOwnershipComponent.generated.h"
 
 class AEscapeChroniclesPlayerState;
+class UPlayerOwnershipComponent;
 
 enum class EControlledCharacterType : uint8;
 
@@ -74,6 +75,10 @@ struct FPlayerOwnershipComponentOwningPlayerContainer
 	EControlledCharacterType ControlledCharacterType = EControlledCharacterType::None;
 };
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnOwningPlayerInitializedDelegate,
+	UPlayerOwnershipComponent* PlayerOwnershipComponent, const FUniquePlayerID& OwningPlayer,
+	const FPlayerOwnershipComponentGroup& Group);
+
 /**
  * This component adds ownership of the player to the actor that owns this component. The ownership is represented by an
  * FUniquePlayerID that is set on the component.
@@ -133,9 +138,6 @@ public:
 	 */
 	void InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer,
 		const EControlledCharacterType ControlledCharacterType);
-
-	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnOwningPlayerInitializedDelegate, const FUniquePlayerID& OwningPlayer,
-		EControlledCharacterType ControlledCharacterType);
 
 	/**
 	 * Calls the given callback if OwningPlayer is already initialized or registers the callback to be called when the
