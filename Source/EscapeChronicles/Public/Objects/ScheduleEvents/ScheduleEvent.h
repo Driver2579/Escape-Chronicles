@@ -68,25 +68,30 @@ public:
 	bool IsActive() const { return bActive; }
 
 	/**
-	 * Starts the event if it was not started before. Should be called when the event is created.
+	 * Starts the event if it was not started before. Should be called by the ScheduleEventManagerComponent when the
+	 * event is created.
 	 * @param bStartPaused If true, then the event will be started in a paused state.
 	 */
 	void StartEvent(const bool bStartPaused = false);
 
-	// Ends the event if it was started. Should be called when the event is no longer needed.
+	/**
+	 * Ends the event if it was started. Should be called by the ScheduleEventManagerComponent when the event is no
+	 * longer needed.
+	 */
 	void EndEvent();
 
 	bool IsPaused() const { return bPaused; }
 
 	/**
-	 * Pauses the event if it was started and if it isn't already paused. Should be called when you want to override the
-	 * event with another one, but don't want to completely end it yet.
+	 * Pauses the event if it was started and if it isn't already paused. Should be called by the
+	 * ScheduleEventManagerComponent when you want to override the event with another one but don't want to completely
+	 * end it yet.
 	 */
 	void PauseEvent();
 
 	/**
-	 * Resumes the event if it's still active and if it is currently paused. Should be called when you want to revert
-	 * the state of the event to the one before it was paused.
+	 * Resumes the event if it's still active and if it is currently paused. Should be called by the
+	 * ScheduleEventManagerComponent when you want to revert the state of the event to the one before it was paused.
 	 */
 	void ResumeEvent();
 
