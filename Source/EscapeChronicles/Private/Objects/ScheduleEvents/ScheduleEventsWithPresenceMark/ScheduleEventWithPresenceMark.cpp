@@ -36,8 +36,6 @@ void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 			TriggerBeginOverlapForOverlappingCharacters(PresenceMarkTrigger);
 		}
 
-		// TODO: Overlaps don't work for some reason (not sure if always or sometimes)
-
 		/**
 		 * Listen for new overlaps for every component individually because child actors may want to check in the player
 		 * if he overlaps with an exact component instead of the whole actor.

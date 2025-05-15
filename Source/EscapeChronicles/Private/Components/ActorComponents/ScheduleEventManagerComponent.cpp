@@ -26,6 +26,19 @@ void UScheduleEventManagerComponent::BeginPlay()
 	}
 }
 
+void UScheduleEventManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// Remove and end all events when the component is destroyed
+	for (int32 i = EventsStack.Num() - 1; i >= 0; --i)
+	{
+		RemoveEventByIndex(i, EAllowShrinking::No, false);
+	}
+
+	EventsStack.Shrink();
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void UScheduleEventManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime,
 	const FGameplayDateTime& NewDateTime)
 {
