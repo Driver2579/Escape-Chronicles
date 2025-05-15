@@ -128,8 +128,7 @@ void UBedtimeScheduleEvent::UnregisterOnOwningPlayerInitializedDelegates()
 		// Unsubscribe from the event for this component if we ever subscribed to it
 		if (DelegateHandle)
 		{
-			Pair.Key->Unregister_OnOwningPlayerInitialized(
-				OnOwningPlayerInitializedDelegateHandles.FindAndRemoveChecked(Pair.Key));
+			Pair.Key->Unregister_OnOwningPlayerInitialized(*DelegateHandle);
 		}
 	}
 
