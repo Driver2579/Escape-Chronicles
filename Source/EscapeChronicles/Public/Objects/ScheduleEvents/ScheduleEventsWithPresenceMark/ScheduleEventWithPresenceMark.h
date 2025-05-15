@@ -23,18 +23,15 @@ class ESCAPECHRONICLES_API UScheduleEventWithPresenceMark : public UScheduleEven
 	GENERATED_BODY()
 
 public:
-	// Should be used when the game is saved
-	const TArray<FUniquePlayerID>& GetCheckedInPlayers() const { return CheckedInPlayers; }
-
-	// Should be called when the game is loaded
-	void SetCheckedInPlayers(const TArray<FUniquePlayerID>& InCheckedInPlayers)
-	{
-		CheckedInPlayers = InCheckedInPlayers;
-	}
-
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerCheckedInDelegate, AEscapeChroniclesPlayerState* CheckedInPlayer);
 
 	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
+
+	// Should be used when the game is saved
+	FScheduleEventWithPresenceMarkSaveData GetScheduleEventWithPresenceMarkSaveData() const;
+
+	// Should be called when the game is loaded
+	void LoadScheduleEventWithPresenceMarkFromSaveData(const FScheduleEventWithPresenceMarkSaveData& SaveData);
 
 protected:
 	// Can be called only from the constructor
@@ -58,7 +55,9 @@ protected:
 	 */
 	void TriggerBeginOverlapForOverlappingCharacters(const AActor* PresenceMarkTrigger);
 
-	// Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
+	/**
+	 * @return Whether the player can be marked as checked-in when overlapping with the PresenceMarkTrigger
+	 */
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const;
 
@@ -74,10 +73,26 @@ protected:
 	virtual void OnEventEnded() override;
 
 	/**
-	 * Called at the end of the event for each player that didn't check in during the event (didn't overlap with the
-	 * PresenceMarkTrigger) if the event isn't paused during the end.
+	 * Calls NotifyPlayerMissedEvent for all players that didn't check in during the event (didn't overlap with the
+	 * PresenceMarkTrigger). Called automatically when the event ends if it isn't paused, but you can call it manually
+	 * sooner (just keep in mind that it doesn't prevent the function from being called again later).
+	 * @param bForceLoadGameplayEffect If this is set to true, then MissedPlayerGameplayEffectClass will be immediately
+	 * loaded synchronously and applied to all missed players after that. Otherwise, it will be loaded asynchronously
+	 * and applied to all missed players once the loading is finished.
 	 */
-	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) {}
+	void CollectPlayersThatMissedAnEvent(const bool bForceLoadGameplayEffect = false);
+
+	/**
+	 * Checks if we can call NotifyPlayerMissedEvent for the given player by checking if the player didn't check in, the
+	 * player wasn't yet marked as missed, and the player is a prisoner.
+	 */
+	virtual bool CanPlayerMissEvent(const AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) const;
+
+	/**
+	 * Called by CollectPlayersThatMissedAnEvent for every player that passed the CanPlayerMissEvent check.
+	 * @param PlayerThatMissedAnEvent 
+	 */
+	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent);
 
 private:
 	// The class of the trigger that is used to check in players
@@ -109,7 +124,7 @@ private:
 	bool TryCheckInPlayer(const AActor* PresenceMarkTrigger, AEscapeChroniclesPlayerState* PlayerToCheckIn);
 
 	// The list of players that checked in during the event
-	TArray<FUniquePlayerID> CheckedInPlayers;
+	TSet<FUniquePlayerID> CheckedInPlayers;
 
 	/**
 	 * Gameplay effect that is applied to the player when he check in and removed when the event is ended. Must add the
@@ -126,4 +141,18 @@ private:
 
 	// The map of checked-in gameplay effect handles for each checked-in player
 	TMap<TWeakObjectPtr<UAbilitySystemComponent>, FActiveGameplayEffectHandle> CheckedInGameplayEffectHandles;
+
+	// Players that didn't check in within the given time during the event
+	TSet<FUniquePlayerID> PlayersThatMissedAnEvent;
+
+	// Gameplay effect that is applied to the player if he misses the event
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay Effects")
+	TSoftClassPtr<UGameplayEffect> MissedPlayerGameplayEffectClass;
+
+	TSharedPtr<FStreamableHandle> LoadMissedPlayerGameplayEffectClassHandle;
+
+	// Applies the missed player gameplay effect to all players that missed the event
+	void OnMissedPlayerGameplayEffectClassLoaded() const;
+
+	void ApplyMissedPlayerGameplayEffect(const AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) const;
 };

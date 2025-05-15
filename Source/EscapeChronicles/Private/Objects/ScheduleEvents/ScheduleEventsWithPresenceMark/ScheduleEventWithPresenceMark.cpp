@@ -3,6 +3,7 @@
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/ScheduleEventWithPresenceMark.h"
 
 #include "EngineUtils.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/GameStateBase.h"
@@ -16,10 +17,13 @@ void UScheduleEventWithPresenceMark::OnEventStarted(const bool bStartPaused)
 	ensureAlways(!CheckedInGameplayEffectClass.IsNull());
 #endif
 
-	// Asynchronously load the gameplay effect as soon as possible to avoid delays
-	LoadCheckedInGameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		CheckedInGameplayEffectClass.ToSoftObjectPath(),
-		FStreamableDelegate::CreateUObject(this, &ThisClass::OnCheckedInGameplayEffectClassLoaded));
+	// Asynchronously load the gameplay effect as soon as possible to avoid delays, but only if it isn't already loaded
+	if (!CheckedInGameplayEffectClass.IsValid())
+	{
+		LoadCheckedInGameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			CheckedInGameplayEffectClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnCheckedInGameplayEffectClassLoaded));
+	}
 
 #if DO_ENSURE
 	ensureAlways(IsValid(PresenceMarkTriggerClass));
@@ -235,21 +239,44 @@ void UScheduleEventWithPresenceMark::OnPresenceMarkTriggerEndOverlap(AActor* Ove
 bool UScheduleEventWithPresenceMark::CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 	const AEscapeChroniclesPlayerState* PlayerToCheckIn) const
 {
-	// Add the player to the list of checked-in players only if it's not already there
-	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID());
+#if DO_CHECK
+	check(IsValid(PresenceMarkTrigger));
+	check(IsValid(PlayerToCheckIn));
+#endif
+
+	// Add the player to the list of checked-in players only if he's not already there and if he's a prisoner
+	return !CheckedInPlayers.Contains(PlayerToCheckIn->GetUniquePlayerID()) &&
+		PlayerToCheckIn->GetAbilitySystemComponent()->HasMatchingGameplayTag(
+			EscapeChroniclesGameplayTags::Role_Prisoner);
 }
 
 void UScheduleEventWithPresenceMark::NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
 {
+#if DO_CHECK
+	check(IsValid(CheckedInPlayer));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(CheckedInPlayer->GetUniquePlayerID().IsValid());
+#endif
+
 	CheckedInPlayers.Add(CheckedInPlayer->GetUniquePlayerID());
 
-	/**
-	 * Apply the checked-in gameplay effect to the player if the gameplay effect's class is already loaded. It will be
-	 * applied once it's loaded otherwise.
-	 */
+	// Apply the checked-in gameplay effect to the player if the gameplay effect's class is already loaded
 	if (CheckedInGameplayEffectClass.IsValid())
 	{
 		ApplyCheckedInGameplayEffect(CheckedInPlayer);
+	}
+	// Otherwise, make sure we request the loading
+	else if (!LoadCheckedInGameplayEffectHandle.IsValid())
+	{
+#if DO_ENSURE
+		ensureAlways(!CheckedInGameplayEffectClass.IsNull());
+#endif
+
+		LoadCheckedInGameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			CheckedInGameplayEffectClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnCheckedInGameplayEffectClassLoaded));
 	}
 
 	OnPlayerCheckedIn.Broadcast(CheckedInPlayer);
@@ -324,11 +351,10 @@ void UScheduleEventWithPresenceMark::ApplyCheckedInGameplayEffect(const AEscapeC
 	check(IsValid(AbilitySystemComponent));
 #endif
 
+#if DO_ENSURE
 	// Make sure we don't apply the same gameplay effect to the same player multiple times
-	if (CheckedInGameplayEffectHandles.Contains(AbilitySystemComponent))
-	{
-		return;
-	}
+	ensureAlways(!CheckedInGameplayEffectHandles.Contains(AbilitySystemComponent));
+#endif
 
 	// Apply the gameplay effect and remember its handle
 	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
@@ -387,25 +413,12 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	// Forget about all the triggers we collected
 	PresenceMarkTriggers.Empty();
 
-	/**
-	 * Iterate all characters in the world to check which of them didn't check in during the event, but only if the
-	 * event wasn't ended while paused.
-	 */
+	if (LoadMissedPlayerGameplayEffectClassHandle.IsValid())
+
+	// Notify about the players that missed an event, but only if the event isn't paused
 	if (!IsPaused())
 	{
-		for (TActorIterator<AEscapeChroniclesCharacter> It(GetWorld()); It; ++It)
-		{
-			const AEscapeChroniclesCharacter* Character = *It;
-
-			// Get the PlayerState of the character to get his FUniquePlayerID
-			AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-			// Call OnPlayerMissedEvent for each valid player that didn't check in during the event
-			if (IsValid(PlayerState) && !CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
-			{
-				NotifyPlayerMissedEvent(PlayerState);
-			}
-		}
+		CollectPlayersThatMissedAnEvent(true);
 	}
 
 	// Forget about all the checked-in players
@@ -434,4 +447,204 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	}
 
 	Super::OnEventEnded();
+}
+
+void UScheduleEventWithPresenceMark::CollectPlayersThatMissedAnEvent(const bool bForceLoadGameplayEffect)
+{
+	const AGameStateBase* GameState = GetWorld()->GetGameState();
+
+	if (!IsValid(GameState))
+	{
+		return;
+	}
+
+	/**
+	 * Load the gameplay effect class if it isn't null and isn't already loaded. We load it either synchronously or
+	 * asynchronously depending on the bForceLoadGameplayEffect parameter.
+	 */
+	if (!MissedPlayerGameplayEffectClass.IsNull() && !MissedPlayerGameplayEffectClass.IsValid())
+	{
+		if (bForceLoadGameplayEffect)
+		{
+			LoadMissedPlayerGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestSyncLoad(
+				MissedPlayerGameplayEffectClass.ToSoftObjectPath());
+		}
+		// Don't request the async load if we already started the loading
+		else if (!LoadMissedPlayerGameplayEffectClassHandle.IsValid())
+		{
+			LoadMissedPlayerGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+				MissedPlayerGameplayEffectClass.ToSoftObjectPath(),
+				FStreamableDelegate::CreateUObject(this, &ThisClass::OnMissedPlayerGameplayEffectClassLoaded));
+		}
+	}
+
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		AEscapeChroniclesPlayerState* CastedPlayerState = Cast<AEscapeChroniclesPlayerState>(PlayerState);
+
+		// Call OnPlayerMissedEvent for each valid player that can be marked as missed
+		if (IsValid(CastedPlayerState) && CanPlayerMissEvent(CastedPlayerState))
+		{
+			NotifyPlayerMissedEvent(CastedPlayerState);
+		}
+	}
+}
+
+bool UScheduleEventWithPresenceMark::CanPlayerMissEvent(
+	const AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerThatMissedAnEvent));
+#endif
+
+	const FUniquePlayerID& UniquePlayerID = PlayerThatMissedAnEvent->GetUniquePlayerID();
+
+#if DO_ENSURE
+	ensureAlways(UniquePlayerID.IsValid());
+#endif
+
+	// Only players that are not already marked as missed or checked in and are prisoners can miss the event
+	return !PlayersThatMissedAnEvent.Contains(UniquePlayerID) && !CheckedInPlayers.Contains(UniquePlayerID) &&
+		PlayerThatMissedAnEvent->GetAbilitySystemComponent()->HasMatchingGameplayTag(
+			EscapeChroniclesGameplayTags::Role_Prisoner);
+}
+
+void UScheduleEventWithPresenceMark::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent)
+{
+#if DO_CHECK
+	check(IsValid(PlayerThatMissedAnEvent));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerThatMissedAnEvent->GetUniquePlayerID().IsValid());
+#endif
+
+	PlayersThatMissedAnEvent.Add(PlayerThatMissedAnEvent->GetUniquePlayerID());
+
+	// Apply the gameplay effect if it's valid
+	if (MissedPlayerGameplayEffectClass.IsValid())
+	{
+		ApplyMissedPlayerGameplayEffect(PlayerThatMissedAnEvent);
+	}
+
+	// Apply the missed gameplay effect to the player if the gameplay effect's class is already loaded
+	if (MissedPlayerGameplayEffectClass.IsValid())
+	{
+		ApplyMissedPlayerGameplayEffect(PlayerThatMissedAnEvent);
+	}
+	// Otherwise, make sure we request the loading
+	else if (!MissedPlayerGameplayEffectClass.IsNull() && !LoadMissedPlayerGameplayEffectClassHandle.IsValid())
+	{
+		LoadMissedPlayerGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			MissedPlayerGameplayEffectClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnMissedPlayerGameplayEffectClassLoaded));
+	}
+}
+
+void UScheduleEventWithPresenceMark::OnMissedPlayerGameplayEffectClassLoaded() const
+{
+#if DO_ENSURE
+	ensureAlways(MissedPlayerGameplayEffectClass.IsValid());
+#endif
+
+	// Don't do anything if there are no missed players
+	if (PlayersThatMissedAnEvent.IsEmpty())
+	{
+		return;
+	}
+
+	AGameStateBase* GameState = GetWorld()->GetGameState();
+
+	if (!IsValid(GameState))
+	{
+		return;
+	}
+
+	// Apply the missed player gameplay effect to all players that missed the event
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		const AEscapeChroniclesPlayerState* CastedPlayerState = Cast<AEscapeChroniclesPlayerState>(PlayerState);
+
+		const bool bCanApplyGameplayEffect = IsValid(CastedPlayerState) &&
+			PlayersThatMissedAnEvent.Contains(CastedPlayerState->GetUniquePlayerID());
+
+		if (bCanApplyGameplayEffect)
+		{
+			ApplyMissedPlayerGameplayEffect(CastedPlayerState);
+		}
+	}
+}
+
+void UScheduleEventWithPresenceMark::ApplyMissedPlayerGameplayEffect(
+	const AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerThatMissedAnEvent));
+	check(MissedPlayerGameplayEffectClass.IsValid());
+#endif
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerThatMissedAnEvent->GetAbilitySystemComponent();
+
+	AbilitySystemComponent->ApplyGameplayEffectToSelf(
+		MissedPlayerGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1,
+		AbilitySystemComponent->MakeEffectContext());
+}
+
+FScheduleEventWithPresenceMarkSaveData UScheduleEventWithPresenceMark::GetScheduleEventWithPresenceMarkSaveData() const
+{
+	return FScheduleEventWithPresenceMarkSaveData(CheckedInPlayers, PlayersThatMissedAnEvent);
+}
+
+void UScheduleEventWithPresenceMark::LoadScheduleEventWithPresenceMarkFromSaveData(
+	const FScheduleEventWithPresenceMarkSaveData& SaveData)
+{
+#if DO_ENSURE
+	ensureAlways(IsActive());
+#endif
+
+	CheckedInPlayers = SaveData.CheckedInPlayers;
+	PlayersThatMissedAnEvent = SaveData.PlayersThatMissedAnEvent;
+
+	// Don't do anything with loaded data if the event is paused
+	if (IsPaused())
+	{
+		return;
+	}
+
+	AGameStateBase* GameState = GetWorld()->GetGameState();
+
+	if (!ensureAlways(IsValid(GameState)))
+	{
+		return;
+	}
+
+	/**
+	 * Call NotifyPlayerCheckedIn for each valid player that was marked as checked in when the game was saved and call
+	 * NotifyPlayerMissedEvent for each valid player that was marked as missed when the game was saved
+	 */
+	for (APlayerState* PlayerState : GameState->PlayerArray)
+	{
+		AEscapeChroniclesPlayerState* CastedPlayerState = Cast<AEscapeChroniclesPlayerState>(PlayerState);
+
+		if (!IsValid(CastedPlayerState))
+		{
+			continue;
+		}
+
+		const FUniquePlayerID& UniquePlayerID = CastedPlayerState->GetUniquePlayerID();
+
+#if DO_ENSURE
+		ensureAlways(UniquePlayerID.IsValid());
+#endif
+
+		if (CheckedInPlayers.Contains(UniquePlayerID))
+		{
+			NotifyPlayerCheckedIn(CastedPlayerState);
+		}
+
+		if (PlayersThatMissedAnEvent.Contains(UniquePlayerID))
+		{
+			NotifyPlayerMissedEvent(CastedPlayerState);
+		}
+	}
 }

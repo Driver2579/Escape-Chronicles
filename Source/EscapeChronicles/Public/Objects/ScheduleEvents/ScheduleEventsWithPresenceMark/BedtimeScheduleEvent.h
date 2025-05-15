@@ -18,11 +18,24 @@ class ESCAPECHRONICLES_API UBedtimeScheduleEvent : public UScheduleEventWithPres
 public:
 	UBedtimeScheduleEvent();
 
+	// Should be used when the game is saved
+	FBedtimeScheduleEventSaveData GetBedtimeScheduleEventSaveData() const;
+
+	// Should be called when the game is loaded
+	void LoadBedtimeScheduleEventFromSaveData(const FBedtimeScheduleEventSaveData& SaveData);
+
 protected:
 	virtual void OnEventStarted(const bool bStartPaused) override;
 
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const override;
+
+	// TODO: Close the door on lock when the player is checked in
+
+	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
+		const FGameplayDateTime& NewDateTime);
+
+	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) override;
 
 	virtual void OnEventEnded() override;
 
@@ -31,6 +44,23 @@ private:
 
 	void OnPrisonerChamberZoneOwningPlayerInitialized(UPlayerOwnershipComponent* PlayerOwnershipComponent,
 		const FUniquePlayerID& OwningPlayer, const FPlayerOwnershipComponentGroup& Group);
+
+	FGameplayDateTime EventStartDateTime;
+	FDelegateHandle OnCurrentGameDateTimeUpdatedDelegateHandle;
+
+	/**
+	 * The time players have to check in after the event started. If some of the real players don't check in within this
+	 * time, an alert will be started for them.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category="Alert")
+	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
+
+	/**
+	 * An event to start if the players don't check in within the time limit. Expected to be an alert event.
+	 * @remark MissedEventGameplayEffectClass must add the Status_CheckedIn tag to the player for this to work!
+	 */
+	UPROPERTY(EditDefaultsOnly, Category="Alert")
+	FScheduleEventData AlertEventData;
 
 	void UnregisterOnOwningPlayerInitializedDelegates();
 };

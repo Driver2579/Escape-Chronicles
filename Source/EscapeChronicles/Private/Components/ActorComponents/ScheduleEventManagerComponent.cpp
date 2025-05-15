@@ -5,6 +5,7 @@
 #include "Engine/AssetManager.h"
 #include "GameState/EscapeChroniclesGameState.h"
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
+#include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/BedtimeScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/ScheduleEventWithPresenceMark.h"
 
 UScheduleEventManagerComponent::UScheduleEventManagerComponent()
@@ -197,22 +198,6 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	EventData.SetEventInstance(EventInstance);
 	EventInstance->SetEventData(EventData);
 
-	UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark = Cast<UScheduleEventWithPresenceMark>(EventInstance);
-
-	/**
-	 * Try to find the save data for the event if it's an event with a presence mark and apply it before we start an
-	 * event if the save data was found.
-	 */
-	if (ScheduleEventWithPresenceMark)
-	{
-		const FScheduleEventWithPresenceMarkSaveData* SaveData = SavedEventsWithPresenceMark.Find(EventData.EventTag);
-
-		if (SaveData)
-		{
-			ScheduleEventWithPresenceMark->SetCheckedInPlayers(SaveData->CheckedInPlayers);
-		}
-	}
-
 	// Always start the event when it's created, but start it paused if the event is not the current active one
 	if (EventData == GetCurrentActiveEventData())
 	{
@@ -221,6 +206,37 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	else
 	{
 		EventInstance->StartEvent(true);
+	}
+
+	// TODO: The next logic is bad. We should add support for saving custom objects into byte data.
+
+	// Try to find the save data for the event if it's an event that can be saved and apply it if it was found
+	if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
+	{
+		UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark = CastChecked<UScheduleEventWithPresenceMark>(
+			EventInstance);
+
+		const FScheduleEventWithPresenceMarkSaveData* ScheduleEventWithPresenceMarkSaveData =
+			SavedEventsWithPresenceMark.Find(EventData.EventTag);
+
+		if (ScheduleEventWithPresenceMarkSaveData)
+		{
+			ScheduleEventWithPresenceMark->LoadScheduleEventWithPresenceMarkFromSaveData(
+				*ScheduleEventWithPresenceMarkSaveData);
+		}
+
+		// UBedtimeScheduleEvent is a child of UScheduleEventWithPresenceMark
+		if (EventInstance->IsA<UBedtimeScheduleEvent>())
+		{
+			UBedtimeScheduleEvent* BedtimeScheduleEvent = CastChecked<UBedtimeScheduleEvent>(EventInstance);
+
+			const FBedtimeScheduleEventSaveData* BedtimeSaveData = SavedBedtimeScheduleEvents.Find(EventData.EventTag);
+
+			if (BedtimeSaveData)
+			{
+				BedtimeScheduleEvent->LoadBedtimeScheduleEventFromSaveData(*BedtimeSaveData);
+			}
+		}
 	}
 }
 
@@ -331,21 +347,30 @@ void UScheduleEventManagerComponent::UnloadOrCancelLoadingEventInstance(const FS
 
 void UScheduleEventManagerComponent::OnPreSaveObject()
 {
+	// TODO: The next logic is bad. We should add support for saving custom objects into byte data.
+
+	// Save all events that can be saved
 	for (const FScheduleEventData& EventData : EventsStack)
 	{
-		const UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark = Cast<UScheduleEventWithPresenceMark>(
-			EventData.GetEventInstance());
+		UScheduleEvent* EventInstance = EventData.GetEventInstance();
 
-		if (!IsValid(ScheduleEventWithPresenceMark))
+		if (IsValid(EventInstance) && EventInstance->IsA<UScheduleEventWithPresenceMark>())
 		{
-			continue;
+			const UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark =
+				CastChecked<UScheduleEventWithPresenceMark>(EventInstance);
+
+			SavedEventsWithPresenceMark.Add(EventData.EventTag,
+				ScheduleEventWithPresenceMark->GetScheduleEventWithPresenceMarkSaveData());
+
+			// UBedtimeScheduleEvent is a child of UScheduleEventWithPresenceMark
+			if (EventInstance->IsA<UBedtimeScheduleEvent>())
+			{
+				const UBedtimeScheduleEvent* BedtimeScheduleEvent = CastChecked<UBedtimeScheduleEvent>(EventInstance);
+
+				SavedBedtimeScheduleEvents.Add(EventData.EventTag,
+					BedtimeScheduleEvent->GetBedtimeScheduleEventSaveData());
+			}
 		}
-
-		// Save the checked-in players of the event
-		FScheduleEventWithPresenceMarkSaveData SaveData;
-		SaveData.CheckedInPlayers = ScheduleEventWithPresenceMark->GetCheckedInPlayers();
-
-		SavedEventsWithPresenceMark.Add(EventData.EventTag, SaveData);
 	}
 }
 

@@ -2,9 +2,11 @@
 
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/BedtimeScheduleEvent.h"
 
+#include "EscapeChroniclesGameplayTags.h"
 #include "Actors/Triggers/PrisonerChamberZone.h"
 #include "Components/BoxComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
+#include "GameState/EscapeChroniclesGameState.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 UBedtimeScheduleEvent::UBedtimeScheduleEvent()
@@ -46,6 +48,20 @@ void UBedtimeScheduleEvent::OnEventStarted(const bool bStartPaused)
 				OnOwningPlayerInitializedDelegateHandle);
 		}
 	}
+
+	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+
+	/**
+	 * If GameState is valid, then we can listen for the game time being updated to start an alert if any player doesn't
+	 * check in within the given time.
+	 */
+	if (ensureAlways(IsValid(GameState)))
+	{
+		EventStartDateTime = GameState->GetCurrentGameDateTime();
+
+		OnCurrentGameDateTimeUpdatedDelegateHandle = GameState->OnCurrentGameDateTimeUpdated.AddUObject(this,
+			&ThisClass::OnCurrentGameDateTimeUpdated);
+	}
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
@@ -53,8 +69,15 @@ void UBedtimeScheduleEvent::OnPrisonerChamberZoneOwningPlayerInitialized(
 	UPlayerOwnershipComponent* PlayerOwnershipComponent, const FUniquePlayerID& OwningPlayer,
 	const FPlayerOwnershipComponentGroup& Group)
 {
-	// Retrigger an overlap for the trigger that got the owning player initialized
-	TriggerBeginOverlapForOverlappingCharacters(PlayerOwnershipComponent->GetOwner());
+	/**
+	 * Make sure the event didn't become paused (or wasn't initially paused when we subscribed to the event) while we
+	 * were waiting for the owning player to be initialized.
+	 */
+	if (!IsPaused())
+	{
+		// Retrigger an overlap for the trigger that got the owning player initialized
+		TriggerBeginOverlapForOverlappingCharacters(PlayerOwnershipComponent->GetOwner());
+	}
 
 	// Stop listening for the event and remove its handle because we don't need these anymore
 	PlayerOwnershipComponent->Unregister_OnOwningPlayerInitialized(
@@ -103,10 +126,98 @@ bool UBedtimeScheduleEvent::CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		PrisonerChamberZone->GetInnerZoneBoxComponent()->IsOverlappingActor(PawnToCheckIn);
 }
 
+void UBedtimeScheduleEvent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
+	const FGameplayDateTime& NewDateTime)
+{
+	// Adjust the EventStartDateTime if the NewDateTime is earlier than the OldDateTime
+	if (NewDateTime < OldDateTime)
+	{
+		EventStartDateTime -= OldDateTime - NewDateTime;
+
+		// No need to continue because the next logic will fail anyway. It can succeed only if the time got increased.
+		return;
+	}
+
+	/**
+	 * We can start an alert only in case the event is active and not paused, and if enough time has passed since the
+	 * event start to start an alert.
+	 */
+	const bool bCanStartAlert = !IsPaused() && IsActive() &&
+		NewDateTime.ToTotalMinutes() - EventStartDateTime.ToTotalMinutes() > TimeForPlayersToCheckIn.ToTotalMinutes();
+
+	if (!bCanStartAlert)
+	{
+		return;
+	}
+
+	// This will automatically start an alert if any player still didn't check in
+	CollectPlayersThatMissedAnEvent();
+
+	/**
+	 * Unsubscribe from the event because we don't need it anymore. We can be sure the game state is valid here because
+	 * this function is called by the delegate from the game state.
+	 */
+	GetWorld()->GetGameStateChecked<AEscapeChroniclesGameState>()->OnCurrentGameDateTimeUpdated.Remove(
+		OnCurrentGameDateTimeUpdatedDelegateHandle);
+}
+
+FBedtimeScheduleEventSaveData UBedtimeScheduleEvent::GetBedtimeScheduleEventSaveData() const
+{
+	return FBedtimeScheduleEventSaveData(EventStartDateTime);
+}
+
+void UBedtimeScheduleEvent::LoadBedtimeScheduleEventFromSaveData(const FBedtimeScheduleEventSaveData& SaveData)
+{
+#if DO_ENSURE
+	ensureAlways(IsActive());
+#endif
+
+	EventStartDateTime = SaveData.EventStartDateTime;
+
+	// Don't do anything with loaded data if the event is paused
+	if (IsPaused())
+	{
+		return;
+	}
+
+	const AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+
+	// Call OnCurrentGameDateTimeUpdated to update everything related to the EventStartDateTime
+	if (ensureAlways(IsValid(GameState)))
+	{
+		OnCurrentGameDateTimeUpdated(FGameplayDateTime(), GameState->GetCurrentGameDateTime());
+	}
+}
+
+void UBedtimeScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent)
+{
+	Super::NotifyPlayerMissedEvent(PlayerThatMissedAnEvent);
+
+#if DO_ENSURE
+	ensureAlways(AlertEventData.IsValid());
+	ensureAlways(AlertEventData.EventTag == EscapeChroniclesGameplayTags::ScheduleEvent_Alert);
+#endif
+
+	UScheduleEventManagerComponent* ScheduleEventManagerComponent = GetScheduleEventManagerComponent();
+
+	// Start an alert if the player missed an event but only if it isn't already started
+	if (!ScheduleEventManagerComponent->IsEventInStack(AlertEventData))
+	{
+		ScheduleEventManagerComponent->PushEvent(AlertEventData);
+	}
+}
+
 void UBedtimeScheduleEvent::OnEventEnded()
 {
 	// We don't need to listen for the owning player initialization when the event ends, so unsubscribe from them
 	UnregisterOnOwningPlayerInitializedDelegates();
+
+	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+
+	if (IsValid(GameState))
+	{
+		GameState->OnCurrentGameDateTimeUpdated.Remove(OnCurrentGameDateTimeUpdatedDelegateHandle);
+	}
 
 	Super::OnEventEnded();
 }

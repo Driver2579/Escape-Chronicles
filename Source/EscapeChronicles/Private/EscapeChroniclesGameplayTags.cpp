@@ -64,4 +64,8 @@ namespace EscapeChroniclesGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_CheckedIn, "Status.CheckedIn",
 		"The character has checked in during the scheduled event");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Wanted, "Status.Wanted",
+		"The character is wanted during the alert. Keep in mind that this tag may still be present even if alert is "
+			"paused.");
 }

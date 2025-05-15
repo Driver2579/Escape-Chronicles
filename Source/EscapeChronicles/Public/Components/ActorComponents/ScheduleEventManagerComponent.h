@@ -7,6 +7,7 @@
 #include "Interfaces/Saveable.h"
 #include "Common/Structs/ScheduleEventData.h"
 #include "Common/Structs/GameplayDateTime.h"
+#include "Common/Structs/SaveData/BedtimeScheduleEventSaveData.h"
 #include "Common/Structs/SaveData/ScheduleEventWithPresenceMarkSaveData.h"
 #include "ScheduleEventManagerComponent.generated.h"
 
@@ -60,6 +61,14 @@ public:
 #endif
 
 		return EventsStack.Last();
+	}
+
+	/**
+	 * @return Whether the given event already exists in the stack (either active or paused).
+	 */
+	bool IsEventInStack(const FScheduleEventData& EventData) const
+	{
+		return EventsStack.Contains(EventData);
 	}
 
 	/**
@@ -141,6 +150,17 @@ private:
 	 */
 	UPROPERTY(Transient, SaveGame)
 	TMap<FGameplayTag, FScheduleEventWithPresenceMarkSaveData> SavedEventsWithPresenceMark;
+
+	/**
+	 * Save data for bedtime schedule events. All newly created events with presence mark should check if they are in
+	 * this list and get the data from it if they are.
+	 * @tparam KeyType Event tag of the event with a UBedtimeScheduleEvent instance's class.
+	 * @tparam ValueType Save data for the event.
+	 * @remark The event should be removed from this list once it's ended to avoid new events using the save data for
+	 * old event.
+	 */
+	UPROPERTY(Transient, SaveGame)
+	TMap<FGameplayTag, FBedtimeScheduleEventSaveData> SavedBedtimeScheduleEvents;
 
 	/**
 	 * @tparam KeyType An event that has a class that is currently being loaded or that is already loaded.
