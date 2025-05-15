@@ -324,6 +324,12 @@ void UScheduleEventWithPresenceMark::ApplyCheckedInGameplayEffect(const AEscapeC
 	check(IsValid(AbilitySystemComponent));
 #endif
 
+	// Make sure we don't apply the same gameplay effect to the same player multiple times
+	if (CheckedInGameplayEffectHandles.Contains(AbilitySystemComponent))
+	{
+		return;
+	}
+
 	// Apply the gameplay effect and remember its handle
 	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
 		CheckedInGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1,
