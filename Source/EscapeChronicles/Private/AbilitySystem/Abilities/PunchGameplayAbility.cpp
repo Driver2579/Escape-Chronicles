@@ -6,6 +6,7 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Components/SphereComponent.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
 
@@ -28,8 +29,6 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		
 		return;
 	}
-
-	LoadDamagingGameplayEffects();
 	
 	if (LastPlayedMontageIndex == MontagesQueue.Num() - 1)
 	{
@@ -39,59 +38,38 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	{
 		LoadAndPlayAnimMontage(LastPlayedMontageIndex + 1);
 	}
+
+	if (!HasAuthority(&ActivationInfo))
+	{
+		return;
+	}
 	
-	// === Wait gameplay event ===
-
-	const FGameplayEventTagMulticastDelegate::FDelegate OnWaitGameplayEventDelegate =
-		FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnWaitGameplayEventSent);
-
-	WaitGameplayEventDelegateHandle = OnWaitGameplayEventDelegate.GetHandle();
+	LoadGameplayEffects();
+	
+	const FGameplayEventTagMulticastDelegate::FDelegate OnStartDamageFrameEventTagDelegate =
+		FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnStartDamageFrame);
 	
 	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
-		FGameplayTagContainer(WaitGameplayEventTag), OnWaitGameplayEventDelegate);
-}
+		FGameplayTagContainer(StartDamageFrameEventTag), OnStartDamageFrameEventTagDelegate);
 
-void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
-	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
-	bool bReplicateEndAbility, bool bWasCancelled)
-{
-	if (ActorInfo->AbilitySystemComponent.IsValid())
-	{
-		ActorInfo->AbilitySystemComponent->RemoveGameplayEventTagContainerDelegate(
-			FGameplayTagContainer(WaitGameplayEventTag), WaitGameplayEventDelegateHandle);
-	}
-
-	if (LoadCurrentAnimMontageHandle.IsValid())
-	{
-		LoadCurrentAnimMontageHandle->CancelHandle();
-		LoadCurrentAnimMontageHandle.Reset();
-	}
-	
-	if (LoadSuccessfulDamagingEffectHandle.IsValid())
-	{
-		LoadSuccessfulDamagingEffectHandle->CancelHandle();
-		LoadSuccessfulDamagingEffectHandle.Reset();
-	}
-
-	if (LoadUnsuccessfulDamagingEffectHandle.IsValid())
-	{
-		LoadUnsuccessfulDamagingEffectHandle->CancelHandle();
-		LoadUnsuccessfulDamagingEffectHandle.Reset();
-	}
-
-	InstigatorAbilitySystemComponent = nullptr;
-	TargetAbilitySystemComponent = nullptr;
-	DesiredToApplyGameplayEffectClass.Reset();
-	WasEventCalledBeforeEffectLoaded = false;
-	
-	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+	OnStartDamageFrameEventTagDelegateHandle = OnStartDamageFrameEventTagDelegate.GetHandle();
 }
 
 void UPunchGameplayAbility::LoadAndPlayAnimMontage(const int32 Index)
 {
-	const TSoftObjectPtr<UAnimMontage>& NeededMontage = MontagesQueue[Index];
+	if (!ensureAlways(IsValid(CurrentActorInfo->AvatarActor.Get())))
+	{
+		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
+		
+		return;
+	}
 	
-	if (!ensureAlways(!NeededMontage.IsNull()))
+	MeleeHitComponent = CurrentActorInfo->AvatarActor->FindComponentByTag<UShapeComponent>(
+		MontagesQueue[Index].DamagingComponentTag);
+	
+	const TSoftObjectPtr<UAnimMontage>& DesiredMontage = MontagesQueue[Index].AnimMontage;
+	
+	if (!ensureAlways(!DesiredMontage.IsNull()))
 	{      
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 
@@ -99,25 +77,19 @@ void UPunchGameplayAbility::LoadAndPlayAnimMontage(const int32 Index)
 	}
 
 	LoadCurrentAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		NeededMontage.ToSoftObjectPath(), 
+		DesiredMontage.ToSoftObjectPath(), 
 		FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimMontageLoaded, Index));
 }
 
 void UPunchGameplayAbility::OnAnimMontageLoaded(const int32 Index)
 {
-	const TSoftObjectPtr<UAnimMontage>& AnimMontage = MontagesQueue[Index];
+	const TSoftObjectPtr<UAnimMontage>& AnimMontage = MontagesQueue[Index].AnimMontage;
 	
 #if DO_CHECK
 	check(CurrentActorInfo);
 	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
 	check(AnimMontage.IsValid());
 #endif
-	
-#if DO_ENSURE
-	ensureAlways(WaitGameplayEventTag.IsValid());
-#endif
-
-	// === Play the animation ===
 	
 	CurrentActorInfo->AbilitySystemComponent->PlayMontage(this, CurrentActivationInfo, AnimMontage.Get(), 1);
 	
@@ -133,41 +105,62 @@ void UPunchGameplayAbility::OnAnimMontageLoaded(const int32 Index)
 	LastPlayedMontageIndex = Index;
 }
 
-void UPunchGameplayAbility::LoadDamagingGameplayEffects()
+void UPunchGameplayAbility::LoadGameplayEffects()
 {
-	if (!ensureAlways(!SuccessfulDamagingEffectClass.IsNull() && !UnsuccessfulDamagingEffectClass.IsNull()))
+	if (!ensureAlways(!SuccessfulPunchEffectClass.IsNull() && !UnsuccessfulPunchEffectClass.IsNull()))
 	{      
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 
 		return;
 	}
 	
-	LoadSuccessfulDamagingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		SuccessfulDamagingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([this]
+	LoadSuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		SuccessfulPunchEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([this]
 		{
-			if (WasEventCalledBeforeEffectLoaded && DesiredToApplyGameplayEffectClass == SuccessfulDamagingEffectClass)
+			if (WasHitBeforeEffectLoaded && DesiredToApplyGameplayEffectClass == SuccessfulPunchEffectClass)
 			{
 				ApplyDesiredGameplayEffect();
 			}
 		}));
 
-	LoadUnsuccessfulDamagingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		UnsuccessfulDamagingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([this]
+	LoadUnsuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		UnsuccessfulPunchEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateLambda([this]
 		{
-			if (WasEventCalledBeforeEffectLoaded && DesiredToApplyGameplayEffectClass == UnsuccessfulDamagingEffectClass)
+			if (WasHitBeforeEffectLoaded && DesiredToApplyGameplayEffectClass == UnsuccessfulPunchEffectClass)
 			{
 				ApplyDesiredGameplayEffect();
 			}
 		}));
 }
 
-void UPunchGameplayAbility::OnWaitGameplayEventSent(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
+void UPunchGameplayAbility::OnStartDamageFrame(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
 {
+	MeleeHitComponent->OnComponentBeginOverlap.AddDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
+	
+	const FGameplayEventTagMulticastDelegate::FDelegate OnEndDamageFrameEventTagDelegate =
+	FGameplayEventTagMulticastDelegate::FDelegate::CreateUObject(this, &ThisClass::OnEndDamageFrame);
+	
+	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
+		FGameplayTagContainer(EndDamageFrameEventTag), OnEndDamageFrameEventTagDelegate);
+
+	OnEndDamageFrameEventTagDelegateHandle = OnEndDamageFrameEventTagDelegate.GetHandle();
+}
+
+void UPunchGameplayAbility::OnEndDamageFrame(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
+{
+	MeleeHitComponent->OnComponentBeginOverlap.RemoveDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
+}
+
+void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	MeleeHitComponent->OnComponentBeginOverlap.RemoveDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
+	
 	InstigatorAbilitySystemComponent =
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GameplayEventData->Instigator);
+		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CurrentActorInfo->AvatarActor.Get());
 	
 	TargetAbilitySystemComponent =
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GameplayEventData->Target);
+		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor->GetOwner());
 	
 	if (!IsValid(InstigatorAbilitySystemComponent) || !IsValid(TargetAbilitySystemComponent))
 	{
@@ -176,24 +169,23 @@ void UPunchGameplayAbility::OnWaitGameplayEventSent(FGameplayTag GameplayTag, co
 		return;
 	}
 
-	// Select the desired effect
-	if (TargetAbilitySystemComponent->HasMatchingGameplayTag(BlockingPunchesTag))
+	if (!TargetAbilitySystemComponent->HasMatchingGameplayTag(BlockingPunchesTag))
 	{
-		DesiredToApplyGameplayEffectClass = SuccessfulDamagingEffectClass;
+		DesiredToApplyGameplayEffectClass = SuccessfulPunchEffectClass;
 	}
 	else
 	{
-		DesiredToApplyGameplayEffectClass = UnsuccessfulDamagingEffectClass;
+		DesiredToApplyGameplayEffectClass = UnsuccessfulPunchEffectClass;
 	}
 
-	if (!DesiredToApplyGameplayEffectClass.IsValid())
+	if (DesiredToApplyGameplayEffectClass.IsValid())
 	{
-		WasEventCalledBeforeEffectLoaded = true;
-		
-		return;
+		ApplyDesiredGameplayEffect();
 	}
-	
-	ApplyDesiredGameplayEffect();
+	else
+	{
+		WasHitBeforeEffectLoaded = true;
+	}
 }
 
 void UPunchGameplayAbility::ApplyDesiredGameplayEffect()
@@ -212,3 +204,41 @@ void UPunchGameplayAbility::ApplyDesiredGameplayEffect()
 		TargetAbilitySystemComponent);
 }
 
+void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		ActorInfo->AbilitySystemComponent->RemoveGameplayEventTagContainerDelegate(
+			FGameplayTagContainer(StartDamageFrameEventTag), OnStartDamageFrameEventTagDelegateHandle);
+
+		ActorInfo->AbilitySystemComponent->RemoveGameplayEventTagContainerDelegate(
+			FGameplayTagContainer(EndDamageFrameEventTag), OnEndDamageFrameEventTagDelegateHandle);
+	}
+
+	if (LoadCurrentAnimMontageHandle.IsValid())
+	{
+		LoadCurrentAnimMontageHandle->CancelHandle();
+		LoadCurrentAnimMontageHandle.Reset();
+	}
+	
+	if (LoadSuccessfulPunchEffectHandle.IsValid())
+	{
+		LoadSuccessfulPunchEffectHandle->CancelHandle();
+		LoadSuccessfulPunchEffectHandle.Reset();
+	}
+
+	if (LoadUnsuccessfulPunchEffectHandle.IsValid())
+	{
+		LoadUnsuccessfulPunchEffectHandle->CancelHandle();
+		LoadUnsuccessfulPunchEffectHandle.Reset();
+	}
+
+	InstigatorAbilitySystemComponent = nullptr;
+	TargetAbilitySystemComponent = nullptr;
+	DesiredToApplyGameplayEffectClass.Reset();
+	WasHitBeforeEffectLoaded = false;
+	
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}

@@ -8,6 +8,18 @@
 
 struct FStreamableHandle;
 
+USTRUCT(BlueprintType)
+struct FPunchConfiguration
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	FName DamagingComponentTag;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSoftObjectPtr<UAnimMontage> AnimMontage;
+};
+
 UCLASS()
 class ESCAPECHRONICLES_API UPunchGameplayAbility : public UEscapeChroniclesGameplayAbility
 {
@@ -21,41 +33,53 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 private:
+
 	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag WaitGameplayEventTag;
+	FGameplayTag StartDamageFrameEventTag;
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag EndDamageFrameEventTag;
 	
 	UPROPERTY(EditDefaultsOnly)
-	TArray<TSoftObjectPtr<UAnimMontage>> MontagesQueue;
+	TArray<FPunchConfiguration> MontagesQueue;
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSoftClassPtr<UGameplayEffect> SuccessfulPunchEffectClass;
 
 	UPROPERTY(EditDefaultsOnly)
-	TSoftClassPtr<UGameplayEffect> SuccessfulDamagingEffectClass;
-
-	UPROPERTY(EditDefaultsOnly)
-	TSoftClassPtr<UGameplayEffect> UnsuccessfulDamagingEffectClass;
+	TSoftClassPtr<UGameplayEffect> UnsuccessfulPunchEffectClass;
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag BlockingPunchesTag; 
 	
 	int32 LastPlayedMontageIndex = 0;
 
+	TWeakObjectPtr<UShapeComponent> MeleeHitComponent;
+
 	void LoadAndPlayAnimMontage(int32 Index);
-	void LoadDamagingGameplayEffects();
-	
+	void LoadGameplayEffects();
+
 	void OnAnimMontageLoaded(const int32 Index);
+	
+	void OnStartDamageFrame(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData);
+	void OnEndDamageFrame(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData);
 
-	void OnWaitGameplayEventSent(FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData);
+	UFUNCTION()
+	void OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	FDelegateHandle OnStartDamageFrameEventTagDelegateHandle;
+	FDelegateHandle OnEndDamageFrameEventTagDelegateHandle;
 
-	// Handles
 	TSharedPtr<FStreamableHandle> LoadCurrentAnimMontageHandle;
-	TSharedPtr<FStreamableHandle> LoadSuccessfulDamagingEffectHandle;
-	TSharedPtr<FStreamableHandle> LoadUnsuccessfulDamagingEffectHandle;
-	FDelegateHandle WaitGameplayEventDelegateHandle;
-
-	bool WasEventCalledBeforeEffectLoaded = false;
+	TSharedPtr<FStreamableHandle> LoadSuccessfulPunchEffectHandle;
+	TSharedPtr<FStreamableHandle> LoadUnsuccessfulPunchEffectHandle;
 
 	TSoftClassPtr<UGameplayEffect> DesiredToApplyGameplayEffectClass;
 	TObjectPtr<UAbilitySystemComponent> InstigatorAbilitySystemComponent;
 	TObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent;
-	
+
 	void ApplyDesiredGameplayEffect();
+	
+	bool WasHitBeforeEffectLoaded = false;
 };
