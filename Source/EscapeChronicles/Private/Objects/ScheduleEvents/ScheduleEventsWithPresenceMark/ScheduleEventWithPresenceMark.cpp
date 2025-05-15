@@ -394,10 +394,10 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 			const AEscapeChroniclesCharacter* Character = *It;
 
 			// Get the PlayerState of the character to get his FUniquePlayerID
-			AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerStateChecked<AEscapeChroniclesPlayerState>();
+			AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
 
-			// Call OnPlayerMissedEvent for each player that didn't check in during the event
-			if (!CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
+			// Call OnPlayerMissedEvent for each valid player that didn't check in during the event
+			if (IsValid(PlayerState) && !CheckedInPlayers.Contains(PlayerState->GetUniquePlayerID()))
 			{
 				NotifyPlayerMissedEvent(PlayerState);
 			}
