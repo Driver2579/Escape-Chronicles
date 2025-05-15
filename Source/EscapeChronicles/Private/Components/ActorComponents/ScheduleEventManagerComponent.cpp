@@ -20,9 +20,9 @@ void UScheduleEventManagerComponent::BeginPlay()
 
 	if (ensureAlways(IsValid(GameState)))
 	{
-		OnCurrentDateTimeUpdated(FGameplayDateTime(), GameState->GetCurrentGameDateTime());
+		OnCurrentGameDateTimeUpdated(FGameplayDateTime(), GameState->GetCurrentGameDateTime());
 
-		GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentDateTimeUpdated);
+		GameState->OnCurrentGameDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentGameDateTimeUpdated);
 	}
 }
 
@@ -39,7 +39,7 @@ void UScheduleEventManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayR
 	Super::EndPlay(EndPlayReason);
 }
 
-void UScheduleEventManagerComponent::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime,
+void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
 	const FGameplayDateTime& NewDateTime)
 {
 	// Don't do anything if there are no scheduled events

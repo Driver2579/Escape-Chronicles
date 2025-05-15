@@ -66,10 +66,10 @@ void ASky::BeginPlay()
 	// Force set the sun rotation for the first time
 	UpdateSunPitchRotation(0);
 
-	GameState->OnCurrentDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentDateTimeUpdated);
+	GameState->OnCurrentGameDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentGameDateTimeUpdated);
 }
 
-void ASky::OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime)
+void ASky::OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime)
 {
 	SetCurrentTimeAndPredictNextOne(NewDateTime.Time);
 
@@ -93,7 +93,7 @@ void ASky::Tick(float DeltaTime)
 
 	UpdateSunPitchRotation(DeltaSecondsSinceLastTimeUpdate);
 
-	// Update the seconds since last time update (this is going to be reset in the OnCurrentDateTimeUpdated)
+	// Update the seconds since last time update (this is going to be reset in the OnCurrentGameDateTimeUpdated)
 	DeltaSecondsSinceLastTimeUpdate += DeltaTime;
 }
 

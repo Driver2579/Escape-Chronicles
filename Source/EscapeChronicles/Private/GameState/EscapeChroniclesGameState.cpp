@@ -89,7 +89,7 @@ void AEscapeChroniclesGameState::SetCurrentGameDateTime(const FGameplayDateTime&
 	CurrentGameDateTime = NewGameDateTime;
 
 	// Broadcast the changes
-	OnCurrentDateTimeUpdated.Broadcast(OldGameDateTime, NewGameDateTime);
+	OnCurrentGameDateTimeUpdated.Broadcast(OldGameDateTime, NewGameDateTime);
 }
 
 void AEscapeChroniclesGameState::TickGameDateTime()
@@ -98,7 +98,7 @@ void AEscapeChroniclesGameState::TickGameDateTime()
 	const FGameplayDateTime OldGameDateTime = CurrentGameDateTime++;
 
 	// Broadcast the changes
-	OnCurrentDateTimeUpdated.Broadcast(OldGameDateTime, CurrentGameDateTime);
+	OnCurrentGameDateTimeUpdated.Broadcast(OldGameDateTime, CurrentGameDateTime);
 
 	// TODO: Remove this once the UI is ready
 	UE_LOG(LogTemp, Display, TEXT("Current game time: Day: %d, Hour: %d, Minute: %d"),
@@ -107,7 +107,7 @@ void AEscapeChroniclesGameState::TickGameDateTime()
 
 void AEscapeChroniclesGameState::OnRep_CurrentDateTime(const FGameplayDateTime& OldValue)
 {
-	OnCurrentDateTimeUpdated.Broadcast(OldValue, CurrentGameDateTime);
+	OnCurrentGameDateTimeUpdated.Broadcast(OldValue, CurrentGameDateTime);
 
 	// Restart the tick GameTime timer to synchronize the update time with the server
 	RestartTickGameTimeTimer();
@@ -167,7 +167,7 @@ void AEscapeChroniclesGameState::OnPostLoadObject()
 #endif
 
 	// Broadcast the old and the current time to everyone after loading the game
-	OnCurrentDateTimeUpdated.Broadcast(*GameDateTimeBeforeLoading, CurrentGameDateTime);
+	OnCurrentGameDateTimeUpdated.Broadcast(*GameDateTimeBeforeLoading, CurrentGameDateTime);
 
 	// Clear the memory
 	GameDateTimeBeforeLoading.Reset();

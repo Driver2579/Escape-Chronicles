@@ -91,7 +91,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// Handles switching between scheduled events
-	virtual void OnCurrentDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime);
+	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime);
 
 	virtual void OnPreSaveObject() override;
 

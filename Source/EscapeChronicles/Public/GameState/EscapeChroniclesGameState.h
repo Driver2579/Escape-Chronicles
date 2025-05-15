@@ -28,10 +28,10 @@ public:
 	// Authority only
 	void SetCurrentGameDateTime(const FGameplayDateTime& NewGameDateTime);
 
-	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCurrentDateTimeUpdatedDelegate, const FGameplayDateTime& OldDateTime,
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnCurrentGameDateTimeUpdatedDelegate, const FGameplayDateTime& OldDateTime,
 		const FGameplayDateTime& NewDateTime);
 
-	FOnCurrentDateTimeUpdatedDelegate OnCurrentDateTimeUpdated;
+	FOnCurrentGameDateTimeUpdatedDelegate OnCurrentGameDateTimeUpdated;
 
 	const FScheduleEventData& GetCurrentScheduledEventData() const { return CurrentScheduledEventData; }
 	const FScheduleEventData& GetCurrentActiveEventData() const { return CurrentActiveEventData; }
