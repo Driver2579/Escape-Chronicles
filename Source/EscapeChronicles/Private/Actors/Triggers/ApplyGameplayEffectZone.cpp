@@ -4,7 +4,9 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Engine/AssetManager.h"
+#include "GameFramework/PlayerState.h"
 
 AApplyGameplayEffectZone::AApplyGameplayEffectZone()
 {
@@ -46,13 +48,13 @@ void AApplyGameplayEffectZone::OnGameplayEffectClassLoaded()
 	 * Apply gameplay effect to all actors that are currently overlapping with the zone once the gameplay effect class
 	 * is loaded.
 	 */
-	for (const AActor* OverlappingActor : OverlappingActors)
+	for (AActor* OverlappingActor : OverlappingActors)
 	{
 		ApplyGameplayEffectToActor(OverlappingActor);
 	}
 }
 
-void AApplyGameplayEffectZone::ApplyGameplayEffectToActor(const AActor* Actor)
+void AApplyGameplayEffectZone::ApplyGameplayEffectToActor(AActor* Actor)
 {
 #if DO_CHECK
 	check(GameplayEffectClass.IsValid());
@@ -61,20 +63,66 @@ void AApplyGameplayEffectZone::ApplyGameplayEffectToActor(const AActor* Actor)
 	UAbilitySystemComponent* AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Actor,
 		false);
 
-	if (!IsValid(AbilitySystemComponent))
+	// Apply gameplay effect already if we found the ASC
+	if (IsValid(AbilitySystemComponent))
+	{
+		ApplyGameplayEffectChecked(AbilitySystemComponent);
+
+		return;
+	}
+
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(Actor);
+
+	/**
+	 * If we didn't find the ASC now, then it might be a character that has no PlayerState with ASC yet. Wait for
+	 * PlayerState to be initialized in this case.
+	 */
+	if (IsValid(Character))
+	{
+		const FDelegateHandle DelegateHandle = Character->OnPlayerStateChangedDelegate.AddUObject(this,
+			&ThisClass::OnCharacterPlayerStateChanged);
+
+		// Remember the delegate handle for this character to unsubscribe from this delegate later
+		OnPlayerStateChangedDelegateHandles.Add(Character, DelegateHandle);
+	}
+}
+
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void AApplyGameplayEffectZone::OnCharacterPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
+{
+	// Don't do anything if we didn't get the new valid PlayerState
+	if (!IsValid(NewPlayerState))
 	{
 		return;
 	}
 
-	// Apply gameplay effect to the actor
-	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
-		GameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, AbilitySystemComponent->MakeEffectContext(),
-		AbilitySystemComponent->ScopedPredictionKey);
+	// Try to get the ASC from a valid PlayerState this time
+	UAbilitySystemComponent* AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
+		NewPlayerState);
+
+	// If we found an ASC, then apply the gameplay effect to it
+	if (IsValid(AbilitySystemComponent))
+	{
+		ApplyGameplayEffectChecked(AbilitySystemComponent);
+	}
 
 	/**
-	 * If we successfully applied the gameplay effect and got a valid handle, then remember it (it will always be
-	 * invalid on clients).
+	 * The character now has a valid PlayerState, so we don't need to listen for the PlayerState changes for this
+	 * character anymore. We can be sure the character is valid here because this function is called by the delegate
+	 * that was broadcast from this character.
 	 */
+	OnPlayerStateChangedDelegateHandles.Remove(
+		CastChecked<AEscapeChroniclesCharacter>(NewPlayerState->GetPawn()));
+}
+
+void AApplyGameplayEffectZone::ApplyGameplayEffectChecked(UAbilitySystemComponent* AbilitySystemComponent)
+{
+	// Apply gameplay effect
+	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+		GameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, AbilitySystemComponent->MakeEffectContext(),
+		AbilitySystemComponent->GetPredictionKeyForNewAction());
+
+	// If we successfully applied the gameplay effect and got a valid handle, then remember it
 	if (ActiveGameplayEffectHandle.IsValid())
 	{
 		ActorsWithActiveGameplayEffects.Add(AbilitySystemComponent, ActiveGameplayEffectHandle);
@@ -93,6 +141,28 @@ void AApplyGameplayEffectZone::NotifyActorEndOverlap(AActor* OtherActor)
 		return;
 	}
 
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
+
+	/**
+	 * If an actor that stopped overlapping the zone is a character, then MAYBE we subscribed to its PlayerState changes
+	 * when we failed to find ASC from this character, so now we need to unsubscribe from it.
+	 */
+	if (IsValid(Character))
+	{
+		const FDelegateHandle* OnPlayerStateChangedDelegateHandle = OnPlayerStateChangedDelegateHandles.Find(
+			Character);
+
+		// Check if we actually subscribed to the delegate
+		if (OnPlayerStateChangedDelegateHandle)
+		{
+			// Unsubscribe from the delegate
+			Character->OnPlayerStateChangedDelegate.Remove(*OnPlayerStateChangedDelegateHandle);
+
+			// Forget about the delegate handle for this character
+			OnPlayerStateChangedDelegateHandles.Remove(Character);
+		}
+	}
+
 	// Try to find a gameplay effect handle for the actor
 	const FActiveGameplayEffectHandle* ActiveGameplayEffectHandle = ActorsWithActiveGameplayEffects.Find(
 		AbilitySystemComponent);
@@ -106,10 +176,13 @@ void AApplyGameplayEffectZone::NotifyActorEndOverlap(AActor* OtherActor)
 	}
 
 	/**
-	 * Remove gameplay effect from the actor (the handle is never valid on clients, so we don't need to check if we have
-	 * an authority because we never get here otherwise).
+	 * Remove gameplay effect from the actor, but first check if we are the server because removing gameplay effects
+	 * predictively on clients is not supported 🤡.
 	 */
-	AbilitySystemComponent->RemoveActiveGameplayEffect(*ActiveGameplayEffectHandle);
+	if (HasAuthority())
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(*ActiveGameplayEffectHandle);
+	}
 
 	// Forget about a gameplay effect handle
 	ActorsWithActiveGameplayEffects.Remove(AbilitySystemComponent);
