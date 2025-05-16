@@ -96,6 +96,8 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 {
 	OnSaveGameCalled.Broadcast();
 
+	bGameSavingInProgress = true;
+
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
 	/**
@@ -377,17 +379,19 @@ void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>
 	Object->Serialize(Ar);
 }
 
-void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess) const
+void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess)
 {
-	if (!bSuccess)
+	if (bSuccess)
+	{
+		OnGameSaved_Internal.Broadcast();
+		OnGameSaved.Broadcast();
+	}
+	else
 	{
 		OnFailedToSaveGame.Broadcast();
-
-		return;
 	}
 
-	OnGameSaved_Internal.Broadcast();
-	OnGameSaved.Broadcast();
+	bGameSavingInProgress = false;
 }
 
 void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync)
@@ -407,6 +411,8 @@ void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, 
 
 		return;
 	}
+
+	bGameLoadingInProgress = true;
 
 	if (bAsync)
 	{
@@ -438,6 +444,9 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Forbid loading the game if level names don't match
 	if (!bLevelNamesMatch)
 	{
+		OnFailedToLoadGame.Broadcast();
+		bGameLoadingInProgress = false;
+
 		return;
 	}
 
@@ -556,6 +565,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// TODO: Also load bots once bots are implemented
 
 	OnGameLoaded.Broadcast();
+
+	bGameLoadingInProgress = false;
 }
 
 bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
