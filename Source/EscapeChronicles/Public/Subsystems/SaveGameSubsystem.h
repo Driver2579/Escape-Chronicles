@@ -32,6 +32,8 @@ public:
 
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
+	bool IsGameSavingInProgress() const { return bGameSavingInProgress; }
+
 	// Saves the game to the autosave slot
 	void SaveGame(const bool bAsync = true)
 	{
@@ -43,6 +45,8 @@ public:
 	 * @remark It's recommended if you load the game first.
 	 */
 	virtual void SaveGame(FString SlotName, const bool bAsync = true);
+
+	bool IsGameLoadingInProgress() const { return bGameLoadingInProgress; }
 
 	// Loads the game from the AutoSaveSlotName. Also, initializes FUniquePlayerIDs for all connected players.
 	void LoadGameAndInitializeUniquePlayerIDs(const bool bAsync = true)
@@ -151,7 +155,10 @@ private:
 
 	FSimpleMulticastDelegate OnGameSaved_Internal;
 
-	void OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess) const;
+	void OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess);
+
+	// Whether the whole game is currently being saved
+	bool bGameSavingInProgress = false;
 
 	void OnLoadingSaveGameObjectFinished(const FString& SlotName, int32 UserIndex, USaveGame* SaveGameObject);
 
@@ -186,4 +193,7 @@ private:
 	 * @return The PlatformUserIndex from the first found ULocalPlayer.
 	 */
 	int32 GetPlatformUserIndex() const;
+
+	// Whether the whole game is currently being loaded
+	bool bGameLoadingInProgress = false;
 };
