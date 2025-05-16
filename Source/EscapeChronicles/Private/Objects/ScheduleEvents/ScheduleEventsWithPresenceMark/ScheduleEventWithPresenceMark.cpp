@@ -529,12 +529,6 @@ void UScheduleEventWithPresenceMark::NotifyPlayerMissedEvent(AEscapeChroniclesPl
 
 	PlayersThatMissedAnEvent.Add(PlayerThatMissedAnEvent->GetUniquePlayerID());
 
-	// Apply the gameplay effect if it's valid
-	if (MissedPlayerGameplayEffectClass.IsValid())
-	{
-		ApplyMissedPlayerGameplayEffect(PlayerThatMissedAnEvent);
-	}
-
 	// Apply the missed gameplay effect to the player if the gameplay effect's class is already loaded
 	if (MissedPlayerGameplayEffectClass.IsValid())
 	{

@@ -88,10 +88,7 @@ protected:
 	 */
 	virtual bool CanPlayerMissEvent(const AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) const;
 
-	/**
-	 * Called by CollectPlayersThatMissedAnEvent for every player that passed the CanPlayerMissEvent check.
-	 * @param PlayerThatMissedAnEvent 
-	 */
+	// Called by CollectPlayersThatMissedAnEvent for every player that passed the CanPlayerMissEvent check
 	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent);
 
 private:
