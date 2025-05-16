@@ -19,9 +19,18 @@ void AApplyGameplayEffectZone::NotifyActorBeginOverlap(AActor* OtherActor)
 	ensureAlways(!GameplayEffectClass.IsNull());
 #endif
 
-	LoadGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		GameplayEffectClass.ToSoftObjectPath(),
-		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectClassLoaded));
+	// Apply gameplay effect to an actor if the gameplay effect is already loaded
+	if (GameplayEffectClass.IsValid())
+	{
+		ApplyGameplayEffectToActor(OtherActor);
+	}
+	// Otherwise, start loading the gameplay effect class but only if we didn't already start loading it before
+	else if (!LoadGameplayEffectClassHandle.IsValid())
+	{
+		LoadGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			GameplayEffectClass.ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectClassLoaded));
+	}
 }
 
 void AApplyGameplayEffectZone::OnGameplayEffectClassLoaded()
