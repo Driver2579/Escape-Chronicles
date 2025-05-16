@@ -413,12 +413,17 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	// Forget about all the triggers we collected
 	PresenceMarkTriggers.Empty();
 
-	if (LoadMissedPlayerGameplayEffectClassHandle.IsValid())
-
 	// Notify about the players that missed an event, but only if the event isn't paused
 	if (!IsPaused())
 	{
 		CollectPlayersThatMissedAnEvent(true);
+	}
+
+	// Unload the missed player gameplay effect class if it's loaded or cancel its loading if it's still loading
+	if (LoadMissedPlayerGameplayEffectClassHandle.IsValid())
+	{
+		LoadMissedPlayerGameplayEffectClassHandle->CancelHandle();
+		LoadMissedPlayerGameplayEffectClassHandle.Reset();
 	}
 
 	// Forget about all the checked-in players
