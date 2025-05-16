@@ -100,7 +100,8 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// Handles switching between scheduled events
-	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime, const FGameplayDateTime& NewDateTime);
+	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
+		const FGameplayDateTime& NewDateTime);
 
 	virtual void OnPreSaveObject() override;
 
@@ -119,15 +120,19 @@ private:
 	 * @param Index Index of the event to remove. Must be valid!
 	 * @param AllowShrinking Whether to allow shrinking the EventsStackArray. If not, then you have to shrink it
 	 * manually.
+	 * @param bRemoveSaveData If true, the save data for the event will be removed. Otherwise, it will be kept.
 	 * @param bStartOrResumeLastEvent If true, the last event before the removed one in the EventsStack will be paused
 	 * if it was paused before or started if it was never started before. This event will be considered as a current
 	 * active event.
 	 */
 	void RemoveEventByIndex(const int32 Index, const EAllowShrinking AllowShrinking = EAllowShrinking::Yes,
-		const bool bStartOrResumeLastEvent = true);
+		const bool bRemoveSaveData = true, const bool bStartOrResumeLastEvent = true);
 
-	// Ends the event, removes it from the EventData and removes the save data for this event if any
-	void EndEvent(FScheduleEventData& EventData);
+	/**
+	 * Ends the event, removes it from the EventData, and removes the save data for this event if any and if it's
+	 * required.
+	 */
+	void EndEvent(FScheduleEventData& EventData, const bool bRemoveSaveData);
 
 	void UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData);
 

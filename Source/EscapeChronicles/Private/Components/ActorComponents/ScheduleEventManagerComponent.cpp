@@ -29,10 +29,10 @@ void UScheduleEventManagerComponent::BeginPlay()
 
 void UScheduleEventManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// Remove and end all events when the component is destroyed
+	// Remove and end all events when the component is destroyed but don't remove their save data
 	for (int32 i = EventsStack.Num() - 1; i >= 0; --i)
 	{
-		RemoveEventByIndex(i, EAllowShrinking::No, false);
+		RemoveEventByIndex(i, EAllowShrinking::No, false, false);
 	}
 
 	EventsStack.Shrink();
@@ -255,14 +255,14 @@ void UScheduleEventManagerComponent::RemoveEvent(const FGameplayTag& EventTag)
 }
 
 void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const EAllowShrinking AllowShrinking,
-	const bool bStartOrResumeLastEvent)
+	const bool bRemoveSaveData, const bool bStartOrResumeLastEvent)
 {
 #if DO_CHECK
 	check(EventsStack.IsValidIndex(Index));
 #endif
 
 	// End and unload the event before removing it
-	EndEvent(EventsStack[Index]);
+	EndEvent(EventsStack[Index], bRemoveSaveData);
 	UnloadOrCancelLoadingEventInstance(EventsStack[Index]);
 
 	// Once everything related to the event is cleared, remove it from the stack
@@ -304,7 +304,7 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 	}
 }
 
-void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData)
+void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, const bool bRemoveSaveData)
 {
 	UScheduleEvent* EventInstance = EventData.GetEventInstance();
 
@@ -313,10 +313,22 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData)
 		return;
 	}
 
-	// If it's an event with a presence mark, then remove its save data if it exists
-	if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
+	// TODO: The next logic is bad. We should add support for saving custom objects into byte data.
+
+	// Remove the save data for the event if required
+	if (bRemoveSaveData)
 	{
-		SavedEventsWithPresenceMark.Remove(EventData.EventTag);
+		// If it's an event with a presence mark, then remove its save data if it exists
+		if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
+		{
+			SavedEventsWithPresenceMark.Remove(EventData.EventTag);
+
+			// UBedtimeScheduleEvent is a child of UScheduleEventWithPresenceMark
+			if (EventInstance->IsA<UBedtimeScheduleEvent>())
+			{
+				SavedBedtimeScheduleEvents.Remove(EventData.EventTag);
+			}
+		}
 	}
 
 	EventInstance->EndEvent();
@@ -390,7 +402,7 @@ void UScheduleEventManagerComponent::OnPostLoadObject()
 	{
 		if (!EventsStack.Contains(EventData))
 		{
-			EndEvent(EventData);
+			EndEvent(EventData, true);
 			UnloadOrCancelLoadingEventInstance(EventData);
 		}
 	}
