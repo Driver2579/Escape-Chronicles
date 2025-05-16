@@ -68,4 +68,9 @@ namespace EscapeChroniclesGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Wanted, "Status.Wanted",
 		"The character is wanted during the alert. Keep in mind that this tag may still be present even if alert is "
 			"paused.");
+
+	// === Other Status tags ===
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_InForbiddenZone, "Status.InForbiddenZone",
+		"The prisoner is in a forbidden zone");
 }

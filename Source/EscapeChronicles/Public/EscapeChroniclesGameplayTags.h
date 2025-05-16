@@ -51,4 +51,8 @@ namespace EscapeChroniclesGameplayTags
 
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_CheckedIn);
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Wanted);
+
+	// === Other Status tags ===
+
+	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_InForbiddenZone);
 }
