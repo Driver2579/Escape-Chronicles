@@ -207,7 +207,7 @@ void UBedtimeScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState
 	}
 }
 
-void UBedtimeScheduleEvent::OnEventEnded()
+void UBedtimeScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
 {
 	// We don't need to listen for the owning player initialization when the event ends, so unsubscribe from them
 	UnregisterOnOwningPlayerInitializedDelegates();
@@ -219,7 +219,7 @@ void UBedtimeScheduleEvent::OnEventEnded()
 		GameState->OnCurrentGameDateTimeUpdated.Remove(OnCurrentGameDateTimeUpdatedDelegateHandle);
 	}
 
-	Super::OnEventEnded();
+	Super::OnEventEnded(EndReason);
 }
 
 void UBedtimeScheduleEvent::UnregisterOnOwningPlayerInitializedDelegates()

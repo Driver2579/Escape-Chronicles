@@ -30,7 +30,7 @@ void UScheduleEvent::StartEvent(const bool bStartPaused)
 	}
 }
 
-void UScheduleEvent::EndEvent()
+void UScheduleEvent::EndEvent(const EScheduleEventEndReason EndReason)
 {
 	// Don't end the event if it wasn't started
 	if (!bActive)
@@ -44,7 +44,7 @@ void UScheduleEvent::EndEvent()
 	// Mark that the event is not active anymore
 	bActive = false;
 
-	OnEventEnded();
+	OnEventEnded(EndReason);
 
 	// Mark that the event isn't paused anymore (because it isn't even active anymore)
 	bPaused = false;

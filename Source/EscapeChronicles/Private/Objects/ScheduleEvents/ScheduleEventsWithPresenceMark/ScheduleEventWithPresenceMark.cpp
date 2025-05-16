@@ -386,7 +386,7 @@ void UScheduleEventWithPresenceMark::OnEventResumed()
 	}
 }
 
-void UScheduleEventWithPresenceMark::OnEventEnded()
+void UScheduleEventWithPresenceMark::OnEventEnded(const EScheduleEventEndReason EndReason)
 {
 	// Unsubscribe from the overlap events
 	for (TWeakObjectPtr PresenceMarkTrigger : PresenceMarkTriggers)
@@ -413,8 +413,11 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 	// Forget about all the triggers we collected
 	PresenceMarkTriggers.Empty();
 
-	// Notify about the players that missed an event, but only if the event isn't paused
-	if (!IsPaused())
+	/**
+	 * Notify about the players that missed an event but only if the event isn't paused and if the event wasn ended
+	 * normally.
+	 */
+	if (!IsPaused() && EndReason == EScheduleEventEndReason::Normal)
 	{
 		CollectPlayersThatMissedAnEvent(true);
 	}
@@ -451,7 +454,7 @@ void UScheduleEventWithPresenceMark::OnEventEnded()
 		LoadCheckedInGameplayEffectHandle.Reset();
 	}
 
-	Super::OnEventEnded();
+	Super::OnEventEnded(EndReason);
 }
 
 void UScheduleEventWithPresenceMark::CollectPlayersThatMissedAnEvent(const bool bForceLoadGameplayEffect)

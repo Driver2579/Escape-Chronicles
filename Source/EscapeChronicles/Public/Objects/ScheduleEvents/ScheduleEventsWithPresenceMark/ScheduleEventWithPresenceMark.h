@@ -70,7 +70,7 @@ protected:
 
 	virtual void OnEventResumed() override;
 
-	virtual void OnEventEnded() override;
+	virtual void OnEventEnded(const EScheduleEventEndReason EndReason) override;
 
 	/**
 	 * Calls NotifyPlayerMissedEvent for all players that didn't check in during the event (didn't overlap with the

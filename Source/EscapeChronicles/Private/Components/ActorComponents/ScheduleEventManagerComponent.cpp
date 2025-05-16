@@ -7,6 +7,7 @@
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/BedtimeScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/ScheduleEventWithPresenceMark.h"
+#include "Subsystems/SaveGameSubsystem.h"
 
 UScheduleEventManagerComponent::UScheduleEventManagerComponent()
 {
@@ -32,7 +33,8 @@ void UScheduleEventManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayR
 	// Remove and end all events when the component is destroyed but don't remove their save data
 	for (int32 i = EventsStack.Num() - 1; i >= 0; --i)
 	{
-		RemoveEventByIndex(i, EAllowShrinking::No, false, false);
+		RemoveEventByIndex(i, EAllowShrinking::No, EScheduleEventEndReason::EndPlay, false,
+			false);
 	}
 
 	EventsStack.Shrink();
@@ -45,6 +47,17 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 {
 	// Don't do anything if there are no scheduled events
 	if (ScheduledEvents.IsEmpty())
+	{
+		return;
+	}
+
+	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
+
+	/**
+	 * Don't do anything if the game is currently loading from save (loading will handle switching events automatically
+	 * and we don't want to conflict with it).
+	 */
+	if (ensureAlways(IsValid(SaveGameSubsystem)) && SaveGameSubsystem->IsGameLoadingInProgress())
 	{
 		return;
 	}
@@ -255,14 +268,14 @@ void UScheduleEventManagerComponent::RemoveEvent(const FGameplayTag& EventTag)
 }
 
 void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const EAllowShrinking AllowShrinking,
-	const bool bRemoveSaveData, const bool bStartOrResumeLastEvent)
+	const EScheduleEventEndReason EndReason, const bool bRemoveSaveData, const bool bStartOrResumeLastEvent)
 {
 #if DO_CHECK
 	check(EventsStack.IsValidIndex(Index));
 #endif
 
 	// End and unload the event before removing it
-	EndEvent(EventsStack[Index], bRemoveSaveData);
+	EndEvent(EventsStack[Index], EndReason, bRemoveSaveData);
 	UnloadOrCancelLoadingEventInstance(EventsStack[Index]);
 
 	// Once everything related to the event is cleared, remove it from the stack
@@ -304,7 +317,8 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 	}
 }
 
-void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, const bool bRemoveSaveData)
+void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, const EScheduleEventEndReason EndReason,
+	const bool bRemoveSaveData)
 {
 	UScheduleEvent* EventInstance = EventData.GetEventInstance();
 
@@ -331,7 +345,7 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, con
 		}
 	}
 
-	EventInstance->EndEvent();
+	EventInstance->EndEvent(EndReason);
 	EventData.ResetEventInstance();
 }
 
@@ -402,7 +416,7 @@ void UScheduleEventManagerComponent::OnPostLoadObject()
 	{
 		if (!EventsStack.Contains(EventData))
 		{
-			EndEvent(EventData, true);
+			EndEvent(EventData, EScheduleEventEndReason::Loading, true);
 			UnloadOrCancelLoadingEventInstance(EventData);
 		}
 	}

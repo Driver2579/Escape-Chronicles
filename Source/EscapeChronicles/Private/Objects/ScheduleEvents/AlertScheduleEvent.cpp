@@ -5,12 +5,12 @@
 #include "GameState/EscapeChroniclesGameState.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-void UAlertScheduleEvent::OnEventEnded()
+void UAlertScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
 {
 	// If the gameplay effect isn't even loaded, then it's for sure isn't added to any player
 	if (!WantedGameplayEffectClass.IsValid())
 	{
-		Super::OnEventEnded();
+		Super::OnEventEnded(EndReason);
 
 		return;
 	}
@@ -20,7 +20,7 @@ void UAlertScheduleEvent::OnEventEnded()
 	// GameState may be invalid at this stage
 	if (!IsValid(GameState))
 	{
-		Super::OnEventEnded();
+		Super::OnEventEnded(EndReason);
 
 		return;
 	}
@@ -41,5 +41,5 @@ void UAlertScheduleEvent::OnEventEnded()
 		}
 	}
 
-	Super::OnEventEnded();
+	Super::OnEventEnded(EndReason);
 }

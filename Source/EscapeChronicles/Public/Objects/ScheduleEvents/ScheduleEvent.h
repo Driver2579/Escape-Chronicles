@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Common/Enums/ScheduleEventEndReason.h"
 #include "Common/Structs/ScheduleEventData.h"
 #include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "ScheduleEvent.generated.h"
@@ -78,7 +79,7 @@ public:
 	 * Ends the event if it was started. Should be called by the ScheduleEventManagerComponent when the event is no
 	 * longer needed.
 	 */
-	void EndEvent();
+	void EndEvent(const EScheduleEventEndReason EndReason = EScheduleEventEndReason::Normal);
 
 	bool IsPaused() const { return bPaused; }
 
@@ -115,13 +116,14 @@ protected:
 	 */
 	virtual void OnEventStarted(const bool bStartPaused)
 	{
-		UE_LOG(LogTemp, Display, TEXT("Event %s started"), *EventData.EventTag.ToString());
+		UE_LOG(LogTemp, Display, TEXT("Event %s started."), *EventData.EventTag.ToString());
 	}
 
 	// Called when the event is ended. This is where you should clear the event's logic.
-	virtual void OnEventEnded()
+	virtual void OnEventEnded(const EScheduleEventEndReason EndReason)
 	{
-		UE_LOG(LogTemp, Display, TEXT("Event %s ended"), *EventData.EventTag.ToString());
+		UE_LOG(LogTemp, Display, TEXT("Event %s ended. Reason: %s."), *EventData.EventTag.ToString(),
+			*UEnum::GetValueAsString(EndReason));
 	}
 
 	/**
@@ -132,7 +134,7 @@ protected:
 	 */
 	virtual void OnEventPaused()
 	{
-		UE_LOG(LogTemp, Display, TEXT("Event %s paused"), *EventData.EventTag.ToString());
+		UE_LOG(LogTemp, Display, TEXT("Event %s paused."), *EventData.EventTag.ToString());
 	}
 
 	/**
@@ -141,7 +143,7 @@ protected:
 	 */
 	virtual void OnEventResumed()
 	{
-		UE_LOG(LogTemp, Display, TEXT("Event %s resumed"), *EventData.EventTag.ToString());
+		UE_LOG(LogTemp, Display, TEXT("Event %s resumed."), *EventData.EventTag.ToString());
 	}
 
 private:

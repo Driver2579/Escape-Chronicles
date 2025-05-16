@@ -37,7 +37,7 @@ protected:
 
 	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) override;
 
-	virtual void OnEventEnded() override;
+	virtual void OnEventEnded(const EScheduleEventEndReason EndReason) override;
 
 private:
 	TMap<TWeakObjectPtr<UPlayerOwnershipComponent>, FDelegateHandle> OnOwningPlayerInitializedDelegateHandles;

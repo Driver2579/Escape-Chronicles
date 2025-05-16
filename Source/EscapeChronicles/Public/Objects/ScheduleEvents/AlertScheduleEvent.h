@@ -20,7 +20,7 @@ class ESCAPECHRONICLES_API UAlertScheduleEvent : public UScheduleEvent
 	// TODO: Как только все игроки с WantedGameplayEffect теряют сознание, заканчивать этот ивент
 
 protected:
-	virtual void OnEventEnded() override;
+	virtual void OnEventEnded(const EScheduleEventEndReason EndReason) override;
 
 private:
 	/**

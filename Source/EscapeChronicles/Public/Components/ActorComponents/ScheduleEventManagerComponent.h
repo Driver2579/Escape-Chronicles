@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Enums/ScheduleEventEndReason.h"
 #include "Common/Structs/ScheduleEventData.h"
 #include "Common/Structs/GameplayDateTime.h"
 #include "Common/Structs/SaveData/BedtimeScheduleEventSaveData.h"
@@ -120,19 +121,25 @@ private:
 	 * @param Index Index of the event to remove. Must be valid!
 	 * @param AllowShrinking Whether to allow shrinking the EventsStackArray. If not, then you have to shrink it
 	 * manually.
+	 * @param EndReason Reason why the event is ended, which will be passed to the event instance when it's ended.
 	 * @param bRemoveSaveData If true, the save data for the event will be removed. Otherwise, it will be kept.
 	 * @param bStartOrResumeLastEvent If true, the last event before the removed one in the EventsStack will be paused
 	 * if it was paused before or started if it was never started before. This event will be considered as a current
 	 * active event.
 	 */
 	void RemoveEventByIndex(const int32 Index, const EAllowShrinking AllowShrinking = EAllowShrinking::Yes,
-		const bool bRemoveSaveData = true, const bool bStartOrResumeLastEvent = true);
+		const EScheduleEventEndReason EndReason = EScheduleEventEndReason::Normal, const bool bRemoveSaveData = true,
+		const bool bStartOrResumeLastEvent = true);
 
 	/**
 	 * Ends the event, removes it from the EventData, and removes the save data for this event if any and if it's
 	 * required.
+	 * @param EventData Event to end.
+	 * @param EndReason Reason why the event is ended, which will be passed to the event instance.
+	 * @param bRemoveSaveData If true, the save data for the event will be removed. Otherwise, it will be kept.
 	 */
-	void EndEvent(FScheduleEventData& EventData, const bool bRemoveSaveData);
+	void EndEvent(FScheduleEventData& EventData,
+		const EScheduleEventEndReason EndReason = EScheduleEventEndReason::Normal, const bool bRemoveSaveData = true);
 
 	void UnloadOrCancelLoadingEventInstance(const FScheduleEventData& EventData);
 
