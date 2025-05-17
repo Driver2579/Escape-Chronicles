@@ -10,6 +10,8 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UBoxComponent;
+class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
@@ -45,6 +47,9 @@ public:
 	// Returns FollowCameraComponent subobject
 	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
 
+	// Returns InteractionManagerComponent subobject
+	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
+	
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -183,6 +188,12 @@ private:
 	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UArrowComponent> ArrowComponent;
 #endif
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<class UInteractionManagerComponent> InteractionManagerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> InteractionZone;
 
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Camera", meta=(AllowPrivateAccess="true"))

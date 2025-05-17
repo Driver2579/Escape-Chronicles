@@ -10,6 +10,8 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Engine/AssetManager.h"
@@ -92,6 +94,16 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	// Disable Actor-level movement replication, since our Mover component will handle it
 	SetReplicatingMovement(false);
+
+	// === Interaction ===
+	
+	InteractionManagerComponent = CreateDefaultSubobject<UInteractionManagerComponent>(
+		TEXT("Interaction Manager Component"));
+	
+	InteractionManagerComponent->SetupAttachment(RootComponent);
+
+	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("Interaction Zone"));
+	InteractionZone->SetupAttachment(InteractionManagerComponent);
 }
 
 UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
