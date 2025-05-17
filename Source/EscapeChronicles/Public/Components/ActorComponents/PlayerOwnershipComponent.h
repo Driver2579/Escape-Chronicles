@@ -8,6 +8,11 @@
 #include "Interfaces/Saveable.h"
 #include "PlayerOwnershipComponent.generated.h"
 
+class UPlayerOwnershipComponent;
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnOwningPlayerInitializedDelegate,
+	UPlayerOwnershipComponent* PlayerOwnershipComponent, const FUniquePlayerID& OwningPlayer);
+
 /**
  * This component adds ownership of the player to the actor that owns this component. The ownership is represented by an
  * FUniquePlayerID that is set on the component.
@@ -44,8 +49,6 @@ public:
 	 * ConnectedComponentsID is empty, in which case there should be no owning player.
 	 */
 	void InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer);
-
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOwningPlayerInitializedDelegate, const FUniquePlayerID& OwningPlayer);
 
 	/**
 	 * Calls the given callback if OwningPlayer is already initialized or registers the callback to be called when the
