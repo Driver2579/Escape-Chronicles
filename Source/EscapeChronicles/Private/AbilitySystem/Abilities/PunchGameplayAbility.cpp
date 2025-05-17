@@ -210,14 +210,14 @@ void UPunchGameplayAbility::OnSoundLoaded(const TSoftObjectPtr<USoundCue> Loaded
 void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	TargetAbilitySystemComponent =
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
-	
 	// Ignore the overlaps on yourself
-	if (CurrentActorInfo->AbilitySystemComponent == TargetAbilitySystemComponent)
+	if (CurrentActorInfo->AvatarActor == OtherActor)
 	{
 		return;
 	}
+	
+	TargetAbilitySystemComponent =
+		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
 	DesiredDamagingCollider->OnComponentBeginOverlap.RemoveDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
 	IsPunchHappened = true;
