@@ -717,8 +717,12 @@ void AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded()
 
 	FaintingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
 		*EffectSpecHandle.Data.Get());
-	
-	
-	LoadFaintingEffectClassHandle->CancelHandle();
-	LoadFaintingEffectClassHandle.Reset();
+
+	// TODO: I don't think this check should be here, but it is needed in some cases. We'll need to look into it in more
+	// detail.
+	if (LoadFaintingEffectClassHandle.IsValid())
+	{
+		LoadFaintingEffectClassHandle->CancelHandle();
+		LoadFaintingEffectClassHandle.Reset();	
+	}
 }
