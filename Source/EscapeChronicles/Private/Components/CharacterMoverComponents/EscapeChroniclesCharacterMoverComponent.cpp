@@ -8,6 +8,8 @@
 #include "Mover/MovementModifiers/GroundSpeedModeModifier.h"
 #include "Mover/MovementSettings/GroundSpeedModeSettings.h"
 
+const FName UEscapeChroniclesCharacterMoverComponent::NullModeName(TEXT("Null"));
+
 #if WITH_EDITOR
 void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -28,6 +30,16 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 	}
 }
 #endif
+
+void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
+{
+	QueueNextMode(NullModeName);
+}
+
+void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
+{
+	QueueNextMode(StartingMovementMode);
+}
 
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
 {
