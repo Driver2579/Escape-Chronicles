@@ -171,7 +171,7 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		// Save the player state separately with the player-specific actors
 		if (PlayerState)
 		{
-			SavePlayerOrBotToSaveGameObjectChecked(SaveGameObject, PlayerState);
+			SavePlayerOrBotChecked(SaveGameObject, PlayerState);
 
 			continue;
 		}
@@ -209,7 +209,7 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 	}
 }
 
-void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
+void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveGameObject,
 	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
