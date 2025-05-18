@@ -31,16 +31,27 @@ public:
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 
 	/**
-	 * Initializes the player or bot after he's loaded.
+	 * Initializes the player or bot after he's loaded or failed to be loaded.
 	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
 	 */
 	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
+		AEscapeChroniclesPlayerState* PlayerState)
+
+	// Called when the player or bot is fully initialized
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotInitialized;
+
+	// Called when the player or bot logs out
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotLogout;
 
 protected:
 	virtual void OnLoadGameCalled();
 
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
+
+	virtual void Logout(AController* Exiting) override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 

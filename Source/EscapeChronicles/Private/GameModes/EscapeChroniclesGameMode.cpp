@@ -178,6 +178,20 @@ void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerS
 {
 	// Register the player in the player ownership system because we have a valid UniquePlayerID now
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
+
+	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+}
+
+void AEscapeChroniclesGameMode::Logout(AController* Exiting)
+{
+#if DO_CHECK
+	check(Exiting->PlayerState);
+	check(Exiting->PlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
+
+	OnPlayerOrBotLogout.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState));
+
+	Super::Logout(Exiting);
 }
 
 void AEscapeChroniclesGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)

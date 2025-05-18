@@ -4,6 +4,7 @@
 
 #include "Engine/AssetManager.h"
 #include "GameState/EscapeChroniclesGameState.h"
+#include "Objects/ScheduleEvents/AlertScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/BedtimeScheduleEvent.h"
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/ScheduleEventWithPresenceMark.h"
@@ -136,7 +137,25 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 	}
 }
 
-void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventData)
+const FScheduleEventData* UScheduleEventManagerComponent::FindEventByTag(const FGameplayTag& EventTag) const
+{
+#if DO_ENSURE
+	ensureAlways(EventTag.IsValid());
+#endif
+
+	for (const FScheduleEventData& EventData : EventsStack)
+	{
+		if (EventData.EventTag == EventTag)
+		{
+			return &EventData;
+		}
+	}
+
+	return nullptr;
+}
+
+void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventData,
+	const bool bLoadEventClassSynchronously)
 {
 #if DO_ENSURE
 	ensureAlways(!EventsStack.Contains(EventData));
@@ -161,10 +180,11 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 	EventsStack.Add(EventData);
 
 	// Create the event instance and start or pause it when it's ready
-	CreateEventInstanceAndStartOrPauseIt(EventData);
+	CreateEventInstanceAndStartOrPauseIt(EventData, bLoadEventClassSynchronously);
 }
 
-void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData)
+void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData,
+	const bool bLoadEventClassSynchronously)
 {
 #if DO_CHECK
 	check(EventData.IsValid());
@@ -175,10 +195,23 @@ void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const 
 	ensureAlways(EventsStack.Contains(EventData));
 #endif
 
-	// Asynchronously load the event class
-	const TSharedPtr<FStreamableHandle> LoadEventInstanceHandle =
-		UAssetManager::GetStreamableManager().RequestAsyncLoad(EventData.EventClass.ToSoftObjectPath(),
+	TSharedPtr<FStreamableHandle> LoadEventInstanceHandle;
+
+	// Load the event class synchronously if required and call the callback immediately
+	if (bLoadEventClassSynchronously)
+	{
+		LoadEventInstanceHandle = UAssetManager::GetStreamableManager().RequestSyncLoad(
+			EventData.EventClass.ToSoftObjectPath());
+
+		OnEventClassLoaded(EventData);
+	}
+	// Otherwise, load it asynchronously and bind the callback to be called when it's ready
+	else
+	{
+		LoadEventInstanceHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			EventData.EventClass.ToSoftObjectPath(),
 			FStreamableDelegate::CreateUObject(this, &ThisClass::OnEventClassLoaded, EventData));
+	}
 
 	LoadEventInstancesHandles.Add(EventData, LoadEventInstanceHandle);
 }
@@ -249,6 +282,17 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 			{
 				BedtimeScheduleEvent->LoadBedtimeScheduleEventFromSaveData(*BedtimeSaveData);
 			}
+		}
+	}
+	else if (EventInstance->IsA<UAlertScheduleEvent>())
+	{
+		UAlertScheduleEvent* AlertScheduleEvent = CastChecked<UAlertScheduleEvent>(EventInstance);
+
+		const FAlertScheduleEventSaveData* AlertSaveData = SavedAlertScheduleEvents.Find(EventData.EventTag);
+
+		if (AlertSaveData)
+		{
+			AlertScheduleEvent->LoadAlertScheduleEventFromSaveData(*AlertSaveData);
 		}
 	}
 }
@@ -329,10 +373,9 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, con
 
 	// TODO: The next logic is bad. We should add support for saving custom objects into byte data.
 
-	// Remove the save data for the event if required
+	// Remove the save data for the event if required and if it exists
 	if (bRemoveSaveData)
 	{
-		// If it's an event with a presence mark, then remove its save data if it exists
 		if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
 		{
 			SavedEventsWithPresenceMark.Remove(EventData.EventTag);
@@ -342,6 +385,10 @@ void UScheduleEventManagerComponent::EndEvent(FScheduleEventData& EventData, con
 			{
 				SavedBedtimeScheduleEvents.Remove(EventData.EventTag);
 			}
+		}
+		else if (EventInstance->IsA<UAlertScheduleEvent>()) 
+		{
+			SavedAlertScheduleEvents.Remove(EventData.EventTag);
 		}
 	}
 
@@ -380,7 +427,12 @@ void UScheduleEventManagerComponent::OnPreSaveObject()
 	{
 		UScheduleEvent* EventInstance = EventData.GetEventInstance();
 
-		if (IsValid(EventInstance) && EventInstance->IsA<UScheduleEventWithPresenceMark>())
+		if (!IsValid(EventInstance))
+		{
+			continue;
+		}
+
+		if (EventInstance->IsA<UScheduleEventWithPresenceMark>())
 		{
 			const UScheduleEventWithPresenceMark* ScheduleEventWithPresenceMark =
 				CastChecked<UScheduleEventWithPresenceMark>(EventInstance);
@@ -396,6 +448,13 @@ void UScheduleEventManagerComponent::OnPreSaveObject()
 				SavedBedtimeScheduleEvents.Add(EventData.EventTag,
 					BedtimeScheduleEvent->GetBedtimeScheduleEventSaveData());
 			}
+		}
+		else if (EventInstance->IsA<UAlertScheduleEvent>())
+		{
+			const UAlertScheduleEvent* AlertScheduleEvent = CastChecked<UAlertScheduleEvent>(EventInstance);
+
+			SavedAlertScheduleEvents.Add(EventData.EventTag,
+				AlertScheduleEvent->GetAlertScheduleEventSaveData());
 		}
 	}
 }

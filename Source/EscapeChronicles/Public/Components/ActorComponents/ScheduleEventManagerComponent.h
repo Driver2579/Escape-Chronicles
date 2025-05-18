@@ -8,6 +8,7 @@
 #include "Common/Enums/ScheduleEventEndReason.h"
 #include "Common/Structs/ScheduleEventData.h"
 #include "Common/Structs/GameplayDateTime.h"
+#include "Common/Structs/SaveData/AlertScheduleEventSaveData.h"
 #include "Common/Structs/SaveData/BedtimeScheduleEventSaveData.h"
 #include "Common/Structs/SaveData/ScheduleEventWithPresenceMarkSaveData.h"
 #include "ScheduleEventManagerComponent.generated.h"
@@ -72,16 +73,23 @@ public:
 		return EventsStack.Contains(EventData);
 	}
 
+	// Finds the event with the given tag in the stack
+	const FScheduleEventData* FindEventByTag(const FGameplayTag& EventTag) const;
+
 	/**
 	 * Pushes a new event on top of the current one. The current active event will be paused and the new one will be
 	 * started.
+	 * @param EventData The event to push.
+	 * @param bLoadEventClassSynchronously If true, the event class will be loaded synchronously. Otherwise, it will be
+	 * loaded asynchronously. Use synchronous loading only if you need the event instance immediately after pushing the
+	 * event.
 	 */
-	void PushEvent(const FScheduleEventData& EventData);
+	void PushEvent(const FScheduleEventData& EventData, const bool bLoadEventClassSynchronously = false);
 
 	/**
-	 * Removes the event with the given tag from the stack and ends it unless it's a scheduled event. The last event
-	 * before the removed one in the stack will be paused if it was paused before or started if it was never started
-	 * before. This event will be considered as a current active event.
+	 * Removes the event with the given tag from the stack and ends it. The last event before the removed one in the
+	 * stack will be paused if it was paused before or started if it was never started before. This event will be
+	 * considered as a current active event.
 	 */
 	void RemoveEvent(const FGameplayTag& EventTag);
 
@@ -113,7 +121,17 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTime, FScheduleEventData> ScheduledEvents;
 
-	void CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData);
+	/**
+	 * Creates the instance of the given event, loads its data, and starts it. If the event isn't the current active
+	 * one, then it will be started paused.
+	 * @param EventData Event which instance we need to create and start or pause.
+	 * @param bLoadEventClassSynchronously If true, the event class will be loaded synchronously. Otherwise, it will be
+	 * loaded asynchronously.
+	 */
+	void CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData,
+		const bool bLoadEventClassSynchronously = false);
+
+	// Actual implementation of CreateEventInstanceAndStartOrPauseIt function. Called after the event class is loaded.
 	void OnEventClassLoaded(FScheduleEventData EventDataCopy);
 
 	/**
@@ -173,6 +191,17 @@ private:
 	 */
 	UPROPERTY(Transient, SaveGame)
 	TMap<FGameplayTag, FBedtimeScheduleEventSaveData> SavedBedtimeScheduleEvents;
+
+	/**
+	 * Save data for alert schedule events. All newly created events with presence mark should check if they are in
+	 * this list and get the data from it if they are.
+	 * @tparam KeyType Event tag of the event with a UAlertScheduleEvent instance's class.
+	 * @tparam ValueType Save data for the event.
+	 * @remark The event should be removed from this list once it's ended to avoid new events using the save data for
+	 * old event.
+	 */
+	UPROPERTY(Transient, SaveGame)
+	TMap<FGameplayTag, FAlertScheduleEventSaveData> SavedAlertScheduleEvents;
 
 	/**
 	 * @tparam KeyType An event that has a class that is currently being loaded or that is already loaded.

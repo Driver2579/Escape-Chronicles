@@ -7,6 +7,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "GameState/EscapeChroniclesGameState.h"
+#include "Objects/ScheduleEvents/AlertScheduleEvent.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 UBedtimeScheduleEvent::UBedtimeScheduleEvent()
@@ -203,7 +204,25 @@ void UBedtimeScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState
 	// Start an alert if the player missed an event but only if it isn't already started
 	if (!ScheduleEventManagerComponent->IsEventInStack(AlertEventData))
 	{
-		ScheduleEventManagerComponent->PushEvent(AlertEventData);
+		// Load an alert event class synchronously because we need its instance right now
+		ScheduleEventManagerComponent->PushEvent(AlertEventData, true);
+	}
+
+	const FScheduleEventData& CurrentActiveEvent = ScheduleEventManagerComponent->GetCurrentActiveEventData();
+
+	// Add the player that missed an event to the wanted players in alert event if it's the current active one
+	if (CurrentActiveEvent.EventTag == AlertEventData.EventTag)
+	{
+#if DO_CHECK
+		check(IsValid(CurrentActiveEvent.GetEventInstance()));
+		check(CurrentActiveEvent.GetEventInstance()->IsA<UAlertScheduleEvent>());
+#endif
+
+		UAlertScheduleEvent* AlertEventInstance = CastChecked<UAlertScheduleEvent>(
+			CurrentActiveEvent.GetEventInstance());
+
+		// Mark the player that missed an event as wanted in the alert event
+		AlertEventInstance->AddWantedPlayer(PlayerThatMissedAnEvent);
 	}
 }
 

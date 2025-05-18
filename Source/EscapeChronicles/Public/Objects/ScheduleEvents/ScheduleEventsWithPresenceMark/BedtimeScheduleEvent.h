@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ScheduleEventWithPresenceMark.h"
+#include "Common/Structs/SaveData/BedtimeScheduleEventSaveData.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "BedtimeScheduleEvent.generated.h"
 
