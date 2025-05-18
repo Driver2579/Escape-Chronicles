@@ -42,6 +42,8 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UScheduleEventManagerComponent> ScheduleEventManagerComponent;

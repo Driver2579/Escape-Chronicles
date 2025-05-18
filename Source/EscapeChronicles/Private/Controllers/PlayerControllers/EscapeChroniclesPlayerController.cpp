@@ -283,10 +283,10 @@ void AEscapeChroniclesPlayerController::OnUnPossess()
 	}
 
 	/**
-	 * Save the game when the pawn is unpossessed. This is needed to save the game before the player leaves the game. It
-	 * would be better to save the game in AEscapeChroniclesGameMode::Logout(), but it's called already after the Pawn
-	 * is unpossessed. This is the last place where we can be sure that the Pawn is still valid. The only problem is
-	 * that this might be called even due to other reasons than leaving the game, which causes to extra sync save calls,
+	 * Save the player when the pawn is unpossessed. This is needed to save the game before the player leaves the game.
+	 * It would be better to save the player in AEscapeChroniclesGameMode::Logout(), but it's called already after the
+	 * Pawn is unpossessed. This is the last place where we can be sure that the Pawn is still valid. The only problem
+	 * is that this might be called even due to other reasons than leaving the game, which causes to extra save calls,
 	 * but unfortunutelly we don't have any place where we can be sure that the player is leaving the game and where the
 	 * Pawn is still valid.
 	 */
@@ -295,8 +295,7 @@ void AEscapeChroniclesPlayerController::OnUnPossess()
 
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		// Save the game synchronously because we may close the game before the async save is finished
-		SaveGameSubsystem->SaveGame(false);
+		SaveGameSubsystem->SavePlayerOrBot(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
 	}
 
 	Super::OnUnPossess();
