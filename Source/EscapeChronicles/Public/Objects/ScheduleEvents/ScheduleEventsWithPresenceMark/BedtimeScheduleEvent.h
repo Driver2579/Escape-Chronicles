@@ -9,7 +9,9 @@
 #include "BedtimeScheduleEvent.generated.h"
 
 /**
- * TODO: Implement me
+ * An event that handles the players checking in only in their prisoner chambers, filtering the chambers of other
+ * prisoners. This event has a time limit for the players to check in. If they don't check in within this time, then an
+ * alert event will be started.
  */
 UCLASS()
 class ESCAPECHRONICLES_API UBedtimeScheduleEvent : public UScheduleEventWithPresenceMark
@@ -31,7 +33,7 @@ protected:
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const override;
 
-	// TODO: Close the door on lock when the player is checked in
+	// TODO: Close the door on lock when the player is checked in and update documentation
 
 	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
 		const FGameplayDateTime& NewDateTime);
@@ -56,10 +58,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Alert")
 	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
 
-	/**
-	 * An event to start if the players don't check in within the time limit. Expected to be an alert event.
-	 * @remark MissedEventGameplayEffectClass must add the Status_CheckedIn tag to the player for this to work!
-	 */
+	// An event to start if the players don't check in within the time limit. Expected to be an alert event.
 	UPROPERTY(EditDefaultsOnly, Category="Alert")
 	FScheduleEventData AlertEventData;
 
