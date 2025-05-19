@@ -10,9 +10,9 @@ struct FScheduleEventWithPresenceMarkSaveData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(SaveGame)
 	TSet<FUniquePlayerID> CheckedInPlayers;
 
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(SaveGame)
 	TSet<FUniquePlayerID> PlayersThatMissedAnEvent;
 };

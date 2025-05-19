@@ -10,6 +10,6 @@ struct FAlertScheduleEventSaveData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(SaveGame)
 	TSet<FUniquePlayerID> WantedPlayers;
 };

@@ -10,6 +10,6 @@ struct FBedtimeScheduleEventSaveData
 {
 	GENERATED_BODY()
 
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(SaveGame)
 	FGameplayDateTime EventStartDateTime;
 };
