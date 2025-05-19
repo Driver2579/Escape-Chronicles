@@ -13,15 +13,16 @@ class UAbilitySystemComponent;
 class AEscapeChroniclesPlayerState;
 class UGameplayEffect;
 
-// TODO: Протестировать
-// TODO: Загрузка и сохранение не работают корректно
-
 // TODO: Удалить пустые C++ классы ивентов, переместив их в BP
 // TODO: Добавить документацию на все ивенты
 // TODO: Реализовать перекличку
 
 /**
- * TODO: Implement me
+ * An event that marks specific players as "wanted" with gameplay effect applied. "Wanted player" means that the guards
+ * should hunt him. The medics should remove the "wanted" mark once they cared the wanted player to the hospital after
+ * he passes out. Once there are no wanted players left, the event will end automatically.
+ * @remark When this event is started, you MUST call the AddWantedPlayer function or SetWantedPlayers function for each
+ * player you want to mark as wanted after the event is started.
  */
 UCLASS()
 class ESCAPECHRONICLES_API UAlertScheduleEvent : public UScheduleEvent
@@ -29,15 +30,25 @@ class ESCAPECHRONICLES_API UAlertScheduleEvent : public UScheduleEvent
 	GENERATED_BODY()
 
 public:
+	// Adds the player to the wanted players list
 	void AddWantedPlayer(AEscapeChroniclesPlayerState* PlayerState);
 
+	/**
+	 * Removes the player from the wanted players list.
+	 * @param PlayerState Player to remove from the list. 
+	 * @param AllowShrinking Whether the arrays with wanted players should be shrunk or not. If set to No, then you
+	 * should shrink them yourself.
+	 * @param bEndEventIfEmpty If true, then, if there are no wanted players left in the game, the event will be ended.
+	 */
 	void RemoveWantedPlayer(AEscapeChroniclesPlayerState* PlayerState,
 		const EAllowShrinking AllowShrinking = EAllowShrinking::Yes, const bool bEndEventIfEmpty = true);
 
+	/**
+	 * Replaces the wanted players list with the new one. If there are no wanted players left in the game, the event
+	 * will be ended.
+	 */
 	void SetWantedPlayers(const TSet<AEscapeChroniclesPlayerState*>& NewWantedPlayers);
 	void SetWantedPlayers(const TSet<FUniquePlayerID>& NewWantedPlayers);
-
-	// TODO: Как только игрок теряет сознание, убирать у него WantedGameplayEffect
 
 	// Should be used when the game is saved
 	FAlertScheduleEventSaveData GetAlertScheduleEventSaveData() const;

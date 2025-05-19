@@ -223,20 +223,13 @@ void UAlertScheduleEvent::SetWantedPlayers(const TSet<FUniquePlayerID>& NewWante
 		}
 	}
 
-	// Remove the rest of the players that are still in the WantedPlayers array but aren't in the NewWantedPlayers array
-	for (int32 i = WantedPlayers.Num() - 1; i >= 0; --i)
-	{
-		if (!NewWantedPlayers.Contains(WantedPlayers[i]))
-		{
-			WantedPlayers.RemoveAt(i, EAllowShrinking::No);
-		}
-	}
+	// Set the whole NewWantedPlayers set to the WantedPlayers array to update other players that are not in the game
+	WantedPlayers = NewWantedPlayers.Array();
 
-	// Shrink arrays to remove all empty slots after removing players from them
+	// Shrink the array to remove all empty slots after removing players from them
 	WantedPlayersInGame.Shrink();
-	WantedPlayers.Shrink();
 
-	// If there are no wanted players left in the game, then remove and end this event
+	// If there are no wanted players left in the game, then remove and end this eventaaa
 	if (WantedPlayersInGame.IsEmpty())
 	{
 		GetScheduleEventManagerComponent()->RemoveEvent(GetEventData().EventTag);
@@ -436,14 +429,6 @@ void UAlertScheduleEvent::OnPlayerOrBotLogout(AEscapeChroniclesPlayerState* Play
 
 void UAlertScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
 {
-	// If the gameplay effect isn't even loaded, then it's for sure isn't added to any player
-	if (!WantedGameplayEffectClass.IsValid())
-	{
-		Super::OnEventEnded(EndReason);
-
-		return;
-	}
-
 	RemoveWantedGameplayEffectFromAllWantedPlayers();
 
 	// Clear the wanted players
