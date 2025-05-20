@@ -8,6 +8,11 @@
 #include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesGameMode.generated.h"
 
+class AEscapeChroniclesPlayerState;
+class UScheduleEventManagerComponent;
+
+struct FScheduleEventData;
+
 UCLASS(MinimalAPI)
 class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 {
@@ -16,9 +21,29 @@ class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 public:
 	AEscapeChroniclesGameMode();
 
+	UScheduleEventManagerComponent* GetScheduleEventManagerComponent() const
+	{
+		return ScheduleEventManagerComponent;
+	}
+
 	FUniquePlayerIdManager& GetUniquePlayerIdManager() { return UniquePlayerIdManager; }
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
+
+	/**
+	 * Initializes the player or bot after he's loaded or failed to be loaded.
+	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
+	 */
+	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
+		AEscapeChroniclesPlayerState* PlayerState)
+
+	// Called when the player or bot is fully initialized
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotInitialized;
+
+	// Called when the player or bot logs out
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotLogout;
 
 protected:
 	virtual void OnLoadGameCalled();
@@ -26,9 +51,14 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
+	virtual void Logout(AController* Exiting) override;
+
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UScheduleEventManagerComponent> ScheduleEventManagerComponent;
+
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
@@ -43,25 +73,26 @@ private:
 
 	/**
 	 * Players in this list are the players that joined the game before the game has finished its loading. They are
-	 * going to be loaded when the loading is finished regardless of whether the loading was successful or not.
+	 * going to be loaded and initialized when the loading is finished regardless of whether the loading was successful
+	 * or not.
 	 */
-	TArray<TWeakObjectPtr<APlayerController>> PlayersWaitingToBeLoaded;
+	TArray<TWeakObjectPtr<APlayerController>> PlayersWaitingToBeLoadedAndInitialized;
 
 	/**
-	 * Attempts to load the player now if he already has a pawn. If the player doesn't have a pawn yet, then he will be
-	 * loaded once he gets it.
+	 * Attempts to load and initialized the player now if he already has a pawn. If the player doesn't have a pawn yet,
+	 * then he will be loaded and initialized once he gets it.
 	 */
-	void LoadPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController) const;
+	void LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController);
 
 	/**
 	 * Called after the player has possessed a pawn for the first time in case we tried to load the player but failed
 	 * because he didn't have a pawn yet.
 	 */
-	void OnPlayerToLoadPawnChanged(APawn* NewPawn) const;
+	void OnPlayerToLoadPawnChanged(APawn* NewPawn);
 
 	/**
 	 * Loads the player from the last save game object that was saved or loaded if any, or if failed to load, then
-	 * generates the new FUniquePlayerID for this player.
+	 * generates the new FUniquePlayerID for this player. After that, calls PostLoadInitPlayerOrBot for the player.
 	 */
-	void LoadPlayerOrGenerateUniquePlayerId(const APlayerController* PlayerController) const;
+	void LoadAndInitPlayer(const APlayerController* PlayerController);
 };

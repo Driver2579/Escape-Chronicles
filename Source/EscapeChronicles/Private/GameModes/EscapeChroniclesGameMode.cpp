@@ -2,16 +2,23 @@
 
 #include "EscapeChronicles/Public/GameModes/EscapeChroniclesGameMode.h"
 
+#include "Components/ActorComponents/PlayerOwnershipComponent.h"
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
+#include "GameState/EscapeChroniclesGameState.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Subsystems/SaveGameSubsystem.h"
 
 AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 {
+	GameStateClass = AEscapeChroniclesGameState::StaticClass();
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
+
+	ScheduleEventManagerComponent = CreateDefaultSubobject<UScheduleEventManagerComponent>(
+		TEXT("Schedule Event Manager"));
 }
 
 void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -80,11 +87,11 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 	 */
 	if (bInitialGameLoadFinishedOrFailed)
 	{
-		LoadPlayerNowOrWhenPawnIsPossessed(NewPlayerController);
+		LoadAndInitPlayerNowOrWhenPawnIsPossessed(NewPlayerController);
 	}
 	else
 	{
-		PlayersWaitingToBeLoaded.Add(NewPlayerController);
+		PlayersWaitingToBeLoadedAndInitialized.Add(NewPlayerController);
 	}
 
 	return ParentResult;
@@ -94,26 +101,25 @@ void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 {
 	bInitialGameLoadFinishedOrFailed = true;
 
-	for (const TWeakObjectPtr<APlayerController>& PlayerController : PlayersWaitingToBeLoaded)
+	for (const TWeakObjectPtr<APlayerController>& PlayerController : PlayersWaitingToBeLoadedAndInitialized)
 	{
 		if (PlayerController.IsValid())
 		{
-			LoadPlayerNowOrWhenPawnIsPossessed(PlayerController.Get());
+			LoadAndInitPlayerNowOrWhenPawnIsPossessed(PlayerController.Get());
 		}
 	}
 }
 
-void AEscapeChroniclesGameMode::LoadPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController) const
+void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController)
 {
 #if DO_CHECK
 	check(IsValid(PlayerController));
-	check(IsValid(PlayerController->PlayerState));
 #endif
 
 	// If the controller already possesses a pawn, then we can already load the player
 	if (IsValid(PlayerController->GetPawn()))
 	{
-		LoadPlayerOrGenerateUniquePlayerId(PlayerController);
+		LoadAndInitPlayer(PlayerController);
 	}
 	// Otherwise, wait for the pawn to be possessed
 	else
@@ -123,7 +129,7 @@ void AEscapeChroniclesGameMode::LoadPlayerNowOrWhenPawnIsPossessed(APlayerContro
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
-void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn) const
+void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn)
 {
 	if (!IsValid(NewPawn))
 	{
@@ -140,14 +146,15 @@ void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn) const
 	// Stop listening for the new pawn possessed event because we needed it only for the first pawn
 	PlayerController->GetOnNewPawnNotifier().RemoveAll(this);
 
-	LoadPlayerOrGenerateUniquePlayerId(PlayerController);
+	LoadAndInitPlayer(PlayerController);
 }
 
-void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerId(const APlayerController* PlayerController) const
+void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* PlayerController)
 {
 #if DO_CHECK
 	check(IsValid(PlayerController));
-	check(IsValid(PlayerController->PlayerState));
+	check(PlayerController->PlayerState);
+	check(PlayerController->PlayerState.IsA<AEscapeChroniclesPlayerState>());
 #endif
 
 #if DO_ENSURE
@@ -156,11 +163,35 @@ void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerId(const APlayer
 
 	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
+	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		PlayerController->PlayerState);
+
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerId(
-			CastChecked<AEscapeChroniclesPlayerState>(PlayerController->PlayerState));
+		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerId(PlayerState);
 	}
+
+	PostLoadInitPlayerOrBot(PlayerState);
+}
+
+void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)
+{
+	// Register the player in the player ownership system because we have a valid UniquePlayerID now
+	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
+
+	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+}
+
+void AEscapeChroniclesGameMode::Logout(AController* Exiting)
+{
+#if DO_CHECK
+	check(Exiting->PlayerState);
+	check(Exiting->PlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
+
+	OnPlayerOrBotLogout.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState));
+
+	Super::Logout(Exiting);
 }
 
 void AEscapeChroniclesGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)

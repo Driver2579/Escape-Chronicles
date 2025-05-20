@@ -140,6 +140,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 {
 	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
 
+	OnPlayerStateChangedDelegate.Broadcast(NewPlayerState, OldPlayerState);
+
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent))
