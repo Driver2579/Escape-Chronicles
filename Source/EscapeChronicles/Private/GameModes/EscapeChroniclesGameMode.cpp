@@ -2,6 +2,8 @@
 
 #include "EscapeChronicles/Public/GameModes/EscapeChroniclesGameMode.h"
 
+#include "OnlineSubsystem.h"
+#include "OnlineSubsystemUtils.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
@@ -73,6 +75,10 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 {
 	const FString ParentResult = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
 
+#if DO_CHECK
+	check(IsValid(NewPlayerController));
+#endif
+
 	if (!ensureAlways(NewPlayerController->PlayerState))
 	{
 		return ParentResult;
@@ -92,6 +98,22 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 	else
 	{
 		PlayersWaitingToBeLoadedAndInitialized.Add(NewPlayerController);
+	}
+
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+
+	// Set the player name with the nickname from the online subsystem
+	if (ensureAlways(OnlineSubsystem))
+	{
+		const IOnlineIdentityPtr IdentityInterface = OnlineSubsystem->GetIdentityInterface();
+
+		if (ensureAlways(IdentityInterface.IsValid()))
+		{
+			const FString PlayerName = IdentityInterface->GetPlayerNickname(
+				*NewPlayerController->PlayerState->GetUniqueId());
+
+			NewPlayerController->PlayerState->SetPlayerName(PlayerName);
+		}
 	}
 
 	return ParentResult;
