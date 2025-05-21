@@ -96,8 +96,7 @@ void UEscapeChroniclesCheatManager::OnStartSessionComplete(FName SessionName, bo
 		return;
 	}
 
-	const UEscapeChroniclesGameInstance* GameInstance = GetWorld()->GetGameInstanceChecked<
-		UEscapeChroniclesGameInstance>();
+	UEscapeChroniclesGameInstance* GameInstance = GetWorld()->GetGameInstanceChecked<UEscapeChroniclesGameInstance>();
 
 	// Open the level after the session was successfully created
 	const bool bTravelResult = GameInstance->ServerTravelByLevelSoftObjectPtr(LevelToServerTravel);
@@ -108,6 +107,9 @@ void UEscapeChroniclesCheatManager::OnStartSessionComplete(FName SessionName, bo
 			TEXT("UEscapeChroniclesCheatManager::OnStartSessionComplete: Failed to server travel to level "
 				"%s!"),
 			*LevelToServerTravel.GetLongPackageName());
+
+		// Destroy the session if we failed
+		GameInstance->DestroyHostSession();
 	}
 }
 
