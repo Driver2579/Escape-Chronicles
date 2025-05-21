@@ -94,12 +94,24 @@ public:
 			FOnDestroySessionCompleteDelegate(),
 		const bool bServerTravelToMainMenu = false);
 
+	// Called when the client accepts an invitation to join a session and either joins the session or fails to do so
+	FOnJoinSessionComplete OnJoinSession;
+
 protected:
 	// Called when the session is created after the StartHostSession function is called
 	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 
 	// Called when the session is started after OnCreateSessionComplete was called with success
 	virtual void OnStartSessionComplete(FName SessionName, bool bWasSuccessful);
+
+	/**
+	 * Called when the session is destroyed.
+	 * @param SessionName The name of the session.
+	 * @param bWasSuccessful Whether the session was destroyed successfully or not.
+	 * @param bServerTravelToMainMenu If true, then if the session was successfully destroyed, the
+	 * ServerTravelByLevelSoftObjectPtr will be called with the MainMenuLevel passed.
+	 */
+	virtual void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful, const bool bServerTravelToMainMenu);
 
 	/**
 	 * Called when the player accepts an invitation to join a session. Joins the session if the invitation was
@@ -111,13 +123,11 @@ protected:
 		FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult);
 
 	/**
-	 * Called when the session is destroyed.
-	 * @param SessionName The name of the session.
-	 * @param bWasSuccessful Whether the session was destroyed successfully or not.
-	 * @param bServerTravelToMainMenu If true, then if the session was successfully destroyed, the
-	 * ServerTravelByLevelSoftObjectPtr will be called with the MainMenuLevel passed.
+	 * Called when joining a session is completed after OnSessionUserInviteAccepted was called with success. If joining
+	 * was successful, the joined client is going to be moved to the level where the host of the session is.
 	 */
-	virtual void OnDestroySessionComplete(FName SessionName, bool bWasSuccessful, const bool bServerTravelToMainMenu);
+	virtual void OnJoinSessionComplete(FName SessionName,
+		EOnJoinSessionCompleteResult::Type OnJoinSessionCompleteResult);
 
 private:
 	// The maximum players that can play together in one session
@@ -144,4 +154,6 @@ private:
 	}
 
 	TArray<FDelegateHandle> OnDestroySessionCompleteDelegateHandles;
+
+	TArray<FDelegateHandle> OnJoinSessionCompleteDelegateHandles;
 };

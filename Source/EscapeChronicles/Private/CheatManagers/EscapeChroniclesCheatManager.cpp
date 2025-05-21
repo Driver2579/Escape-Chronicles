@@ -133,5 +133,6 @@ void UEscapeChroniclesCheatManager::EndHosting() const
 	IsValid(OwningPlayerController) && ensureAlways(OwningPlayerController->HasAuthority());
 #endif
 
-	GameInstance->DestroyHostSession();
+	// Destroy the session and travel to the main menu
+	GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
 }

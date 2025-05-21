@@ -235,46 +235,6 @@ void UEscapeChroniclesGameInstance::DestroyHostSession(
 	DestroySession(OnDestroySessionCompleteDelegate, bServerTravelToMainMenu);
 }
 
-void UEscapeChroniclesGameInstance::OnSessionUserInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
-	FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult)
-{
-	if (!bWasSuccessful)
-	{
-		return;
-	}
-
-	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
-
-	if (!ensureAlways(OnlineSubsystem))
-	{
-		return;
-	}
-
-	const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
-
-	if (!ensureAlways(SessionInterface.IsValid()))
-	{
-		return;
-	}
-
-	// Get GameState to check if we are the server
-	const AGameStateBase* GameState = GetWorld()->GetGameState();
-
-	/**
-	 * We might already have an active session, which isn't a problem because JoinSession will automatically handle
-	 * switching the sessions, but if we are the server and hosting a game, then we need to kick all the clients first.
-	 * To do that correctly, we have to call the DestroyHostSession function. If we have no active session, then it
-	 * won't take any effect.
-	 */
-	if (ensureAlways(IsValid(GameState)) && GameState->HasAuthority())
-	{
-		DestroyHostSession(FOnDestroySessionCompleteDelegate(), false);
-	}
-
-	// Join the session from the invitation and assert if we fail
-	ensureAlways(SessionInterface->JoinSession(ControllerId, NAME_GameSession, InviteResult));
-}
-
 void UEscapeChroniclesGameInstance::DestroySession(
 	const FOnDestroySessionCompleteDelegate& OnDestroySessionCompleteDelegate, const bool bServerTravelToMainMenu)
 {
@@ -340,5 +300,119 @@ void UEscapeChroniclesGameInstance::OnDestroySessionComplete(FName SessionName, 
 		// We don't want to be a ListenServer in the main menu, and we want to assert if the travel was failed
 		ensureAlwaysMsgf(ServerTravelByLevelSoftObjectPtr(MainMenuLevel, false),
 			TEXT("Failed for server to travel to main menu!"));
+	}
+}
+
+void UEscapeChroniclesGameInstance::OnSessionUserInviteAccepted(const bool bWasSuccessful, const int32 ControllerId,
+	FUniqueNetIdPtr UserId, const FOnlineSessionSearchResult& InviteResult)
+{
+	if (!bWasSuccessful)
+	{
+		return;
+	}
+
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+
+	if (!ensureAlways(OnlineSubsystem))
+	{
+		return;
+	}
+
+	const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
+
+	if (!ensureAlways(SessionInterface.IsValid()))
+	{
+		return;
+	}
+
+	// Get GameState to check if we are the server
+	const AGameStateBase* GameState = GetWorld()->GetGameState();
+
+	if (!ensureAlways(IsValid(GameState)))
+	{
+		return;
+	}
+
+	/**
+	 * We might already have an active session, so we need to destroy it first. Thse will have no effect if we don't
+	 * have any active sessions. If we are the server, then call a host version of session destruction function.
+	 */
+	if (GameState->HasAuthority())
+	{
+		DestroyHostSession();
+	}
+	// Otherwise, destroy the session as a client
+	else
+	{
+		DestroySession();
+	}
+
+	// Subscribe our OnJoinSessionComplete function to the delegate
+	const FDelegateHandle DelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
+		FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete));
+
+	// Remember the delegate handle to clear it later
+	OnJoinSessionCompleteDelegateHandles.Add(DelegateHandle);
+
+	// Join the session from the invitation
+	SessionInterface->JoinSession(ControllerId, NAME_GameSession, InviteResult);
+}
+
+void UEscapeChroniclesGameInstance::OnJoinSessionComplete(FName SessionName,
+	EOnJoinSessionCompleteResult::Type OnJoinSessionCompleteResult)
+{
+	// Broadcast the delegate before we have any chance to fail in this function
+	OnJoinSession.Broadcast(SessionName, OnJoinSessionCompleteResult);
+
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+
+	if (!ensureAlways(OnlineSubsystem))
+	{
+		return;
+	}
+
+	const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
+
+	if (!ensureAlways(SessionInterface.IsValid()))
+	{
+		return;
+	}
+
+	// Clear all delegates
+	for (FDelegateHandle& DelegateHandle : OnJoinSessionCompleteDelegateHandles)
+	{
+		SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(DelegateHandle);
+	}
+
+	// Forget about the delegate handles
+	OnJoinSessionCompleteDelegateHandles.Empty();
+
+	// We don't need to do anything else if we failed to join the session
+	if (OnJoinSessionCompleteResult != EOnJoinSessionCompleteResult::Success)
+	{
+		return;
+	}
+
+	// Get the string we're going to use for ClientTravel
+	FString ConnectString;
+	const bool bGetConnectStringResult = SessionInterface->GetResolvedConnectString(SessionName, ConnectString);
+
+	// Assert if we failed to get the ConnectString and destroy the session because we already connected to it
+	if (!ensureAlways(bGetConnectStringResult))
+	{
+		DestroySession();
+
+		return;
+	}
+
+	// Travel all local clients to the level where the host of the session is
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		const TWeakObjectPtr<APlayerController> PlayerController = *It;
+
+		if (PlayerController.IsValid() && PlayerController->IsLocalController())
+		{
+			PlayerController->ClientTravel(ConnectString, TRAVEL_Absolute);
+		}
 	}
 }
