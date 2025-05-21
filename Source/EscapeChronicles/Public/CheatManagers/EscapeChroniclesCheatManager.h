@@ -33,10 +33,13 @@ public:
 	void EndHosting() const;
 
 private:
+	// Called from the HostLevel when the session is created
+	static void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
+
 	/**
-	 * Called from the HostLevel when the session is created and calls ServerTravelByLevelSoftObjectPtr for the given
+	 * Called from the HostLevel when the session is started and calls ServerTravelByLevelSoftObjectPtr for the given
 	 * level.
 	 */
-	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful,
+	void OnStartSessionComplete(FName SessionName, bool bWasSuccessful,
 		const TSoftObjectPtr<UWorld> LevelToServerTravel) const;
 };

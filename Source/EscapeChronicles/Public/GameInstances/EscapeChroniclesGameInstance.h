@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
 #include "Interfaces/OnlineSessionDelegates.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "EscapeChroniclesGameInstance.generated.h"
 
 UCLASS()
@@ -20,10 +21,13 @@ public:
 	 * @param HostingPlayerNetID Local player that is hosting the game.
 	 * @param OnCreateSessionCompleteDelegate Delegate that is going to be called when the session is created or failed
 	 * to be created.
+	 * @param OnStartSessionCompleteDelegate Delegate that is going to be called when the session is started or failed
+	 * to be started, but only after the session was created successfully.
 	 * @remark For clients to join the session, they have to accept the invitation from the host.
 	 */
 	void StartHostSession(const FUniqueNetId& HostingPlayerNetID,
-		const FOnCreateSessionCompleteDelegate& OnCreateSessionCompleteDelegate);
+		const FOnCreateSessionCompleteDelegate& OnCreateSessionCompleteDelegate,
+		const FOnStartSessionCompleteDelegate& OnStartSessionCompleteDelegate);
 
 	/**
 	 * Calls ServerTravel on the server using the TSoftObjectPtr of the level.
@@ -94,6 +98,9 @@ protected:
 	// Called when the session is created after the StartHostSession function is called
 	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 
+	// Called when the session is started after OnCreateSessionComplete was called with success
+	virtual void OnStartSessionComplete(FName SessionName, bool bWasSuccessful);
+
 	/**
 	 * Called when the player accepts an invitation to join a session. Joins the session if the invitation was
 	 * successful.
@@ -118,6 +125,9 @@ private:
 	uint8 MaxPlayersPerSession = 4;
 
 	TArray<FDelegateHandle> OnCreateSessionCompleteDelegateHandles;
+	TArray<FDelegateHandle> OnStartSessionCompleteDelegateHandles;
+
+	void ClearOnStartSessionCompleteDelegateHandles(const IOnlineSessionPtr SessionInterface);
 
 	// The main menu level that is going to be opened for the client when he's kicked from the server and for the host when he 
 	UPROPERTY(EditDefaultsOnly, Category="Sessions")

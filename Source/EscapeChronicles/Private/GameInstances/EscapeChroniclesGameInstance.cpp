@@ -31,7 +31,8 @@ void UEscapeChroniclesGameInstance::Init()
 }
 
 void UEscapeChroniclesGameInstance::StartHostSession(const FUniqueNetId& HostingPlayerNetID,
-	const FOnCreateSessionCompleteDelegate& OnCreateSessionCompleteDelegate)
+	const FOnCreateSessionCompleteDelegate& OnCreateSessionCompleteDelegate,
+	const FOnStartSessionCompleteDelegate& OnStartSessionCompleteDelegate)
 {
 	const FName& SessionName = NAME_GameSession;
 
@@ -60,20 +61,33 @@ void UEscapeChroniclesGameInstance::StartHostSession(const FUniqueNetId& Hosting
 	SessionSettings.bAllowInvites = true;
 	SessionSettings.bUsesPresence = true;
 	SessionSettings.bAllowJoinViaPresence = true;
-	SessionSettings.bAllowJoinViaPresenceFriendsOnly = true;
 	SessionSettings.bUseLobbiesIfAvailable = true;
 
 	// Subscribe our OnCreateSessionComplete function to the delegate
-	const FDelegateHandle InternalDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
-		FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete));
+	const FDelegateHandle InternalOnCreateSessionCompleteDelegateHandle =
+		SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
+			FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete));
 
-	// Subscribe the passed delegate to the delegate, LOL
-	const FDelegateHandle ExternalDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
-		OnCreateSessionCompleteDelegate);
+	// Subscribe the passed OnCreateSessionCompleteDelegate to the delegate
+	const FDelegateHandle ExternalOnCreateSessionCompleteDelegateHandle =
+		SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(OnCreateSessionCompleteDelegate);
 
 	// Remember the delegate handles to clear them later
-	OnCreateSessionCompleteDelegateHandles.Add(InternalDelegateHandle);
-	OnCreateSessionCompleteDelegateHandles.Add(ExternalDelegateHandle);
+	OnCreateSessionCompleteDelegateHandles.Add(InternalOnCreateSessionCompleteDelegateHandle);
+	OnCreateSessionCompleteDelegateHandles.Add(ExternalOnCreateSessionCompleteDelegateHandle);
+
+	// Subscribe our OnStartSessionComplete function to the delegate
+	const FDelegateHandle InternalStartSessionDelegateHandle =
+		SessionInterface->AddOnStartSessionCompleteDelegate_Handle(
+			FOnStartSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnStartSessionComplete));
+
+	// Subscribe the passed OnStartSessionCompleteDelegate to the delegate
+	const FDelegateHandle ExternalStartSessionDelegateHandle =
+		SessionInterface->AddOnStartSessionCompleteDelegate_Handle(OnStartSessionCompleteDelegate);
+
+	// Remember the delegate handles to clear them later
+	OnStartSessionCompleteDelegateHandles.Add(InternalStartSessionDelegateHandle);
+	OnStartSessionCompleteDelegateHandles.Add(ExternalStartSessionDelegateHandle);
 
 	// Create the session for the passed player and with our constructed settings
 	SessionInterface->CreateSession(HostingPlayerNetID, SessionName, SessionSettings);
@@ -103,6 +117,52 @@ void UEscapeChroniclesGameInstance::OnCreateSessionComplete(FName SessionName, b
 
 	// Forget about the delegate handles
 	OnCreateSessionCompleteDelegateHandles.Empty();
+
+	// Start the session if it was successfully created
+	if (bWasSuccessful)
+	{
+		SessionInterface->StartSession(SessionName);
+	}
+	// Otherwise, clear OnStartSessionComplete delegates
+	else
+	{
+		ClearOnStartSessionCompleteDelegateHandles(SessionInterface);
+	}
+}
+
+void UEscapeChroniclesGameInstance::OnStartSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
+
+	if (!ensureAlways(OnlineSubsystem))
+	{
+		return;
+	}
+
+	const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
+
+	// Clear the delegates once the session has started or failed to be started
+	if (ensureAlways(SessionInterface.IsValid()))
+	{
+		ClearOnStartSessionCompleteDelegateHandles(SessionInterface);
+	}
+}
+
+// ReSharper disable once CppPassValueParameterByConstReference
+void UEscapeChroniclesGameInstance::ClearOnStartSessionCompleteDelegateHandles(const IOnlineSessionPtr SessionInterface)
+{
+#if DO_CHECK
+	check(SessionInterface.IsValid());
+#endif
+
+	// Clear all delegates
+	for (FDelegateHandle& DelegateHandle : OnStartSessionCompleteDelegateHandles)
+	{
+		SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(DelegateHandle);
+	}
+
+	// Forget about the delegate handles
+	OnStartSessionCompleteDelegateHandles.Empty();
 }
 
 bool UEscapeChroniclesGameInstance::ServerTravelByLevelSoftObjectPtr(const TSoftObjectPtr<UWorld>& Level,

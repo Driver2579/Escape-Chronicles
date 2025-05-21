@@ -71,18 +71,27 @@ void UEscapeChroniclesCheatManager::HostLevel(const FString& LevelPath) const
 
 	// Request to host a new session and send the LevelSoftObjectPtr to the callback
 	GameInstance->StartHostSession(*OwningPlayerController->PlayerState->GetUniqueId().GetUniqueNetId(),
-		FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete,
-			LevelSoftObjectPtr));
+		FOnCreateSessionCompleteDelegate::CreateStatic(&ThisClass::OnCreateSessionComplete),
+		FOnStartSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnStartSessionComplete, LevelSoftObjectPtr));
+}
+
+void UEscapeChroniclesCheatManager::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
+{
+	if (!bWasSuccessful)
+	{
+		UE_LOG(LogCheat, Warning,
+			TEXT("UEscapeChroniclesCheatManager::OnCreateSessionComplete: Failed to create session!"));
+	}
 }
 
 // ReSharper disable once CppPassValueParameterByConstReference
-void UEscapeChroniclesCheatManager::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful,
+void UEscapeChroniclesCheatManager::OnStartSessionComplete(FName SessionName, bool bWasSuccessful,
 	const TSoftObjectPtr<UWorld> LevelToServerTravel) const
 {
 	if (!bWasSuccessful)
 	{
 		UE_LOG(LogCheat, Warning,
-			TEXT("UEscapeChroniclesCheatManager::OnCreateSessionComplete: Failed to create session"));
+			TEXT("UEscapeChroniclesCheatManager::OnStartSessionComplete: Failed to start session!"));
 
 		return;
 	}
@@ -95,7 +104,9 @@ void UEscapeChroniclesCheatManager::OnCreateSessionComplete(FName SessionName, b
 
 	if (!bTravelResult)
 	{
-		UE_LOG(LogCheat, Warning, TEXT("Failed to server travel to level %s"),
+		UE_LOG(LogCheat, Warning,
+			TEXT("UEscapeChroniclesCheatManager::OnStartSessionComplete: Failed to server travel to level "
+				"%s!"),
 			*LevelToServerTravel.GetLongPackageName());
 	}
 }
