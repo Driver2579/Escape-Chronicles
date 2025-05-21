@@ -270,6 +270,9 @@ void UEscapeChroniclesGameInstance::DestroySession(
 	// Remember the delegate handles to clear them later
 	OnDestroySessionCompleteDelegateHandles.Add(InternalDelegateHandle);
 	OnDestroySessionCompleteDelegateHandles.Add(ExternalDelegateHandle);
+
+	// Finally, destroy the session
+	SessionInterface->DestroySession(SessionName);
 }
 
 void UEscapeChroniclesGameInstance::OnDestroySessionComplete(FName SessionName, bool bWasSuccessful,
