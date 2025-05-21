@@ -10,6 +10,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UCarryableComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -55,10 +56,16 @@ public:
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
-
+	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
+	UFUNCTION(BlueprintCallable)
+	bool GetIsTurning() const { return bIsTurning; }
+
+	UFUNCTION(BlueprintCallable)
+	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
+	
 	virtual void PostLoad() override;
 	virtual void OnPostLoadObject() override;
 
@@ -104,6 +111,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaSeconds) override;
+	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
@@ -127,6 +136,14 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStartTurning = 90;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStopTurning = 10;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float TurningInterpSpeed = 7;
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
 	 * “FaintingGameplayTag”
@@ -182,7 +199,7 @@ private:
 	// The main skeletal mesh associated with this Character (optional sub-object). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> MeshComponent;
-
+	
 #if WITH_EDITORONLY_DATA
 	// Component shown in the editor only to indicate character facing
 	UPROPERTY(VisibleAnywhere, Category="Components")
@@ -219,6 +236,9 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
+	bool bIsTurning = false;
+	FRotator ActorAndViewDelta;
+	
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
 	 * values that should be gotten when OnStanceChanged is called.

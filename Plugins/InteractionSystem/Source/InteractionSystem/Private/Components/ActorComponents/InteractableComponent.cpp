@@ -31,11 +31,20 @@ void UInteractableComponent::InitializeHintMeshes()
 		{
 			continue;
 		}
+
+		bool Test = MeshComponent->GetGenerateOverlapEvents();
+
+		if (Test)
+		{
+			UE_LOG(LogTemp, Error, TEXT("TEST"));
+		}
 		
-		if (MeshComponent->GetGenerateOverlapEvents())
+		if (Test)
 		{
 			HasMeshWithGenerateOverlapEvents = true;
 		}
+
+		HasMeshWithGenerateOverlapEvents = true;
 		
 		HintMeshes.Add(MeshComponent);
 	}
@@ -51,7 +60,7 @@ void UInteractableComponent::InitializeHintWidget()
 {
 	const UWidgetComponent* WidgetComponent = GetOwner()->FindComponentByTag<UWidgetComponent>(HintWidgetTag);
 	
-	if (!ensureAlways(IsValid(WidgetComponent)))
+	if (!IsValid(WidgetComponent))
 	{
 		return;
 	}

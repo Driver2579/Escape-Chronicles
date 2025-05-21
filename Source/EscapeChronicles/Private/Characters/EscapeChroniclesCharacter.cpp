@@ -5,12 +5,14 @@
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
+#include "AI/NavigationSystemBase.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/ActorComponents/CarryableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -45,7 +47,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
-
+	
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
@@ -148,7 +150,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
-
+	
 	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
@@ -158,6 +160,34 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
+}
+
+void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	ActorAndViewDelta = GetActorRotation() - GetControlRotation();
+	ActorAndViewDelta.Normalize();
+	
+	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
+	
+	// Check if we have to rotate the actor
+	if (!bIsTurning && AbsoluteYawDelta <= AngleToStartTurning)
+	{
+		return;
+	}
+
+	// === Rotate actor ===
+	
+	FRotator ActorRotation = GetActorRotation();
+
+	ActorRotation.Yaw = FMath::FInterpTo(ActorRotation.Yaw, ActorRotation.Yaw - ActorAndViewDelta.Yaw, DeltaSeconds,
+		TurningInterpSpeed);
+	
+	SetActorRotation(ActorRotation);
+
+	// Check or end the current turn
+	bIsTurning = AbsoluteYawDelta > AngleToStopTurning;
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
@@ -681,7 +711,7 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 	}
 
 	const bool bIsFainting = VitalAttributeSet->GetHealth() <= 0;
-
+	
 	MeshComponent->SetSimulatePhysics(bIsFainting);
 	MeshComponent->bBlendPhysics = bIsFainting;
 	
@@ -691,6 +721,7 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		
 		MeshComponent->WakeAllRigidBodies();
+		
 		CharacterMoverComponent->DisableMovement();
 
 		if (!FaintingEffectSpecHandle.IsValid())
@@ -706,8 +737,9 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 		
 		MeshComponent->PutAllRigidBodiesToSleep();
-		CharacterMoverComponent->SetDefaultMovementMode();
 
+		CharacterMoverComponent->SetDefaultMovementMode();
+		
 		if (FaintingEffectSpecHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintingEffectSpecHandle);

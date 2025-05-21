@@ -9,9 +9,6 @@
 class IAbilitySystemInterface;
 class AEscapeChroniclesPlayerState;
 
-/**
- *
- */
 UCLASS(meta=(DisplayName="Send Gameplay Even"))
 class ESCAPECHRONICLES_API USendGameplayEventAnimNotify : public UAnimNotify
 {

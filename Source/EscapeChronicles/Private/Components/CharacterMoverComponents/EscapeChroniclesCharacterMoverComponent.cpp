@@ -34,6 +34,11 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 {
 	QueueNextMode(NullModeName);
+
+	// TODO: Find out how to disable Mover completely and do it here
+	//CachedLastSyncState.SyncStateCollection.Empty();
+	//CachedLastSyncState.Reset();
+	//LastMoverDefaultSyncState = nullptr;
 }
 
 void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
