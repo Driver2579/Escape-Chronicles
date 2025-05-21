@@ -68,16 +68,16 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (!IsValid(OtherActor))
+	if (!IsValid(OtherActor) || OtherActor == GetOwner())
 	{
 		return;
 	}
-
+	
 	// === When the object enters the interaction zone - add it to the pool ===
 	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
-	if (IsValid(InteractableComponent))
+	if (IsValid(InteractableComponent) && InteractableComponent->bCanInteraction == true)
 	{
 		InteractableComponentsPool.Add(InteractableComponent);
 	}
@@ -222,7 +222,7 @@ void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractab
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	if (!IsValid(InteractableComponent))
+	if (!IsValid(InteractableComponent) || InteractableComponent->bCanInteraction == false)
 	{
 		return false;
 	}

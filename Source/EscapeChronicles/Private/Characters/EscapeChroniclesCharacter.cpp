@@ -5,12 +5,14 @@
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
+#include "AI/NavigationSystemBase.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/ActorComponents/CarryableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -46,6 +48,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
 
+	CarryableComponent = CreateDefaultSubobject<UCarryableComponent>(TEXT("Carryable Component"));
+	
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
@@ -148,7 +152,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
-
+	
 	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
@@ -158,6 +162,27 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
+}
+
+void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	const FVector ActorForwardVector = GetActorForwardVector();
+	const FVector ViewForwardVector = GetControlRotation().Vector();
+
+	const float Dot = FVector::DotProduct(ActorForwardVector, ViewForwardVector);
+	const FVector Cross = FVector::CrossProduct(ViewForwardVector, ActorForwardVector);
+
+	const float CameraYawOffset = FMath::RadiansToDegrees(FMath::Atan2(Cross.Z, Dot));
+
+
+	CharacterMoverComponent->
+	/*if (FMath::Abs(CameraYawOffset) > 90)
+	{
+		FTimerHandle TimerHandle;
+		GetWorld()->GetTimerManager().SetTimer(TimerHandle, this, &ThisClass::TurnOnCharacterRotation, 1, false);
+	}*/
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
@@ -682,6 +707,11 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 
 	const bool bIsFainting = VitalAttributeSet->GetHealth() <= 0;
 
+	if (!IsLocallyControlled())
+	{
+		CarryableComponent->bCanInteraction = bIsFainting;
+	}
+	
 	MeshComponent->SetSimulatePhysics(bIsFainting);
 	MeshComponent->bBlendPhysics = bIsFainting;
 	
@@ -691,8 +721,14 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		
 		MeshComponent->WakeAllRigidBodies();
+		
+		//CharacterMoverComponent->SetUseDeferredGroupMovement(false);
 		CharacterMoverComponent->DisableMovement();
 
+		
+		//CharacterMoverComponent->PrimaryComponentTick.bStartWithTickEnabled = false;
+		//CharacterMoverComponent->SetComponentTickEnabled(false);
+		//CharacterMoverComponent->Deactivate();
 		if (!FaintingEffectSpecHandle.IsValid())
 		{
 			LoadFaintingEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
@@ -706,7 +742,7 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 		
 		MeshComponent->PutAllRigidBodiesToSleep();
-		CharacterMoverComponent->SetDefaultMovementMode();
+		//CharacterMoverComponent->SetDefaultMovementMode();
 
 		if (FaintingEffectSpecHandle.IsValid())
 		{
@@ -737,4 +773,9 @@ void AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded()
 		LoadFaintingEffectClassHandle->CancelHandle();
 		LoadFaintingEffectClassHandle.Reset();	
 	}
+}
+
+void AEscapeChroniclesCharacter::TurnOnCharacterRotation()
+{
+	bUseControllerRotationYaw = true;
 }

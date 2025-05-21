@@ -15,7 +15,7 @@ class UInteractionManagerComponent;
 DECLARE_MULTICAST_DELEGATE_OneParam(FInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
 
 // A component that makes an actor interactive
-UCLASS()
+UCLASS(BlueprintType, Blueprintable, meta = (BlueprintSpawnableComponent))
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -31,6 +31,9 @@ public:
 	
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
+
+	UPROPERTY(EditAnywhere)
+	bool bCanInteraction;
 	
 protected:
 	virtual void BeginPlay() override;

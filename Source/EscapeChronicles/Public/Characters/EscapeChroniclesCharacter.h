@@ -10,6 +10,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UCarryableComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -104,6 +105,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaSeconds) override;
+	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
@@ -183,6 +186,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> MeshComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Carry", meta=(AllowPrivateAccess = "true"))
+	TObjectPtr<UCarryableComponent> CarryableComponent;
+	
 #if WITH_EDITORONLY_DATA
 	// Component shown in the editor only to indicate character facing
 	UPROPERTY(VisibleAnywhere, Category="Components")
@@ -247,4 +253,6 @@ private:
 	TSharedPtr<FStreamableHandle> LoadFaintingEffectClassHandle;
 	FActiveGameplayEffectHandle FaintingEffectSpecHandle;
 	void OnFaintingEffectClassLoaded();
+
+	void TurnOnCharacterRotation();
 };
