@@ -57,6 +57,7 @@ void UEscapeChroniclesGameInstance::StartHostSession(const FUniqueNetId& Hosting
 	// Construct the SessionSettings
 	FOnlineSessionSettings SessionSettings;
 	SessionSettings.NumPrivateConnections = MaxPlayersPerSession;
+	SessionSettings.bShouldAdvertise = true;
 	SessionSettings.bAllowJoinInProgress = true;
 	SessionSettings.bAllowInvites = true;
 	SessionSettings.bUsesPresence = true;
