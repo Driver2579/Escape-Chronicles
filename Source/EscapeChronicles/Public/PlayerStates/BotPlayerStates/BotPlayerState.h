@@ -6,9 +6,7 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "BotPlayerState.generated.h"
 
-/**
- * 
- */
+// A base class for the PlayerState that bots should use
 UCLASS()
 class ESCAPECHRONICLES_API ABotPlayerState : public AEscapeChroniclesPlayerState
 {
