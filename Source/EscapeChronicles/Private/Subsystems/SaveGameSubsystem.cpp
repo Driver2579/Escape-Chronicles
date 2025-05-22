@@ -573,10 +573,20 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Then load players
 	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
 	{
-		LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+		if (!PlayerState->IsABot())
+		{
+			LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+		}
 	}
 
-	// TODO: Also load bots once bots are implemented
+	// Then load bots
+	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
+	{
+		if (PlayerState->IsABot())
+		{
+			// TODO: Load bots
+		}
+	}
 
 	OnGameLoaded.Broadcast();
 
@@ -594,6 +604,7 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 
 #if DO_ENSURE
 	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(!PlayerState->IsABot());
 #endif
 
 	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveData(SaveGameObject, PlayerState);
@@ -604,44 +615,7 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 		return false;
 	}
 
-	const FActorSaveData* PlayerStateSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-		APlayerState::StaticClass());
-
-	// Load the PlayerState if its save data is valid
-	if (PlayerStateSaveData)
-	{
-		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
-	}
-
-	APawn* PlayerPawn = PlayerState->GetPawn();
-
-	// Try to load the Pawn if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(PlayerPawn)) && PlayerPawn->Implements<USaveable>())
-	{
-		const FActorSaveData* PawnSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-			APawn::StaticClass());
-
-		// Load the Pawn if its save data is valid
-		if (PawnSaveData)
-		{
-			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
-		}
-	}
-
-	AController* Controller = PlayerState->GetOwningController();
-
-	// Try to load the Controller if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
-	{
-		const FActorSaveData* ControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-			AController::StaticClass());
-
-		// Load the Controller if its save data is valid
-		if (ControllerSaveData)
-		{
-			LoadActorFromSaveDataChecked(Controller, *ControllerSaveData);
-		}
-	}
+	LoadPlayerSpecificActors(*PlayerSaveData, PlayerState);
 
 	return true;
 }
@@ -732,6 +706,58 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOfflinePlayerSaveDataAndPlayerID(
 	}
 
 	return nullptr;
+}
+
+void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
+	AEscapeChroniclesPlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+#endif
+
+	const FActorSaveData* PlayerStateSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+		APlayerState::StaticClass());
+
+	// Load the PlayerState if its save data is valid
+	if (PlayerStateSaveData)
+	{
+		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
+	}
+
+	APawn* PlayerPawn = PlayerState->GetPawn();
+
+	// Try to load the Pawn if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(PlayerPawn)) && PlayerPawn->Implements<USaveable>())
+	{
+		const FActorSaveData* PawnSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+			APawn::StaticClass());
+
+		// Load the Pawn if its save data is valid
+		if (PawnSaveData)
+		{
+			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
+		}
+	}
+
+	AController* Controller = PlayerState->GetOwningController();
+
+	// Try to load the Controller if it's valid and implements Saveable interface
+	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
+	{
+		const FActorSaveData* ControllerSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+			AController::StaticClass());
+
+		// Load the Controller if its save data is valid
+		if (ControllerSaveData)
+		{
+			LoadActorFromSaveDataChecked(Controller, *ControllerSaveData);
+		}
+	}
 }
 
 void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)

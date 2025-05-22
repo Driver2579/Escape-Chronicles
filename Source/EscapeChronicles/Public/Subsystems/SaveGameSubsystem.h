@@ -173,7 +173,7 @@ private:
 
 	/**
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save game
-	 * object. If the player generates a UniquePlayerID for the given PlayerState if it doesn't have one.
+	 * object and generates a UniquePlayerID for the given PlayerState if it doesn't have one.
 	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
 	static bool LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
@@ -194,6 +194,13 @@ private:
 	 */
 	static const FPlayerSaveData* LoadOfflinePlayerSaveDataAndPlayerID(const UEscapeChroniclesSaveGame* SaveGameObject,
 		FUniquePlayerID& InOutUniquePlayerID);
+
+	/**
+	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save data.
+	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
+	 */
+	static void LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
+		AEscapeChroniclesPlayerState* PlayerState);
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
 	static void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData);
