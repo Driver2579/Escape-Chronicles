@@ -40,13 +40,10 @@ public:
 
 	bool IsOnlinePlayer() const;
 
-	/**
-	 * The PlayerID in the struct should be overriden by the SaveGameSubsystem if it found the save for the same NetId
-	 * but their PlayerIDs are different.
-	 */
-	FUniquePlayerID& GetUniquePlayerID_Mutable() { return UniquePlayerID; }
-
 	const FUniquePlayerID& GetUniquePlayerID() const { return UniquePlayerID; }
+
+	// Should be used only by the SaveGameSubsystem
+	void SetUniquePlayerID(const FUniquePlayerID& NewUniquePlayerID);
 
 	void GenerateUniquePlayerIdIfInvalid();
 
@@ -55,6 +52,12 @@ public:
 protected:
 	UFUNCTION()
 	virtual void OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn);
+
+	/**
+	 * Called from the GenerateUniquePlayerIdIfInvalid function if it generates the new UniquePlayerID and from the
+	 * SetUniquePlayerID function.
+	 */
+	virtual void OnUniquePlayerIdInitializedOrChanged() {}
 
 	/**
 	 * Called when the new pawn is set (except of the situation when you switch between spectator pawns), but before the

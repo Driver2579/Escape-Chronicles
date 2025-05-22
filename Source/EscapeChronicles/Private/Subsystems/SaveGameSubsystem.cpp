@@ -3,6 +3,7 @@
 #include "Subsystems/SaveGameSubsystem.h"
 
 #include "EngineUtils.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "Common/Structs/SaveData/ActorSaveData.h"
 #include "Common/Structs/SaveData/PlayerSaveData.h"
 #include "GameFramework/GameModeBase.h"
@@ -304,7 +305,36 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 	// If it's not an online player, then check if it's a bot and save it if it is
 	else if (PlayerState->IsABot())
 	{
-		SaveGameObject->AddBotSaveData(UniquePlayerID, PlayerSaveData);
+		UAbilitySystemComponent* AbilitySystemComponent = PlayerState->GetAbilitySystemComponent();
+
+#if DO_CHECK
+		check(IsValid(AbilitySystemComponent));
+#endif
+
+		// Whether the bot is a prisoner. If false, then the bot is a guard.
+		const bool bPrisoner = AbilitySystemComponent->HasMatchingGameplayTag(
+			EscapeChroniclesGameplayTags::Role_Prisoner);
+
+#if DO_ENSURE
+		// If the bot is a prisoner, then make sure it isn't also marked as a guard
+		if (bPrisoner)
+		{
+			ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));		
+		}
+		// Otherwise, if the bot isn't a prisoner, make sure it is a guard
+		else
+		{
+			ensureAlways(AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));
+		}
+#endif
+
+		/**
+		 * If the bot is a prisoner, then save it to the list of prisoner bots. Otherwise, if it's a guard, save it to
+		 * the list of guard bots.
+		 */
+		bPrisoner ?
+			SaveGameObject->AddPrisonerBotSaveData(UniquePlayerID, PlayerSaveData) :
+				SaveGameObject->AddGuardBotSaveData(UniquePlayerID, PlayerSaveData);
 	}
 	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
 	else
@@ -584,7 +614,7 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	{
 		if (PlayerState->IsABot())
 		{
-			// TODO: Load bots
+			LoadBotOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
 		}
 	}
 
@@ -607,7 +637,7 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 	ensureAlways(!PlayerState->IsABot());
 #endif
 
-	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveData(SaveGameObject, PlayerState);
+	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveDataForPlayer(SaveGameObject, PlayerState);
 
 	// Don't load the player if he doesn't have anything to load
 	if (!PlayerSaveData)
@@ -620,7 +650,7 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 	return true;
 }
 
-const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveData(
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveDataForPlayer(
 	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
@@ -643,7 +673,7 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 	 */
 	PlayerState->GenerateUniquePlayerIdIfInvalid();
 
-	FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID_Mutable();
+	FUniquePlayerID UniquePlayerID = PlayerState->GetUniquePlayerID();
 
 	// Load the save data for the player as an online player if the player is online
 	if (PlayerState->IsOnlinePlayer())
@@ -677,6 +707,9 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 		PlayerSaveData = LoadOfflinePlayerSaveDataAndPlayerID(SaveGameObject, UniquePlayerID);
 	}
 
+	// Set the UniquePlayerID once we loaded or generated it
+	PlayerState->SetUniquePlayerID(UniquePlayerID);
+
 	return PlayerSaveData;
 }
 
@@ -705,6 +738,132 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOfflinePlayerSaveDataAndPlayerID(
 		return OfflinePlayerSaveData;
 	}
 
+	return nullptr;
+}
+
+bool USaveGameSubsystem::LoadBotOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+	AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(PlayerState->IsABot());
+#endif
+
+	const FPlayerSaveData* BotSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveDataForBot(SaveGameObject, PlayerState);
+
+	// Don't load the bot if it doesn't have anything to load
+	if (!BotSaveData)
+	{
+		return false;
+	}
+
+	LoadPlayerSpecificActors(*BotSaveData, PlayerState);
+
+	return true;
+}
+
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveDataForBot(
+	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+	check(PlayerState->Implements<USaveable>());
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(PlayerState->IsABot());
+#endif
+
+	const UAbilitySystemComponent* AbilitySystemComponent = PlayerState->GetAbilitySystemComponent();
+
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Whether the bot is a prisoner. If false, then the bot is a guard.
+	const bool bPrisoner = AbilitySystemComponent->HasMatchingGameplayTag(
+		EscapeChroniclesGameplayTags::Role_Prisoner);
+
+#if DO_ENSURE
+	// If the bot is a prisoner, then make sure it isn't also marked as a guard
+	if (bPrisoner)
+	{
+		ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));		
+	}
+	// Otherwise, if the bot isn't a prisoner, make sure it is a guard
+	else
+	{
+		ensureAlways(AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));
+	}
+#endif
+
+	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
+
+	/**
+	 * Try to find the save data for a bot if it already has a UniquePlayerID. If failed to find, then return null as
+	 * this bot already has a UniquePlayerID and don't have any save data load.
+	 */
+	if (UniquePlayerID.IsValid())
+	{
+		// If the bot is a prisoner, then find the save data for a prisoner. Otherwise, find the save data for a guard.
+		return bPrisoner ?
+			SaveGameObject->FindPrisonerBotSaveData(UniquePlayerID) :
+				SaveGameObject->FindGuardBotSaveData(UniquePlayerID);
+	}
+
+	/**
+	 * Contains the save data of all prisoner bots if bot to load is a prisoner. Otherwise, contains the save data of
+	 * all guard bots.
+	 */
+	const TMap<FUniquePlayerID, FPlayerSaveData>& BotsSaveDataOfBotType =
+		bPrisoner ? SaveGameObject->GetPrisonerBotsSaveData() : SaveGameObject->GetGuardBotsSaveData();
+
+	for (const TPair<FUniquePlayerID, FPlayerSaveData>& BotSaveDataPair : BotsSaveDataOfBotType)
+	{
+		// Go to the next pair if UniquePlayerID from this pair was already taken by another bot
+		if (!RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
+		{
+			continue;
+		}
+
+		// Initialize the UniquePlayerID of the bot with the first untaken UniquePlayerID from the saved data
+		PlayerState->SetUniquePlayerID(BotSaveDataPair.Key);
+
+#if DO_ENSURE
+		/**
+		 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the SetUniquePlayerID
+		 * function for this bot.
+		 */
+		EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
+
+		// Return the found save data for the bot to load
+		return &BotSaveDataPair.Value;
+	}
+
+	/**
+	 * If we get here, then we failed to find the UniquePlayerID and the save data to load for the bot. Generate the new
+	 * UniquePlayerID for the bot in this case (it will call the RegisterBotUniquePlayerID function automatically).
+	 */
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+#if DO_ENSURE
+	/**
+	 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the
+	 * GenerateUniquePlayerIdIfInvalid function for this bot.
+	 */
+	EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
+
+	// We didn't find any save data, so return null
 	return nullptr;
 }
 
@@ -843,7 +1002,7 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 	Object->Serialize(Ar);
 }
 
-bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const
+bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerID(AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
@@ -856,6 +1015,31 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPla
 
 	// Just Generate a UniquePlayerID for the player if we don't have a save game object
 	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+	return false;
+}
+
+bool USaveGameSubsystem::LoadBotOrGenerateUniquePlayerID(AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+	if (CurrentSaveGameObject)
+	{
+		return LoadBotOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+	}
+
+	// Just Generate a UniquePlayerID for the bot if we don't have a save game object
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+#if DO_ENSURE
+	/**
+	 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the
+	 * GenerateUniquePlayerIdIfInvalid function for this bot.
+	 */
+	EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
 
 	return false;
 }

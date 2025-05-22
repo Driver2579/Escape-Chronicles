@@ -158,7 +158,7 @@ void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerId(const APlayer
 
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerId(
+		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerID(
 			CastChecked<AEscapeChroniclesPlayerState>(PlayerController->PlayerState));
 	}
 }

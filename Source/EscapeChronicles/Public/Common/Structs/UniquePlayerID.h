@@ -58,13 +58,22 @@ struct FUniquePlayerID
 	}
 
 	/**
-	 * @return True if the PlayerId is the same as the other one or if the NetId isn't empty and is the same as the
+	 * @return True, if the PlayerId is the same as the other one or if the NetId isn't empty and is the same as the
 	 * other one. The LocalPlayerID should always be the same to return true.
 	 */
 	bool operator==(const FUniquePlayerID& Other) const
 	{
 		return (PlayerID == Other.PlayerID || (!NetID.IsEmpty() && NetID == Other.NetID)) &&
 			LocalPlayerID == Other.LocalPlayerID;
+	}
+
+	/**
+	 * @return True if all fields of this instance and another instance are equal.
+	 * @remark Consider using the operator== instead of this function in most cases.
+	 */
+	bool ExactlyEquals(const FUniquePlayerID& Other) const
+	{
+		return PlayerID == Other.PlayerID && NetID == Other.NetID && LocalPlayerID == Other.LocalPlayerID;
 	}
 };
 

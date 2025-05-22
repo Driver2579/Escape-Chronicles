@@ -207,4 +207,18 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 	{
 		UniquePlayerID.NetID = GetUniqueId()->ToString();
 	}
+
+	OnUniquePlayerIdInitializedOrChanged();
+}
+
+void AEscapeChroniclesPlayerState::SetUniquePlayerID(const FUniquePlayerID& NewUniquePlayerID)
+{
+	// Don't do anything if the struct wasn't changed
+	if (UniquePlayerID.ExactlyEquals(NewUniquePlayerID))
+	{
+		return;
+	}
+
+	UniquePlayerID = NewUniquePlayerID;
+	OnUniquePlayerIdInitializedOrChanged();
 }
