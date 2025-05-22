@@ -30,6 +30,7 @@ protected:
 
 private:
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
+	UPROPERTY(Transient, SaveGame)
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
 	FDelegateHandle OnGameLoadedDelegateHandle;

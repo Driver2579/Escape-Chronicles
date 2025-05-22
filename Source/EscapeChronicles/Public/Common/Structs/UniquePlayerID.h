@@ -100,7 +100,7 @@ struct FUniquePlayerIdManager
 #endif
 
 private:
-	UPROPERTY()
+	UPROPERTY(SaveGame)
 	uint64 MaxGeneratedPlayerId = INDEX_NONE;
 
 	uint8 LastOpenedPIEIndex = INDEX_NONE;
