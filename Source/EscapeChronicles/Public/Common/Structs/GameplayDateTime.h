@@ -71,12 +71,12 @@ struct FGameplayTime
 	}
 
 	// Postfix increment
-	FGameplayTime& operator++(int)
+	FGameplayTime&& operator++(int)
 	{
 		FGameplayTime OldGameplayTime = *this;
 		++*this;
 
-		return OldGameplayTime;
+		return MoveTemp(OldGameplayTime);
 	}
 
 	// Prefix decrement
@@ -88,12 +88,12 @@ struct FGameplayTime
 	}
 
 	// Postfix decrement
-	FGameplayTime& operator--(int)
+	FGameplayTime&& operator--(int)
 	{
 		FGameplayTime OldGameplayTime = *this;
 		--*this;
 
-		return OldGameplayTime;
+		return MoveTemp(OldGameplayTime);
 	}
 
 	bool operator==(const FGameplayTime& Other) const
