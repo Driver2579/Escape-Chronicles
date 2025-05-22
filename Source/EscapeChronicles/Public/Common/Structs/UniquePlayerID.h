@@ -58,7 +58,7 @@ struct FUniquePlayerID
 	}
 
 	/**
-	 * @return True if the PlayerId is the same as the other one or if the NetId isn't empty and is the same as the
+	 * @return True, if the PlayerId is the same as the other one or if the NetId isn't empty and is the same as the
 	 * other one. The LocalPlayerID should always be the same to return true.
 	 */
 	bool operator==(const FUniquePlayerID& Other) const
@@ -85,7 +85,7 @@ struct FUniquePlayerIdManager
 
 	FUniquePlayerID GenerateUniquePlayerID(const int32 LocalPlayerID)
 	{
-		return FUniquePlayerID(++MaxGeneratedPlayerId, LocalPlayerID);
+		return FUniquePlayerID(++MaxGeneratedPlayerID, LocalPlayerID);
 	}
 
 #if WITH_EDITOR
@@ -101,7 +101,7 @@ struct FUniquePlayerIdManager
 
 private:
 	UPROPERTY()
-	uint64 MaxGeneratedPlayerId = INDEX_NONE;
+	uint64 MaxGeneratedPlayerID = INDEX_NONE;
 
 	uint8 LastOpenedPIEIndex = INDEX_NONE;
 };
