@@ -7,6 +7,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
+#include "GameModes/EscapeChroniclesGameMode.h"
+#include "Net/UnrealNetwork.h"
 
 AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
@@ -15,6 +17,13 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 	
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+}
+
+void AEscapeChroniclesPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, UniquePlayerID);
 }
 
 void AEscapeChroniclesPlayerState::InitPlayerStateForController(AController* OwnerController,
@@ -150,5 +159,53 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 
 		// We also want to apply blocking attributes by tags only after the gameplay effects are applied
 		AbilitySystemSet->ApplyBlockingAttributesByTags(AbilitySystemComponent);
+	}
+}
+
+bool AEscapeChroniclesPlayerState::IsOnlinePlayer() const
+{
+	// If it's a bot, then it's for sure not a player
+	if (IsABot())
+	{
+		return false;
+	}
+
+	const FUniqueNetIdRepl& UniqueNetId = GetUniqueId();
+
+#if DO_ENSURE
+	ensureAlways(UniqueNetId.IsValid());
+#endif
+
+	return (UniqueNetId.IsV1() && !UniqueNetId.GetV1Unsafe()->GetType().IsEqual(TEXT("NULL"))) ||
+		(UniqueNetId.IsV2() && UniqueNetId.GetV2Unsafe().GetOnlineServicesType() != UE::Online::EOnlineServices::None);
+}
+
+void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
+{
+	if (UniquePlayerID.IsValid())
+	{
+		return;
+	}
+
+	const UWorld* World = GetWorld();
+
+	AEscapeChroniclesGameMode* GameMode = World->GetAuthGameMode<AEscapeChroniclesGameMode>();
+
+	if (!ensureAlways(GameMode))
+	{
+		return;
+	}
+
+#if WITH_EDITORONLY_DATA
+	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
+#else
+	// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build
+	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerID(0);
+#endif
+
+	// Generate the NetID if it's an online player
+	if (IsOnlinePlayer())
+	{
+		UniquePlayerID.NetID = GetUniqueId()->ToString();
 	}
 }

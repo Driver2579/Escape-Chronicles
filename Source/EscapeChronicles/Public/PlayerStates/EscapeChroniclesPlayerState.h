@@ -6,24 +6,20 @@
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
 #include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
+#include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesPlayerState.generated.h"
 
 class UInventoryManagerComponent;
 class UAbilitySystemSet;
 
 UCLASS()
-class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface
+class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface,
+	public ISaveable
 {
 	GENERATED_BODY()
 
 public:
 	AEscapeChroniclesPlayerState();
-
-	// The same as AController::InitPlayerState() but with a custom PlayerState class
-	static void InitPlayerStateForController(AController* OwnerController,
-		const TSubclassOf<AEscapeChroniclesPlayerState>& PlayerStateClass);
-
-	virtual void PostInitializeComponents() override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final
 	{
@@ -34,6 +30,28 @@ public:
 	{
 		return AbilitySystemComponent;
 	}
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	// The same as AController::InitPlayerState() but with a custom PlayerState class
+	static void InitPlayerStateForController(AController* OwnerController,
+		const TSubclassOf<AEscapeChroniclesPlayerState>& PlayerStateClass);
+
+	virtual void PostInitializeComponents() override;
+
+	bool IsOnlinePlayer() const;
+
+	/**
+	 * The PlayerID in the struct should be overriden by the SaveGameSubsystem if it found the save for the same NetId
+	 * but their PlayerIDs are different.
+	 */
+	FUniquePlayerID& GetUniquePlayerID_Mutable() { return UniquePlayerID; }
+
+	const FUniquePlayerID& GetUniquePlayerID() const { return UniquePlayerID; }
+
+	void GenerateUniquePlayerIdIfInvalid();
+
+	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 
 protected:
 	UFUNCTION()
@@ -58,4 +76,7 @@ private:
 	TArray<TObjectPtr<UAbilitySystemSet>> AbilitySystemSets;
 
 	TWeakObjectPtr<APawn> LastNotSpectatorPawn;
+
+	UPROPERTY(Transient, Replicated)
+	FUniquePlayerID UniquePlayerID;
 };
