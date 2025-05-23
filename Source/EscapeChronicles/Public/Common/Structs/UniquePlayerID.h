@@ -71,7 +71,16 @@ struct FUniquePlayerID
 // This is required to use FUniquePlayerID as a key in TMap and TSet
 FORCEINLINE uint32 GetTypeHash(const FUniquePlayerID& UniquePlayerID)
 {
-	return FCrc::MemCrc32(&UniquePlayerID, sizeof(UniquePlayerID));
+	/**
+	 * Get the hash of the LocalPlayerID as it's the only field that is guaranteed to be same for different instances of
+	 * this struct where Instance1 == Instance2 returns true. Other fields could be different even if
+	 * Instance1 == Instance2 returns true. This will of course lead to a lot of collisions which leads to worse
+	 * performance but we don't have any other option here for GetTypeHash to always return the same value for different
+	 * structs that pass the equality check.
+	 * P.S.: If we didn't have the LocalPlayerID field, we would always return the same hash for all instances of this
+	 * struct 🥲.
+	 */
+	return GetTypeHash(UniquePlayerID.LocalPlayerID);
 }
 
 /**
