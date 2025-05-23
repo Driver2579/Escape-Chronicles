@@ -3,7 +3,7 @@
 #include "Subsystems/SaveGameSubsystem.h"
 
 #include "EngineUtils.h"
-#include "EscapeChroniclesGameplayTags.h"
+#include "Common/Enums/CharacterRole.h"
 #include "Common/Structs/SaveData/ActorSaveData.h"
 #include "Common/Structs/SaveData/PlayerSaveData.h"
 #include "GameFramework/GameModeBase.h"
@@ -311,30 +311,29 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 		check(IsValid(AbilitySystemComponent));
 #endif
 
-		// Whether the bot is a prisoner. If false, then the bot is a guard.
-		const bool bPrisoner = AbilitySystemComponent->HasMatchingGameplayTag(
-			EscapeChroniclesGameplayTags::Role_Prisoner);
+		const ECharacterRole CharacterRole = PlayerState->GetCharacterRole();
 
-#if DO_ENSURE
-		// If the bot is a prisoner, then make sure it isn't also marked as a guard
-		if (bPrisoner)
+		// Save the bot depending on its role
+		switch (CharacterRole)
 		{
-			ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));		
-		}
-		// Otherwise, if the bot isn't a prisoner, make sure it is a guard
-		else
-		{
-			ensureAlways(AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));
-		}
-#endif
+			case ECharacterRole::Prisoner:
+				SaveGameObject->AddPrisonerBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
 
-		/**
-		 * If the bot is a prisoner, then save it to the list of prisoner bots. Otherwise, if it's a guard, save it to
-		 * the list of guard bots.
-		 */
-		bPrisoner ?
-			SaveGameObject->AddPrisonerBotSaveData(UniquePlayerID, PlayerSaveData) :
+			case ECharacterRole::Guard:
 				SaveGameObject->AddGuardBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
+
+			case ECharacterRole::Medic:
+				SaveGameObject->AddMedicBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
+
+			// This should never happen
+			default:
+#if DO_ENSURE
+				ensureAlways(false);
+#endif
+		}
 	}
 	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
 	else
@@ -782,28 +781,7 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 	ensureAlways(PlayerState->IsABot());
 #endif
 
-	const UAbilitySystemComponent* AbilitySystemComponent = PlayerState->GetAbilitySystemComponent();
-
-#if DO_CHECK
-	check(IsValid(AbilitySystemComponent));
-#endif
-
-	// Whether the bot is a prisoner. If false, then the bot is a guard.
-	const bool bPrisoner = AbilitySystemComponent->HasMatchingGameplayTag(
-		EscapeChroniclesGameplayTags::Role_Prisoner);
-
-#if DO_ENSURE
-	// If the bot is a prisoner, then make sure it isn't also marked as a guard
-	if (bPrisoner)
-	{
-		ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));		
-	}
-	// Otherwise, if the bot isn't a prisoner, make sure it is a guard
-	else
-	{
-		ensureAlways(AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));
-	}
-#endif
+	const ECharacterRole CharacterRole = PlayerState->GetCharacterRole();
 
 	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
 
@@ -813,40 +791,79 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 	 */
 	if (UniquePlayerID.IsValid())
 	{
-		// If the bot is a prisoner, then find the save data for a prisoner. Otherwise, find the save data for a guard.
-		return bPrisoner ?
-			SaveGameObject->FindPrisonerBotSaveData(UniquePlayerID) :
-				SaveGameObject->FindGuardBotSaveData(UniquePlayerID);
-	}
-
-	/**
-	 * Contains the save data of all prisoner bots if bot to load is a prisoner. Otherwise, contains the save data of
-	 * all guard bots.
-	 */
-	const TMap<FUniquePlayerID, FPlayerSaveData>& BotsSaveDataOfBotType =
-		bPrisoner ? SaveGameObject->GetPrisonerBotsSaveData() : SaveGameObject->GetGuardBotsSaveData();
-
-	for (const TPair<FUniquePlayerID, FPlayerSaveData>& BotSaveDataPair : BotsSaveDataOfBotType)
-	{
-		// Go to the next pair if UniquePlayerID from this pair was already taken by another bot
-		if (!RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
+		// Find the save data depending on the bot's role
+		switch (CharacterRole)
 		{
-			continue;
-		}
+			case ECharacterRole::Prisoner:
+				return SaveGameObject->FindPrisonerBotSaveData(UniquePlayerID);
 
-		// Initialize the UniquePlayerID of the bot with the first untaken UniquePlayerID from the saved data
-		PlayerState->SetUniquePlayerID(BotSaveDataPair.Key);
+			case ECharacterRole::Guard:
+				return SaveGameObject->FindGuardBotSaveData(UniquePlayerID);
 
+			case ECharacterRole::Medic:
+				return SaveGameObject->FindMedicBotSaveData(UniquePlayerID);
+
+			// This should never happen
+			default:
 #if DO_ENSURE
-		/**
-		 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the SetUniquePlayerID
-		 * function for this bot.
-		 */
-		EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+				ensureAlways(false);
 #endif
 
-		// Return the found save data for the bot to load
-		return &BotSaveDataPair.Value;
+				return nullptr;
+		}
+	}
+
+	// Contains the save data of all bots that have the same role as the one we are trying to load
+	const TMap<FUniquePlayerID, FPlayerSaveData>* BotsSaveDataOfBotType;
+
+	// Get the save data depending on the bot's role
+	switch (CharacterRole)
+	{
+		case ECharacterRole::Prisoner:
+			BotsSaveDataOfBotType = &SaveGameObject->GetPrisonerBotsSaveData();
+			break;
+
+		case ECharacterRole::Guard:
+			BotsSaveDataOfBotType = &SaveGameObject->GetGuardBotsSaveData();
+			break;
+
+		case ECharacterRole::Medic:
+			BotsSaveDataOfBotType = &SaveGameObject->GetMedicBotsSaveData();
+			break;
+
+		// This should never happen
+		default:
+#if DO_ENSURE
+			ensureAlways(false);
+#endif
+
+			BotsSaveDataOfBotType = nullptr;
+	}
+
+	if (BotsSaveDataOfBotType)
+	{
+		for (const TPair<FUniquePlayerID, FPlayerSaveData>& BotSaveDataPair : *BotsSaveDataOfBotType)
+		{
+			// Go to the next pair if UniquePlayerID from this pair was already taken by another bot
+			if (!RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
+			{
+				continue;
+			}
+
+			// Initialize the UniquePlayerID of the bot with the first untaken UniquePlayerID from the saved data
+			PlayerState->SetUniquePlayerID(BotSaveDataPair.Key);
+
+#if DO_ENSURE
+			/**
+			 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the SetUniquePlayerID
+			 * function for this bot.
+			 */
+			EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
+
+			// Return the found save data for the bot to load
+			return &BotSaveDataPair.Value;
+		}
 	}
 
 	/**

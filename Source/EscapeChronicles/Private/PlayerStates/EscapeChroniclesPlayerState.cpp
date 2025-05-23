@@ -2,7 +2,9 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
+#include "EscapeChroniclesGameplayTags.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "Common/Enums/CharacterRole.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/SpectatorPawn.h"
@@ -230,4 +232,35 @@ void AEscapeChroniclesPlayerState::SetUniquePlayerID(const FUniquePlayerID& NewU
 
 	UniquePlayerID = NewUniquePlayerID;
 	OnUniquePlayerIdInitializedOrChanged();
+}
+
+ECharacterRole AEscapeChroniclesPlayerState::GetCharacterRole() const
+{
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Prisoner))
+	{
+		// Make sure the character doesn't have other roles
+#if DO_ENSURE
+		ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard));
+		ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Medic));
+#endif
+
+		return ECharacterRole::Prisoner;
+	}
+
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Guard))
+	{
+		// Make sure the character doesn't have other roles (we already checked for the prisoner role)
+#if DO_ENSURE
+		ensureAlways(!AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Medic));
+#endif
+
+		return ECharacterRole::Guard;
+	}
+
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Role_Medic))
+	{
+		return ECharacterRole::Medic;
+	}
+
+	return ECharacterRole::None;
 }

@@ -11,6 +11,8 @@
 
 class UAbilitySystemSet;
 
+enum class ECharacterRole : uint8;
+
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface,
 	public ISaveable
@@ -46,6 +48,9 @@ public:
 	void SetUniquePlayerID(const FUniquePlayerID& NewUniquePlayerID);
 
 	void GenerateUniquePlayerIdIfInvalid();
+
+	// Returns the role depending on the gameplay tags
+	ECharacterRole GetCharacterRole() const;
 
 	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 

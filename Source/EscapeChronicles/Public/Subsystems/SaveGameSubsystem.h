@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/SaveGame.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Common/Structs/UniquePlayerID.h"
+#include "GameFramework/SaveGame.h"
 #include "SaveGameSubsystem.generated.h"
 
 class AEscapeChroniclesPlayerState;
@@ -12,7 +13,6 @@ class UEscapeChroniclesSaveGame;
 
 struct FActorSaveData;
 struct FPlayerSaveData;
-struct FUniquePlayerID;
 
 /**
  * A subsystem that handles saving and loading the game. It saves/loads all actors, all their components, and all world
@@ -89,7 +89,6 @@ public:
 		RegisteredBotsUniquePlayerIDs.Add(UniquePlayerID);
 	}
 
-	// TODO: Call this function when the bot is created
 	/**
 	 * Tries to load the given bot from the last save game object that was saved or loaded if any. Could fail in case
 	 * there is no save game object or the bot doesn't have anything to load. This function will also load
