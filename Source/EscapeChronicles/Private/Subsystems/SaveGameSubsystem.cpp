@@ -176,11 +176,14 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 			continue;
 		}
 
+		// Check if an actor was dynamically spawned
+		const bool bDynamicallySpawnedActor = !Actor->HasAnyFlags(RF_WasLoaded);
+
 		/**
 		 * Skip dynamically spawned actors if they are not in the allowed list and player-specific actors
 		 * (player-specific actors are saved separately).
 		 */
-		const bool bCanSaveActor = (!Actor->HasAnyFlags(RF_WasLoaded) || IsAllowedDynamicallySpawnedActor(Actor)) &&
+		const bool bCanSaveActor = (!bDynamicallySpawnedActor || IsAllowedDynamicallySpawnedActor(Actor)) &&
 			!IsPlayerSpecificActor(Actor);
 
 		if (!bCanSaveActor)
@@ -191,8 +194,19 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		FActorSaveData ActorSaveData;
 		SaveActorToSaveDataChecked(Actor, ActorSaveData);
 
-		// Add actor's SaveData to the save game object
-		SaveGameObject->AddStaticSavedActor(Actor->GetFName(), ActorSaveData);
+		/**
+		 * Add actor's SaveData to the save game object. If an actor wasn't dynamically spawned, then add it to static
+		 * actors.
+		 */
+		if (!bDynamicallySpawnedActor)
+		{
+			SaveGameObject->AddStaticSavedActor(Actor->GetFName(), ActorSaveData);
+		}
+		// Otherwise, if an actor was dynamically spawned, then add it to dynamically spawned actors
+		else
+		{
+			SaveGameObject->AddDynamicallySpawnedSavedActor(Actor->GetClass(), ActorSaveData);
+		}
 	}
 
 	if (bAsync)
