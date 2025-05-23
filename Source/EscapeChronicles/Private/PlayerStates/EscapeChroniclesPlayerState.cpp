@@ -120,7 +120,7 @@ void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, 
 		return;
 	}
 
-	// Don't reapply effects if the new pawn is a spectator
+	// Don't reapply any effects if the new pawn is a spectator
 	if (NewPawn->IsA<ASpectatorPawn>())
 	{
 		// Remember the last pawn that wasn't a spectator
@@ -195,12 +195,21 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 		return;
 	}
 
+	// Players and bots have different LocalPlayerIDs
+	if (!IsABot())
+	{
 #if WITH_EDITOR
-	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
+		UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
 #else
-	// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build
-	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerID(0);
+		// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build
+		UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerID(0);
 #endif
+	}
+	else
+	{
+		// Always use 0 for LocalPlayerIDs of the bots
+		UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerID(0);
+	}
 
 	// Generate the NetID if it's an online player
 	if (IsOnlinePlayer())
