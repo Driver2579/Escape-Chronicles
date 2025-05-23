@@ -12,6 +12,8 @@ class ESCAPECHRONICLES_API AEscapeChroniclesAIController : public ADetourCrowdAI
 	GENERATED_BODY()
 
 public:
+	AEscapeChroniclesAIController();
+
 	virtual void InitPlayerState() override;
 
 private:

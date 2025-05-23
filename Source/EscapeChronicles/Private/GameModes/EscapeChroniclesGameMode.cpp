@@ -4,6 +4,7 @@
 
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "Components/ActorComponents/BotSpawnerComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
@@ -18,6 +19,8 @@ AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
+
+	BotSpawnerComponent = CreateDefaultSubobject<UBotSpawnerComponent>(TEXT("Bot Spawner"));
 
 	ScheduleEventManagerComponent = CreateDefaultSubobject<UScheduleEventManagerComponent>(
 		TEXT("Schedule Event Manager"));
@@ -202,6 +205,13 @@ void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerS
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
 
 	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+}
+
+void AEscapeChroniclesGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	BotSpawnerComponent->SpawnBots();
 }
 
 void AEscapeChroniclesGameMode::Logout(AController* Exiting)

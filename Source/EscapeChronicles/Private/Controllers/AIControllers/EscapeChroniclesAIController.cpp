@@ -4,6 +4,11 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
+AEscapeChroniclesAIController::AEscapeChroniclesAIController()
+{
+	bWantsPlayerState = true;
+}
+
 void AEscapeChroniclesAIController::InitPlayerState()
 {
 	// Initialize the PlayerState with a custom class if it's set

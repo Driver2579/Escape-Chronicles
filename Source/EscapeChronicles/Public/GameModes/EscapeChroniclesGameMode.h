@@ -9,6 +9,7 @@
 #include "EscapeChroniclesGameMode.generated.h"
 
 class AEscapeChroniclesPlayerState;
+class UBotSpawnerComponent;
 class UScheduleEventManagerComponent;
 
 struct FScheduleEventData;
@@ -20,6 +21,8 @@ class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 
 public:
 	AEscapeChroniclesGameMode();
+
+	UBotSpawnerComponent* GetBotSpawnerComponent() const { return BotSpawnerComponent; }
 
 	UScheduleEventManagerComponent* GetScheduleEventManagerComponent() const
 	{
@@ -51,11 +54,16 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
+	virtual void BeginPlay() override;
+
 	virtual void Logout(AController* Exiting) override;
 
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBotSpawnerComponent> BotSpawnerComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UScheduleEventManagerComponent> ScheduleEventManagerComponent;
 
@@ -93,7 +101,7 @@ private:
 
 	/**
 	 * Loads the player from the last save game object that was saved or loaded if any, or if failed to load, then
-	 * generates the new FUniquePlayerID for this player. After that, calls PostLoadInitPlayerOrBot for the player.
+	 * generates the new FUniquePlayerID for this player. After that, it calls PostLoadInitPlayerOrBot for the player.
 	 */
 	void LoadAndInitPlayer(const APlayerController* PlayerController);
 };
