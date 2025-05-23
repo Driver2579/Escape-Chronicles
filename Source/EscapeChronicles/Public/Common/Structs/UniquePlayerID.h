@@ -94,7 +94,7 @@ struct FUniquePlayerIdManager
 
 	FUniquePlayerID GenerateUniquePlayerID(const int32 LocalPlayerID)
 	{
-		return FUniquePlayerID(++MaxGeneratedPlayerId, LocalPlayerID);
+		return FUniquePlayerID(++MaxGeneratedPlayerID, LocalPlayerID);
 	}
 
 #if WITH_EDITOR
@@ -110,7 +110,7 @@ struct FUniquePlayerIdManager
 
 private:
 	UPROPERTY(SaveGame)
-	uint64 MaxGeneratedPlayerId = INDEX_NONE;
+	uint64 MaxGeneratedPlayerID = INDEX_NONE;
 
 	uint8 LastOpenedPIEIndex = INDEX_NONE;
 };

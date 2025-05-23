@@ -195,7 +195,7 @@ void AEscapeChroniclesPlayerState::GenerateUniquePlayerIdIfInvalid()
 		return;
 	}
 
-#if WITH_EDITORONLY_DATA
+#if WITH_EDITOR
 	UniquePlayerID = GameMode->GetUniquePlayerIdManager().GenerateUniquePlayerIdForPIE();
 #else
 	// We don't currently support split-screen, so always use 0 as the LocalPlayerID in the build

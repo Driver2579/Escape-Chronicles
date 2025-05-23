@@ -55,6 +55,11 @@ public:
 
 	virtual void PostLoad() override;
 
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,
+		APlayerState* OldPlayerState)
+
+	FOnPlayerStateChangedDelegate OnPlayerStateChangedDelegate;
+
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void UpdateNavigationRelevance() override;

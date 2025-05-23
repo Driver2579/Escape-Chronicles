@@ -18,12 +18,13 @@ public class EscapeChronicles : ModuleRules
 			"Mover",
 			"GameplayAbilities",
 			"GameplayTags",
-			"GameplayTasks"
+			"GameplayTasks",
+			"OnlineSubsystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			
+			"OnlineSubsystemUtils"
 		});
 	}
 }
