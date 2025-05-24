@@ -18,7 +18,7 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 
 public:
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
-	FLocalData& GetLocalData() { return LocalData; }
+	
 	bool IsInitialized() const { return bInitialized; }
 
 	template<typename T>
@@ -34,12 +34,17 @@ public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-private:
-	UPROPERTY(EditAnywhere, Replicated)
-	TSubclassOf<UInventoryItemDefinition> Definition;
-
+	void Break() { OnShouldBeRemoved.Execute(this); }
+	
 	UPROPERTY(Replicated)
 	FLocalData LocalData;
+	
+private:
+	DECLARE_DELEGATE_OneParam(FOnShouldBeBroken, UInventoryItemInstance*);
+	FOnShouldBeBroken OnShouldBeRemoved;
+	
+	UPROPERTY(EditAnywhere, Replicated)
+	TSubclassOf<UInventoryItemDefinition> Definition;
 	
 	bool bInitialized = false;
 };
@@ -49,7 +54,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!IsValid(GetDefinition()))
 	{
 		return nullptr;
 	}
@@ -57,7 +62,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return nullptr;
 	}

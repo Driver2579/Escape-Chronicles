@@ -13,7 +13,8 @@
 				"Mover",
 				"AIModule",
 				"CommonUI",
-				"UMG"
+				"UMG",
+				"InventorySystem"
 			]
 		}
 	],

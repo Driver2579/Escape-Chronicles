@@ -49,13 +49,13 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
+	// Do an action on each item in the inventory
+	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+	
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void ReadyForReplication() override;
-
-	// Do an action on each item in the inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
 	void LogInventoryContent() const;
 	
