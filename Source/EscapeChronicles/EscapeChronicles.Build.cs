@@ -19,7 +19,9 @@ public class EscapeChronicles : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
-			"OnlineSubsystem"
+			"OnlineSubsystem",
+			"StateTreeModule",
+			"GameplayStateTreeModule"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

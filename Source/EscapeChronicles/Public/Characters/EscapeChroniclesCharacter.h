@@ -97,6 +97,15 @@ public:
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
+	/**
+	 * The same as ResetGroundSpeedMode, but resets the ground speed mode to the default one no	matter what mode is
+	 * currently set.
+	 */
+	void ForceResetGroundSpeedMode()
+	{
+		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
+	}
+
 protected:
 	virtual void BeginPlay() override;
 
