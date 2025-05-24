@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "StateTree/StateTreeTasks/StateTreeAITasks/StateTreeAIActionTasks/ResetGroundSpeedModeStateTreeTask.h"
+#include "StateTree/Tasks/AITasks/AIActionTasks/ResetGroundSpeedModeStateTreeTask.h"
 
 #include "StateTreeExecutionContext.h"
 #include "Characters/EscapeChroniclesCharacter.h"
