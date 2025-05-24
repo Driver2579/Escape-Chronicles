@@ -15,9 +15,6 @@ EStateTreeRunStatus FResetGroundSpeedModeStateTreeTask::EnterState(FStateTreeExe
 {
 	const FInstanceDataType& InstanceData = Context.GetInstanceData(*this);
 
-	const EStateTreeRunStatus PositiveReturnStatus = InstanceData.bRunTaskForever ?
-		EStateTreeRunStatus::Running : EStateTreeRunStatus::Succeeded;
-
 #if DO_CHECK
 	check(InstanceData.OwnerCharacter);
 #endif
@@ -33,5 +30,5 @@ EStateTreeRunStatus FResetGroundSpeedModeStateTreeTask::EnterState(FStateTreeExe
 		InstanceData.OwnerCharacter->ResetGroundSpeedMode(InstanceData.GroundSpeedModeOverrideToReset);
 	}
 
-	return PositiveReturnStatus;
+	return EStateTreeRunStatus::Succeeded;
 }

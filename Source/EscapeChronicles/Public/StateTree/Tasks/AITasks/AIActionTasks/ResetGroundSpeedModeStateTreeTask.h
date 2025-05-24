@@ -15,13 +15,6 @@ struct FResetGroundSpeedModeStateTreeTaskInstanceData
 {
     GENERATED_BODY()
 
-    /**
-     * If true, the task will return the "Running" status. If false, the task will return the "Succeeded" status.
-     * Note: If the task fails, it will always return the "Failed" status regardless of this property.
-     */
-    UPROPERTY(EditAnywhere, Category="Parameter")
-    bool bRunTaskForever = false;
-
     UPROPERTY(EditAnywhere, Category="Context")
     TObjectPtr<AEscapeChroniclesCharacter> OwnerCharacter;
 
