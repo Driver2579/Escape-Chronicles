@@ -5,7 +5,7 @@
 #include "UI/Widgets/UserWidgets/RootContainerWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
-AEscapeChroniclesHUD::AEscapeChroniclesHUD(): RootInputMode(ERouteInputMode::Game), bRootCursorVisible(false)
+AEscapeChroniclesHUD::AEscapeChroniclesHUD()
 {
 	PrimaryActorTick.bCanEverTick = false;
 }
@@ -18,14 +18,14 @@ void AEscapeChroniclesHUD::BeginPlay()
 	
 	APlayerController* PlayerController = GetOwningPlayerController();
 	
-	if (!ensureAlways(IsValid(RootWidgetClass) && IsValid(PlayerController)))
+	if (!ensureAlways(RootWidgetClass && IsValid(PlayerController)))
 	{
 		return;
 	}
 	
 	RootWidget = CreateWidget<URootContainerWidget>(PlayerController, RootWidgetClass);
-
-	if (!ensureAlways(IsValid(RootWidget)))
+	
+	if (!ensureAlways(RootWidget))
 	{
 		return;
 	}
@@ -56,7 +56,7 @@ void AEscapeChroniclesHUD::BeginPlay()
 
 void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
 {
-	if (!ensureAlways(RouteName.IsValid() && IsValid(RootWidget)))
+	if (!ensureAlways(RouteName.IsValid() && RootWidget))
 	{
 		return;
 	}
@@ -78,7 +78,7 @@ void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
 
 void AEscapeChroniclesHUD::GoToRoot() const
 {
-	if (!ensureAlways(IsValid(RootWidget)))
+	if (!IsValid(RootWidget))
 	{
 		return;
 	}
@@ -104,8 +104,8 @@ void AEscapeChroniclesHUD::SetInputMode(const ERouteInputMode NewInputMode, cons
 
 	switch (NewInputMode)
 	{
-	case ERouteInputMode::Game: PlayerController->SetInputMode(FInputModeGameOnly()); break;
-	case ERouteInputMode::Ui: PlayerController->SetInputMode(FInputModeUIOnly()); break;
-	case ERouteInputMode::GameAndUi: PlayerController->SetInputMode(FInputModeGameAndUI()); break;
+		case ERouteInputMode::Game:			PlayerController->SetInputMode(FInputModeGameOnly());	break;
+		case ERouteInputMode::Ui:			PlayerController->SetInputMode(FInputModeUIOnly());		break;
+		case ERouteInputMode::GameAndUi:	PlayerController->SetInputMode(FInputModeGameAndUI());	break;
 	}
 }

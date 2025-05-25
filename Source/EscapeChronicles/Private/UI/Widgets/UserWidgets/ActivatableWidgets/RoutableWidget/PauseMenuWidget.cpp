@@ -10,19 +10,19 @@ void UPauseMenuWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	if (ensureAlways(IsValid(ContinueButton)))
+	if (ensureAlways(ContinueButton))
 	{
-		ContinueButton->OnClicked().AddUObject(this, &UPauseMenuWidget::OnContinueButtonClicked);
+		ContinueButton->OnClicked().AddUObject(this, &ThisClass::OnContinueButtonClicked);
 	}
 
-	if (ensureAlways(IsValid(OptionsButton)))
+	if (ensureAlways(OptionsButton))
 	{
-		OptionsButton->OnClicked().AddUObject(this, &UPauseMenuWidget::OnOptionsButtonClicked);
+		OptionsButton->OnClicked().AddUObject(this, &ThisClass::OnOptionsButtonClicked);
 	}
 
-	if (ensureAlways(IsValid(ExitButton)))
+	if (ensureAlways(ExitButton))
 	{
-		ExitButton->OnClicked().AddUObject(this, &UPauseMenuWidget::OnExitButtonClicked);
+		ExitButton->OnClicked().AddUObject(this, &ThisClass::OnExitButtonClicked);
 	}
 }
 
@@ -47,7 +47,7 @@ void UPauseMenuWidget::OnExitButtonClicked()
 	}
 
 	ConfirmationExitWidget->SetDisplayedText(ExitConfirmationWidgetText);
-	ConfirmationExitWidget->OnResult().AddLambda([this] (bool bConfirmed)
+	ConfirmationExitWidget->OnResult().AddLambda([this](bool bConfirmed)
 	{
 		if (bConfirmed)
 		{

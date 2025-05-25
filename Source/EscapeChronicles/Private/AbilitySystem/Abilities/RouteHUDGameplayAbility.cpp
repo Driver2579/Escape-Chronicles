@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/Abilities/RouteHUDGameplayAbility.h"
 
 #include "Characters/EscapeChroniclesCharacter.h"
@@ -51,7 +50,7 @@ void URouteHUDGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 		return;
 	}
 
-	HUD->GoTo(RouteName);
+	HUD->GoTo(RouteTag);
 	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
