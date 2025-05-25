@@ -19,6 +19,7 @@ public class EscapeChronicles : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
+			"InteractionSystem",
 			"OnlineSubsystem"
 		});
 
