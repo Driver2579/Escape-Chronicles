@@ -21,12 +21,14 @@ public class EscapeChronicles : ModuleRules
 			"GameplayTasks",
 			"OnlineSubsystem",
 			"StateTreeModule",
-			"GameplayStateTreeModule"
+			"GameplayStateTreeModule",
+			"SmartObjectsModule"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"OnlineSubsystemUtils"
+			"OnlineSubsystemUtils",
+			"GameplayBehaviorSmartObjectsModule"
 		});
 	}
 }
