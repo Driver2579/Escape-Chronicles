@@ -4,7 +4,7 @@
 
 #include "Objects/InventoryItemInstance.h"
 
-void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* Instance, int32 Amount)
+void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* Instance, int32 Amount) const
 {
 	const float CurrentDurability = Instance->LocalData.GetData(DurabilityDataTag)->Value;
 

@@ -45,19 +45,27 @@ private:
 	UFUNCTION()
 	void OnEnterBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-
-	UFUNCTION()
-	void OnExitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 	
 	UFUNCTION()
 	void OnEnterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
+	void OnExitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	
+	UFUNCTION()
 	void OnExitBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+	void SetLockDoorway(const AEscapeChroniclesCharacter* Character, bool IsLock) const;
 	bool HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const;
-	void UseKey(const AEscapeChroniclesCharacter* Character) const;
+	void UseKey(AEscapeChroniclesCharacter* Character);
+
+	/**
+	 * The characters who used the key
+	 * @tparam Сharacter has already used the key.
+	 * @tparam If True then the player enters, if False exits
+	 */
+	TMap<TObjectPtr<AEscapeChroniclesCharacter>, bool> ConfirmedCharactersPool;
 };

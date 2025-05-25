@@ -18,7 +18,7 @@ class INVENTORYSYSTEM_API UDurabilityInventoryItemFragment : public UInventoryIt
 public:
 	virtual void OnInstanceInitialized(UInventoryItemInstance* Instance) override;
 	
-	void ReduceDurability(UInventoryItemInstance* Instance, int32 Amount);
+	void ReduceDurability(UInventoryItemInstance* Instance, int32 Amount) const;
 	
 private:
 	// 

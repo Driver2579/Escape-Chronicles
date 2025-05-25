@@ -202,7 +202,7 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
 	UInventoryItemInstance* ItemInstance) const
 {
-	/*for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
+	for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
 	{
 		for (int32 Index = 0; Index <= TypedArray.Array.GetSlots().Num(); Index++)
 		{
@@ -214,20 +214,20 @@ bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& 
 				return true;
 			}
 		}
-	}*/
+	}
 
 	return false;
 }
 
 void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemInstance)
 {
-	/*FGameplayTag SlotsType;
+	FGameplayTag SlotsType;
 	int32 SlotIndex;
 	
 	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
 	{
 		DeleteItem(SlotIndex, SlotsType);
-	}*/
+	}
 }
 
 void UInventoryManagerComponent::AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback)

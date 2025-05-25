@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Objects/InventoryItemDefinition.h"
+#include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
 #include "Objects/InventoryItemFragments/InventoryItemFragment.h"
 #include "DoorKeyInventoryItemFragment.generated.h"
 
@@ -15,8 +17,20 @@ class ESCAPECHRONICLES_API UDoorKeyInventoryItemFragment : public UInventoryItem
 
 public:
 	const FGameplayTagContainer& GetCompatibleAccessTags() const { return CompatibleAccessTags; }
+	bool IsUseDurability() const { return bUseDurability; }
 
 	//void UseKey(UInventoryItemInstance* Instance) {}
+
+	virtual bool HasValidProperties(UInventoryItemDefinition* ItemDefinition) override
+	{
+		if (!bUseDurability)
+		{
+			return true;
+		}
+
+		return ensureAlwaysMsgf(ItemDefinition->GetFragments().FindItemByClass<UDurabilityInventoryItemFragment>(),
+			TEXT("If bUseDurability is true, the definition must include UDurabilityInventoryItemFragment"));
+	}
 	
 private:
 	// Indicates which doors this key can open
