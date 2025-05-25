@@ -13,6 +13,7 @@ AInventoryPickupItem::AInventoryPickupItem()
 	PrimaryActorTick.bCanEverTick = false;
 	
 	bReplicates = true;
+	bReplicateUsingRegisteredSubObjectList = true;
 	
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SetRootComponent(StaticMeshComponent);
@@ -58,7 +59,8 @@ void AInventoryPickupItem::BeginPlay()
 	{
 		ItemInstance->Initialize();
 	}
-
+	
+	AddReplicatedSubObject(ItemInstance);
 }
 
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
@@ -117,24 +119,16 @@ void AInventoryPickupItem::SetDefaultSettings() const
 	}
 }
 
+void AInventoryPickupItem::BreakItemInstance(UInventoryItemInstance* ItemInstancee)
+{
+	Destroy();
+}
+
 void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, ItemInstance);
-}
-
-bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
-	FReplicationFlags* RepFlags)
-{
-	bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-			
-	if (IsValid(ItemInstance))
-	{
-		bWroteSomething |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
-	}
-	
-	return bWroteSomething;
 }
 
 void AInventoryPickupItem::OnRep_ItemInstance()

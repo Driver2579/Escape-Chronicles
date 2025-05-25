@@ -30,17 +30,23 @@ public:
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
+
+	/**
+	 * Breaks the object.
+	 * @see for exactly how the item will break is used by Outer. The item can't break without it!
+	 * @warning Outer must implement IStoringItemInstances!
+	 */
+	void Break();
 	
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	void Break() { OnShouldBeRemoved.Execute(this); }
 	
 	UPROPERTY(Replicated)
 	FLocalData LocalData;
 	
 private:
 	DECLARE_DELEGATE_OneParam(FOnShouldBeBroken, UInventoryItemInstance*);
+	
 	FOnShouldBeBroken OnShouldBeRemoved;
 	
 	UPROPERTY(EditAnywhere, Replicated)

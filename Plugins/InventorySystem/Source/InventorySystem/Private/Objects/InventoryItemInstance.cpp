@@ -2,6 +2,7 @@
 
 #include "Objects/InventoryItemInstance.h"
 
+#include "Interfaces/StoringItemInstances.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragments/InventoryItemFragment.h"
@@ -60,6 +61,18 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	NewItemInstance->Initialize(GetDefinition());
 
 	return NewItemInstance;
+}
+
+void UInventoryItemInstance::Break()
+{
+	IStoringItemInstances* Outer = Cast<IStoringItemInstances>(GetOuter());
+
+	if (ensureAlways(Outer))
+	{
+		return;
+	}
+
+	Outer->BreakItemInstance(this);
 }
 
 void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

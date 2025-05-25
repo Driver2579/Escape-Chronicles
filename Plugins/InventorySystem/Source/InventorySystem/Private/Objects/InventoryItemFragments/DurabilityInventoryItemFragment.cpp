@@ -17,7 +17,6 @@ void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* 
 	{
 		Instance->Break();
 	}
-	
 }
 
 void UDurabilityInventoryItemFragment::OnInstanceInitialized(UInventoryItemInstance* Instance)

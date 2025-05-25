@@ -5,6 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
+#include "Interfaces/StoringItemInstances.h"
 
 #include "InventoryManagerComponent.generated.h"
 
@@ -13,7 +14,7 @@ DECLARE_MULTICAST_DELEGATE(FOnInventoryContentChanged);
 
 // Adds a custom inventory to an actor
 UCLASS(Blueprintable, Const)
-class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
+class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
 	
@@ -45,6 +46,15 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
+	/**
+	 * Method for obtaining data on item location in inventory
+	 * @return true if the search was successful
+	 */
+	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
+	                                      UInventoryItemInstance* ItemInstance) const;
+	
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
+	
 	void AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
