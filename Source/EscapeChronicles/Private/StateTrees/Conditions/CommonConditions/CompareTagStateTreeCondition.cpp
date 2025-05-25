@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "StateTree/Conditions/CompareTagStateTreeCondition.h"
+#include "StateTree/Conditions/CommonConditions/CompareTagStateTreeCondition.h"
 
 #include "StateTreeExecutionContext.h"
 
