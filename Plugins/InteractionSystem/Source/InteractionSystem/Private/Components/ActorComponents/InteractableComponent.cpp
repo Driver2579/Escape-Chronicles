@@ -58,22 +58,20 @@ void UInteractableComponent::InitializeHintWidget()
 
 	UInteractPopupWidget* Widget = Cast<UInteractPopupWidget>(WidgetComponent->GetWidget());
 
-	if (!ensureAlways(Widget))
+	if (ensureAlways(IsValid(Widget)))
 	{
-		return;
+		HintWidget = Widget;
 	}
-
-	HintWidget = Widget;
 }
 
 void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
 {
-	OnInteract.Broadcast(InteractionManagerComponent);
+	InteractDelegate.Broadcast(InteractionManagerComponent);
 }
 
-void UInteractableComponent::AddInteractionHandler(const FOnInteractDelegate::FDelegate& Callback)
+void UInteractableComponent::AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate)
 {
-	OnInteract.Add(Callback);
+	InteractDelegate.Add(Delegate);
 }
 
 void UInteractableComponent::SetInteractionHintVisibility(const bool bNewVisibility)

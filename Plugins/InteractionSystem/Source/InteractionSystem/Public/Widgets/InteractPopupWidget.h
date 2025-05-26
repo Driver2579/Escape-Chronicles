@@ -6,7 +6,6 @@
 #include "Blueprint/UserWidget.h"
 #include "InteractPopupWidget.generated.h"
 
-
 // Can be used in InteractableComponent with a component to show a hint
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractPopupWidget : public UUserWidget

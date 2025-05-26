@@ -26,18 +26,18 @@ void UInteractionManagerComponent::BeginPlay()
 	{
 		return;
 	}
-
+		
 	OwnerController = OwningPawn->GetController<APlayerController>();
 
 	bool bWasThereCollisionBinding = false;
 	
-	for (auto Component : GetAttachChildren())
+	for (USceneComponent* Component : GetAttachChildren())
 	{
 		UPrimitiveComponent* Primitive = Cast<UPrimitiveComponent>(Component);
 		
 		if (IsValid(Primitive))
 		{
-			// Add and remove UInteractableComponent from InteractableComponentsPool
+			// Add components to the interactable pool on begin overlap and remove them on end overlap
 			Primitive->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnAddToInteractableComponentsPool);
 			Primitive->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDeleteFromInteractableComponentsPool);
 
@@ -45,8 +45,10 @@ void UInteractionManagerComponent::BeginPlay()
 		}
 	}
 
+#if DO_ENSURE
 	ensureAlwaysMsgf(bWasThereCollisionBinding,
 		TEXT("Wasn't there an actor suitable to bind a selection component search!"));
+#endif
 }
 
 // ReSharper disable once CppParameterMayBeConst
@@ -71,6 +73,8 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 		return;
 	}
 
+	// === When the object enters the interaction zone - add it to the pool ===
+	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
 	if (IsValid(InteractableComponent))
@@ -88,6 +92,8 @@ void UInteractionManagerComponent::OnDeleteFromInteractableComponentsPool(UPrimi
 		return;
 	}
 
+	// === When the object leaves the zone - remove it from the pool ===
+	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
 	if (!IsValid(InteractableComponent))
@@ -123,10 +129,7 @@ bool UInteractionManagerComponent::IsPathObstructed(const UInteractableComponent
 	TraceParams.bTraceComplex = true;
 
 	FHitResult HitResult;
-	const bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility,
-		TraceParams);
-	
-	return bHit;
+	return GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
 }
 
 void UInteractionManagerComponent::SelectInteractableComponent()
@@ -156,7 +159,7 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 			continue;
 		}
 
-		const FVector OffsetVectorToActor = InteractableComponent.Get()->GetOwner()->GetActorLocation() - ViewLocation;
+		const FVector OffsetVectorToActor = InteractableComponent->GetOwner()->GetActorLocation() - ViewLocation;
 		const FVector DirectionToActor = OffsetVectorToActor.GetSafeNormal();
 
 		const float DotProduct = FVector::DotProduct(ViewDirection, DirectionToActor);

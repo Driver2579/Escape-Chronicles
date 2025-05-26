@@ -4,6 +4,7 @@
 
 #include "EscapeChroniclesGameplayTags.h"
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
+#include "Common/Structs/SaveData/AttributeSetSaveData.h"
 
 int32 UEscapeChroniclesAbilitySystemComponent::GenerateInputId()
 {
@@ -81,4 +82,75 @@ bool UEscapeChroniclesAbilitySystemComponent::CanModifyAttribute(const FGameplay
 	}
 
 	return true;
+}
+
+void UEscapeChroniclesAbilitySystemComponent::OnPreSaveObject()
+{
+	// Clear the map to avoid conflicts with the previous saved/loaded data
+	SavedAttributeSets.Empty();
+
+	// Iterate all attribute sets to save their attributes
+	for (const UAttributeSet* AttributeSet : GetSpawnedAttributes())
+	{
+#if DO_CHECK
+		check(IsValid(AttributeSet));
+#endif
+
+		FAttributeSetSaveData AttributeSetSaveData;
+
+		TArray<FGameplayAttribute> Attributes;
+		UAttributeSet::GetAttributesFromSetClass(AttributeSet->GetClass(), Attributes);
+
+		// Iterate all attributes to save their base values
+		for (const FGameplayAttribute& Attribute : Attributes)
+		{
+			// Save information about what attribute is being saved and save its base value
+			AttributeSetSaveData.AttributesBaseValues.Add(Attribute.GetName(),
+				Attribute.GetGameplayAttributeDataChecked(AttributeSet)->GetBaseValue());
+		}
+
+		// Save information about what attribute set is being saved and save its attributes' base values
+		SavedAttributeSets.Add(AttributeSet->GetClass(), AttributeSetSaveData);
+	}
+}
+
+void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
+{
+	// Iterate all attribute sets to update their attributes with loaded data
+	for (UAttributeSet* AttributeSet : GetSpawnedAttributes())
+	{
+#if DO_CHECK
+		check(IsValid(AttributeSet));
+#endif
+
+		// Try to find the save data for the attribute set
+		FAttributeSetSaveData* AttributeSetSaveData = SavedAttributeSets.Find(AttributeSet->GetClass());
+
+		// Skip the attribute set if it doesn't have any save data
+		if (!AttributeSetSaveData)
+		{
+			continue;
+		}
+
+		TArray<FGameplayAttribute> Attributes;
+		UAttributeSet::GetAttributesFromSetClass(AttributeSet->GetClass(), Attributes);
+
+		for (FGameplayAttribute& Attribute : Attributes)
+		{
+			const float* LoadedBaseValue = AttributeSetSaveData->AttributesBaseValues.Find(Attribute.GetName());
+
+			// Set the loaded base value to the attribute if it was found
+			if (LoadedBaseValue)
+			{
+				FGameplayAttributeData* GameplayAttributeData = Attribute.GetGameplayAttributeDataChecked(AttributeSet);
+
+				/**
+				 * We need to set both base	and current value because setting the base value doesn't automatically
+				 * update the current value.
+				 */
+				GameplayAttributeData->SetBaseValue(*LoadedBaseValue);
+				GameplayAttributeData->SetCurrentValue(*LoadedBaseValue);
+			}
+		}
+	}
 }
