@@ -2,6 +2,7 @@
 
 #include "Actors/Door.h"
 
+#include "AbilitySystemComponent.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/BoxComponent.h"
@@ -21,42 +22,76 @@ ADoor::ADoor()
 	ExitBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ExitBox"));
 	ExitBox->SetupAttachment(RootComponent);
 	
-	DoorwayBox = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBox"));
-	DoorwayBox->SetupAttachment(RootComponent);
+	DoorwayBoxBlock = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxBlock"));
+	DoorwayBoxBlock->SetupAttachment(RootComponent);
+	
+	DoorwayBoxOverlap = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxOverlap"));
+	DoorwayBoxOverlap->SetupAttachment(RootComponent);
 }
 
 void ADoor::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	EnterBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnEnterBoxBeginOverlap);
-	EnterBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterBoxEndOverlap);
-	
-	ExitBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnExitBoxBeginOverlap);
-	ExitBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnExitBoxEndOverlap);
+	DoorwayBoxOverlap->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxOverlapBeginOverlap);
+	DoorwayBoxOverlap->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxOverlapEndOverlap);
+
+	EnterBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterOrExitBoxOverlapEndOverlap);
+	ExitBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterOrExitBoxOverlapEndOverlap);
 }
 
-void ADoor::OnEnterBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character) || bEnterRequiresKey && !HasCharacterMatchingKey(Character))
+	if (!IsValid(Character))
 	{
 		return;
 	}
-	
-	SetLockDoorway(Character, true);
 
-	// If a character crosses two zones, he goes through a door
-	if (bExitRequiresKey && ExitBox->IsOverlappingActor(Character) && !ConfirmedCharactersPool.Find(Character))
+	if (ConfirmedCharactersPool.Contains(Character))
+	{
+		SetLockDoorway(Character, true);
+
+		return;
+	}
+	
+	const bool bRequiresKey = IsRequiresKey(Character);
+	
+	if (!bRequiresKey || HasCharacterAccess(Character))
+	{
+		SetLockDoorway(Character, true);
+
+		ConfirmedCharactersPool.Add(Character);
+		
+		return;
+	}
+	
+	if (HasCharacterMatchingKey(Character))
 	{
 		UseKey(Character);
-		ConfirmedCharactersPool.Add(Character, true);
+
+		SetLockDoorway(Character, true);
+
+		ConfirmedCharactersPool.Add(Character);
 	}
 }
 
-void ADoor::OnEnterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void ADoor::OnDoorwayBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
+
+	if (!IsValid(Character))
+	{
+		return;
+	}
+
+	SetLockDoorway(Character, false);
+}
+
+void ADoor::OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
@@ -65,70 +100,61 @@ void ADoor::OnEnterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActo
 	{
 		return;
 	}
-	
-	const bool* PoolValue = ConfirmedCharactersPool.Find(Character);
-	if (PoolValue && *PoolValue == false)
+
+	if (!DoorwayBoxOverlap->IsOverlappingActor(Character))
 	{
 		ConfirmedCharactersPool.Remove(Character);
 	}
-	
-	if (!EnterBox->IsOverlappingActor(Character))
-	{
-		SetLockDoorway(Character, false);
-	}
 }
 
-void ADoor::OnExitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+bool ADoor::IsRequiresKey(const AEscapeChroniclesCharacter* Character) const
 {
-	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
+	if (EnterBox->IsOverlappingActor(Character))
+	{
+		return bEnterRequiresKey;
+	}
+	if (ExitBox->IsOverlappingActor(Character))
+	{
+		return bExitRequiresKey;
+	}
 
-	if (!IsValid(Character) || bExitRequiresKey && !HasCharacterMatchingKey(Character))
-	{
-		return;
-	}
-	
-	SetLockDoorway(Character, true);
-	
-	// If a character crosses two zones, he goes through a door
-	if (bEnterRequiresKey && EnterBox->IsOverlappingActor(Character) && !ConfirmedCharactersPool.Find(Character))
-	{
-		UseKey(Character);
-		ConfirmedCharactersPool.Add(Character, false);
-	}
+	return ensureAlwaysMsgf(true, TEXT("During this check, the character must be in one of the direction boxes."));
 }
 
-void ADoor::OnExitBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+bool ADoor::IsOppositeSideRequiresKey(const AEscapeChroniclesCharacter* Character) const
 {
-	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
-
-	if (!IsValid(Character))
+	if (EnterBox->IsOverlappingActor(Character))
 	{
-		return;
+		return bExitRequiresKey;
+	}
+	if (ExitBox->IsOverlappingActor(Character))
+	{
+		return bEnterRequiresKey;
 	}
 
-	const bool* PoolValue = ConfirmedCharactersPool.Find(Character);
-	
-	if (PoolValue && *PoolValue == true)
-	{
-		ConfirmedCharactersPool.Remove(Character);
-	}
-	
-	if (!EnterBox->IsOverlappingActor(Character))
-	{
-		SetLockDoorway(Character, false);
-	}
+	return ensureAlwaysMsgf(true, TEXT("During this check, the character must be in one of the direction boxes."));
 }
 
 void ADoor::SetLockDoorway(const AEscapeChroniclesCharacter* Character, const bool IsLock) const
 {
-	Character->GetCapsuleComponent()->IgnoreComponentWhenMoving(DoorwayBox, IsLock);
+	Character->GetCapsuleComponent()->IgnoreComponentWhenMoving(DoorwayBoxBlock, IsLock);
 
 	if (ensureAlways(IsValid(Character->GetMesh())))
 	{
-		DoorwayBox->IgnoreComponentWhenMoving(Character->GetMesh(), IsLock);
+		DoorwayBoxBlock->IgnoreComponentWhenMoving(Character->GetMesh(), IsLock);
 	}
+}
+
+bool ADoor::HasCharacterAccess(const AEscapeChroniclesCharacter* Character) const
+{
+	const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
+
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	{
+		return false;
+	}
+
+	return AbilitySystemComponent->HasAnyMatchingGameplayTags(CharacterAccessTags);
 }
 
 bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const
@@ -152,7 +178,7 @@ bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character)
 			return;
 		}
 		
-		if (DoorKeyFragment->GetCompatibleAccessTags().HasTag(AccessTag))
+		if (DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
 		{
 			bResult = true;
 		}
@@ -161,7 +187,7 @@ bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character)
 	return bResult;
 }
 
-void ADoor::UseKey(AEscapeChroniclesCharacter* Character)
+void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 {
 	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
 
@@ -185,7 +211,7 @@ void ADoor::UseKey(AEscapeChroniclesCharacter* Character)
 		const UDoorKeyInventoryItemFragment* DoorKeyFragment =
 			ItemInstance->GetFragmentByClass<UDoorKeyInventoryItemFragment>();
 
-		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(AccessTag))
+		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
 		{
 			return; 
 		}

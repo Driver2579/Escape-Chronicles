@@ -31,10 +31,16 @@ private:
 	TObjectPtr<UBoxComponent> ExitBox;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UBoxComponent> DoorwayBox;
+	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> DoorwayBoxOverlap;
+	
 	UPROPERTY(EditAnywhere, Category="Access")
-	FGameplayTag AccessTag;
+	FGameplayTag KeyAccessTag;
+	
+	UPROPERTY(EditAnywhere, Category="Access")
+	FGameplayTagContainer CharacterAccessTags;
 	
 	UPROPERTY(EditAnywhere, Category="Access")
 	bool bEnterRequiresKey = false;
@@ -43,29 +49,35 @@ private:
 	bool bExitRequiresKey = false;
 
 	UFUNCTION()
-	void OnEnterBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
-	
-	UFUNCTION()
-	void OnEnterBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
 	UFUNCTION()
-	void OnExitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+	void OnDoorwayBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 	
 	UFUNCTION()
-	void OnExitBoxEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	
+	// Returns true if the key is needed in the current position
+	bool IsRequiresKey(const AEscapeChroniclesCharacter* Character) const;
 
+	// Returns true if the key is needed in the opposite side position
+	bool IsOppositeSideRequiresKey(const AEscapeChroniclesCharacter* Character) const;
+	
+	// Sets whether a character can pass through a door
 	void SetLockDoorway(const AEscapeChroniclesCharacter* Character, bool IsLock) const;
+	
+	// Returns true if the character has access to this door
+	bool HasCharacterAccess(const AEscapeChroniclesCharacter* Character) const;
+	
+	// Returns true if the character has a matching key
 	bool HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const;
-	void UseKey(AEscapeChroniclesCharacter* Character);
+	
+	// Removes 1 unit of durability if needed
+	void UseKey(const AEscapeChroniclesCharacter* Character) const;
 
-	/**
-	 * The characters who used the key
-	 * @tparam Сharacter has already used the key.
-	 * @tparam If True then the player enters, if False exits
-	 */
-	TMap<TObjectPtr<AEscapeChroniclesCharacter>, bool> ConfirmedCharactersPool;
+	// The characters who used the key
+	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ConfirmedCharactersPool;
 };
