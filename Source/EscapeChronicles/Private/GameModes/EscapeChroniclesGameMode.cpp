@@ -52,16 +52,27 @@ void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& 
 
 AActor* AEscapeChroniclesGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
+#if DO_CHECK
+	check(IsValid(Player));
+#endif
+
 	/**
 	 * The code below is based on the default implementation of ChoosePlayerStart in AGameModeBase. It was mostly copied
-	 * with some small modifications. The only difference here is that we check if we can spawn
+	 * with some small modifications. The main difference here is that we check if we can spawn
 	 * EscapeChroniclesPlayerStart.
 	 */
 
 	APlayerStart* FoundPlayerStart = nullptr;
 
-	const UClass* PawnClass = GetDefaultPawnClassForController(Player);
-	const APawn* PawnToFit = PawnClass ? PawnClass->GetDefaultObject<APawn>() : nullptr;
+	// Try to get the pawn from the controller
+	const APawn* PawnToFit = Player->GetPawn();
+
+	// If no pawn was found, they use the default pawn
+	if (!IsValid(PawnToFit))
+	{
+		const UClass* PawnClass = GetDefaultPawnClassForController(Player);
+		PawnToFit = IsValid(PawnClass) ? PawnClass->GetDefaultObject<APawn>() : nullptr;
+	}
 
 	const AEscapeChroniclesPlayerState* PlayerState = Cast<AEscapeChroniclesPlayerState>(Player->PlayerState);
 
@@ -120,6 +131,131 @@ AActor* AEscapeChroniclesGameMode::ChoosePlayerStart_Implementation(AController*
 	}
 
 	return FoundPlayerStart;
+}
+
+void AEscapeChroniclesGameMode::RestartPlayerAtPlayerStart(AController* NewPlayer, AActor* StartSpot)
+{
+	/**
+	 * The code below is based on the default implementation of RestartPlayerAtPlayerStart in AGameModeBase. It was
+	 * mostly copied with some small modifications. The main difference here is that we reset the pawn's location and
+	 * rotation here at the ones of the StartSpot even if there is already a pawn existing, which the default
+	 * implementation doesn't do in this case.
+	 */
+
+	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+	if (!StartSpot)
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Warning, TEXT("RestartPlayerAtPlayerStart: Player start not found"));
+#endif
+
+		return;
+	}
+
+#if !NO_LOGGING
+	UE_LOG(LogGameMode, Verbose, TEXT("RestartPlayerAtPlayerStart %s"),
+		(NewPlayer && NewPlayer->PlayerState) ? *NewPlayer->PlayerState->GetPlayerName() : TEXT("Unknown"));
+#endif
+
+	if (MustSpectate(Cast<APlayerController>(NewPlayer)))
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Verbose,
+			TEXT("RestartPlayerAtPlayerStart: Tried to restart a spectator-only player!"));
+#endif
+
+		return;
+	}
+
+	// Try to create a pawn to use of the default class for this player if it doesn't already have one
+	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer) != nullptr)
+	{
+		APawn* NewPawn = SpawnDefaultPawnFor(NewPlayer, StartSpot);
+
+		if (IsValid(NewPawn))
+		{
+			NewPlayer->SetPawn(NewPawn);
+		}
+	}
+	
+	if (!IsValid(NewPlayer->GetPawn()))
+	{
+		FailedToRestartPlayer(NewPlayer);
+	}
+	else
+	{
+		// Tell the start spot it was used
+		InitStartSpot(StartSpot, NewPlayer);
+
+		const FRotator SpawnRotation = StartSpot->GetActorRotation();
+
+		// Reset the pawn's location and rotation to the StartSpot's ones
+		NewPlayer->GetPawn()->SetActorLocation(StartSpot->GetActorLocation());
+		NewPlayer->GetPawn()->SetActorRotation(SpawnRotation);
+
+		FinishRestartPlayer(NewPlayer, SpawnRotation);
+	}
+}
+
+void AEscapeChroniclesGameMode::RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform)
+{
+	/**
+	 * The code below is based on the default implementation of RestartPlayerAtPlayerStart in AGameModeBase. It was
+	 * mostly copied with some small modifications. The main difference here is that we reset the pawn's location and
+	 * rotation here at the ones of the SpawnTransform even if there is already a pawn existing, which the default
+	 * implementation doesn't do in this case.
+	 */
+
+	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+#if !NO_LOGGING
+	UE_LOG(LogGameMode, Verbose, TEXT("RestartPlayerAtTransform %s"),
+		(NewPlayer && NewPlayer->PlayerState) ? *NewPlayer->PlayerState->GetPlayerName() : TEXT("Unknown"));
+#endif
+
+	if (MustSpectate(Cast<APlayerController>(NewPlayer)))
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Verbose,
+			TEXT("RestartPlayerAtTransform: Tried to restart a spectator-only player!"));
+#endif
+
+		return;
+	}
+
+	// Try to create a pawn to use of the default class for this player if it doesn't already have one
+	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer) != nullptr)
+	{
+		// Try to create a pawn to use of the default class for this player
+		APawn* NewPawn = SpawnDefaultPawnAtTransform(NewPlayer, SpawnTransform);
+
+		if (IsValid(NewPawn))
+		{
+			NewPlayer->SetPawn(NewPawn);
+		}
+	}
+
+	if (!IsValid(NewPlayer->GetPawn()))
+	{
+		FailedToRestartPlayer(NewPlayer);
+	}
+	else
+	{
+		const FRotator SpawnRotation = SpawnTransform.GetRotation().Rotator();
+
+		// Reset the pawn's location and rotation to the SpawnTransform's ones
+		NewPlayer->GetPawn()->SetActorLocation(SpawnTransform.GetLocation());
+		NewPlayer->GetPawn()->SetActorRotation(SpawnRotation);
+
+		FinishRestartPlayer(NewPlayer, SpawnRotation);
+	}
 }
 
 void AEscapeChroniclesGameMode::OnLoadGameCalled()

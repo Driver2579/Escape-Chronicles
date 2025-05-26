@@ -35,6 +35,9 @@ public:
 
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
+	virtual void RestartPlayerAtPlayerStart(AController* NewPlayer, AActor* StartSpot) override;
+	virtual void RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform) override;
+
 	/**
 	 * Initializes the player or bot after he's loaded or failed to be loaded.
 	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
