@@ -162,3 +162,23 @@ void AEscapeChroniclesGameMode::LoadPlayerOrGenerateUniquePlayerId(const APlayer
 			CastChecked<AEscapeChroniclesPlayerState>(PlayerController->PlayerState));
 	}
 }
+
+void AEscapeChroniclesGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	/**
+	 * Save the game at the end of the game but only if initial loading was finished or failed because we don't want to
+	 * accidentally override the data that wasn't even loaded yet.
+	 */
+	if (bInitialGameLoadFinishedOrFailed)
+	{
+		USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
+
+		if (ensureAlways(IsValid(SaveGameSubsystem)))
+		{
+			// Save the game synchronously because the game is about to be closed
+			SaveGameSubsystem->SaveGame(false);
+		}
+	}
+
+	Super::EndPlay(EndPlayReason);
+}

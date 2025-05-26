@@ -37,7 +37,7 @@ void UInteractionManagerComponent::BeginPlay()
 		
 		if (IsValid(Primitive))
 		{
-			// Subscribe to the events of the beginning and end of the collision intersection of a primitive
+			// Add components to the interactable pool on begin overlap and remove them on end overlap
 			Primitive->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnAddToInteractableComponentsPool);
 			Primitive->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDeleteFromInteractableComponentsPool);
 

@@ -26,8 +26,11 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 private:
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
+	UPROPERTY(Transient, SaveGame)
 	FUniquePlayerIdManager UniquePlayerIdManager;
 
 	FDelegateHandle OnGameLoadedDelegateHandle;

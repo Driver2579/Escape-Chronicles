@@ -46,6 +46,16 @@ public:
 	 */
 	virtual void SaveGame(FString SlotName, const bool bAsync = true);
 
+	/**
+     * Saves all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) associated with the given
+     * PlayerState to the current save game object. If there is no save game object yet, then it will be created.
+     * @remark It doesn't save the save game object to the file. You need to use the SaveGame function for that.
+     */
+    void SavePlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)
+    {
+    	SavePlayerOrBotChecked(GetOrCreateSaveGameObjectChecked(), PlayerState);
+    }
+
 	bool IsGameLoadingInProgress() const { return bGameLoadingInProgress; }
 
 	// Loads the game from the AutoSaveSlotName. Also, initializes FUniquePlayerIDs for all connected players.
@@ -59,6 +69,15 @@ public:
 	 * initializes FUniquePlayerIDs for all connected players.
 	 */
 	virtual void LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync = true);
+
+	/**
+	 * Tries to load the given player from the last save game object that was saved or loaded if any. Could fail in case
+	 * there is no save game object or the player doesn't have anything to load. This function will also load
+	 * FUniquePlayerID for the given PlayerState or if it failed to load, then going to generate a new one in case it
+	 * wasn't generated before.
+	 * @return True if the player was loaded.
+	 */
+	bool LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const;
 
 	// Called right before the game is about to be saved
 	FSimpleMulticastDelegate OnSaveGameCalled;
@@ -77,15 +96,6 @@ public:
 
 	// Usually happens when the given slot name doesn't exist
 	FSimpleMulticastDelegate OnFailedToLoadGame;
-
-	/**
-	 * Tries to load the given player from the last save game object that was saved or loaded if any. Could fail in case
-	 * there is no save game object or the player doesn't have anything to load. This function will also load
-	 * FUniquePlayerID for the given PlayerState or if it failed to load, then going to generate a new one in case it
-	 * wasn't generated before.
-	 * @return True if the player was loaded.
-	 */
-	bool LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const;
 
 protected:
 	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked();
@@ -142,10 +152,9 @@ private:
 
 	/**
 	 * Saves all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) associated with the given
-	 * PlayerState to the given save game object
+	 * PlayerState to the given save game object.
 	 */
-	void SavePlayerOrBotToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
-		AEscapeChroniclesPlayerState* PlayerState);
+	void SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState);
 
 	/**
 	 * Saves an actor to the OutActorSaveData and prepares it to be saved in the given save game object (e.g., calling
