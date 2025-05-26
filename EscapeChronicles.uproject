@@ -36,7 +36,7 @@
 		{
 			"Name": "MoverExamples",
 			"Enabled": true
-		}
+		},
 		{
 			"Name": "CommonUI",
 			"Enabled": true

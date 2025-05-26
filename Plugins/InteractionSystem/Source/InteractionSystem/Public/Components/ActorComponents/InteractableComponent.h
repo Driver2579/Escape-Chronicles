@@ -23,6 +23,11 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
+	const FName& GetHintMeshTag() const { return HintMeshTag; }
+
+
+	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
+	
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 

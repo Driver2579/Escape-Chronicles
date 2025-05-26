@@ -19,7 +19,7 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableComponent->AddInteractionHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
+	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
 		&AEscapeChroniclesInventoryPickupItem::InteractHandler));
 }
 
