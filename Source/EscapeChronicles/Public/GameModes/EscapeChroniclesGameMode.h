@@ -33,6 +33,8 @@ public:
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+
 	/**
 	 * Initializes the player or bot after he's loaded or failed to be loaded.
 	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
