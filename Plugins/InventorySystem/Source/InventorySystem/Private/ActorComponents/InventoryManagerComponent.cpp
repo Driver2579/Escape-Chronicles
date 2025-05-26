@@ -50,6 +50,11 @@ void UInventoryManagerComponent::BeginPlay()
 	// === Initialization ===
 	
 	TypedInventorySlotsLists.Initialize(SlotsNumberByTypes);
+
+	for (UInventoryManagerFragment* Fragment : Fragments)
+	{
+		Fragment->OnManagerInitialized(this);
+	}
 }
 
 UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,

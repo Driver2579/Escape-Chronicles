@@ -38,6 +38,9 @@ public:
 	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = -1,
 		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
+	bool AddItem(const UInventoryItemDefinition* ItemInstance, int32 SlotIndex = -1,
+		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	
 	/**
 	 * Delete an item from inventory
 	 * @param SlotIndex Index of the slot

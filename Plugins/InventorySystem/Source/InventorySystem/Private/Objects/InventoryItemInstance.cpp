@@ -53,13 +53,13 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 		return nullptr;
 	}
 
+	NewItemInstance->Initialize(GetDefinition());
+
 	for (FLocalDataItem Data : LocalData.GetAllData())
 	{
 		NewItemInstance->LocalData.SetData(Data);
 	}
-
-	NewItemInstance->Initialize(GetDefinition());
-
+	
 	return NewItemInstance;
 }
 

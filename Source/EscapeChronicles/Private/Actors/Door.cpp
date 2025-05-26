@@ -233,7 +233,7 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 		}
 	});
 
-	if (!bHasUnbreakableKey)
+	if (HasAuthority() && !bHasUnbreakableKey)
 	{
 		CachedDurabilityFragment->ReduceDurability(CachedItemInstance, 1);
 	}
