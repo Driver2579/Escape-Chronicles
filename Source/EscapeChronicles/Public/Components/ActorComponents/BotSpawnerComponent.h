@@ -27,7 +27,7 @@ public:
 	 */
 	void SpawnBots();
 
-	// Calls SpawnOneBot the specified number of times with specified class
+	// Calls SpawnOneBot the specified number of times with a specified class
 	void SpawnBots(const uint8 NumberOfBotsToSpawn,
 		const TSubclassOf<AEscapeChroniclesCharacter>& CharacterClass) const;
 
@@ -74,4 +74,7 @@ private:
 
 	UFUNCTION()
 	void OnCharacterControllerChanged(APawn* Pawn, AController* OldController, AController* NewController);
+
+	UFUNCTION()
+	void OnControllerPossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
 };

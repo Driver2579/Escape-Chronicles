@@ -148,9 +148,46 @@ void UBotSpawnerComponent::OnCharacterControllerChanged(APawn* Pawn, AController
 	ensureAlways(NewController->IsA<AAIController>());
 #endif
 
+	/**
+	 * Usually, ReceiveControllerChangedDelegate (where this function is called from) is called before the pawn is set
+	 * for the controller, even though it's already possessed at this stage. So we need to wait for the pawn to be set
+	 * if it isn't already before restarting it.
+	 */
+	if (NewController->GetPawn() == Pawn)
+	{
+		OnControllerPossessedPawnChanged(nullptr, Pawn);
+	}
+	else
+	{
+		NewController->OnPossessedPawnChanged.AddDynamic(this, &ThisClass::OnControllerPossessedPawnChanged);
+	}
+
+	// Unsubscribe from the controller changes
+	Pawn->ReceiveControllerChangedDelegate.RemoveDynamic(this, &ThisClass::OnCharacterControllerChanged);
+}
+
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
+{
+	// Don't do anything if this function was called for the pawn to be removed
+	if (!IsValid(NewPawn))
+	{
+		return;
+	}
+
 	const UWorld* World = GetWorld();
 
 	AGameModeBase* GameMode = World->GetAuthGameMode();
+
+#if DO_CHECK
+	check(IsValid(NewPawn->GetController()));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(NewPawn->GetController()->IsA<AAIController>());
+#endif
+
+	AController* Controller = NewPawn->GetController();
 
 	/**
 	 * Restart the AI controller. This will choose a PlayerStart for the character and move it there. If there was no
@@ -158,7 +195,7 @@ void UBotSpawnerComponent::OnCharacterControllerChanged(APawn* Pawn, AController
 	 */
 	if (ensureAlways(IsValid(GameMode)))
 	{
-		GameMode->RestartPlayer(NewController);
+		GameMode->RestartPlayer(Controller);
 	}
 
 	/**
@@ -166,10 +203,10 @@ void UBotSpawnerComponent::OnCharacterControllerChanged(APawn* Pawn, AController
 	 * generate the UniquePlayerID for the bot and load the bot if it has any save data. But first we need to make sure
 	 * the PlayerState is valid.
 	 */
-	if (ensureAlways(NewController->PlayerState))
+	if (ensureAlways(Controller->PlayerState))
 	{
 #if DO_CHECK
-		check(NewController->PlayerState->IsA<AEscapeChroniclesPlayerState>());
+		check(Controller->PlayerState->IsA<AEscapeChroniclesPlayerState>());
 #endif
 
 		const USaveGameSubsystem* SaveGameSubsystem = World->GetSubsystem<USaveGameSubsystem>();
@@ -177,10 +214,10 @@ void UBotSpawnerComponent::OnCharacterControllerChanged(APawn* Pawn, AController
 		if (ensureAlways(IsValid(SaveGameSubsystem)))
 		{
 			SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(
-				CastChecked<AEscapeChroniclesPlayerState>(NewController->PlayerState));
+				CastChecked<AEscapeChroniclesPlayerState>(Controller->PlayerState));
 		}
 	}
 
-	// Unsubscribe from the controller changes
-	Pawn->ReceiveControllerChangedDelegate.RemoveDynamic(this, &ThisClass::OnCharacterControllerChanged);
+	// Unsubscribe from the pawn changes if we ever subscribed to them
+	Controller->OnPossessedPawnChanged.RemoveDynamic(this, &ThisClass::OnControllerPossessedPawnChanged);
 }

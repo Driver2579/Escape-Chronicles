@@ -7,7 +7,6 @@
 #include "Common/Enums/CharacterRole.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
-#include "GameFramework/SpectatorPawn.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "Net/UnrealNetwork.h"
 
@@ -99,67 +98,14 @@ void AEscapeChroniclesPlayerState::PostInitializeComponents()
 
 	/**
 	 * Give AbilitySystemSets to the AbilitySystemComponent. We do this here because SetupInputComponent is called
-	 * before BeginPlay. Except we don't want to apply gameplay effects before the pawn is set to be able to initialize
-	 * attributes with data from the pawn.
+	 * before BeginPlay.
 	 */
 	for (UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
 	{
 		if (AbilitySystemSet)
 		{
-			AbilitySystemSet->GiveAttributesToAbilitySystem(AbilitySystemComponent);
-			AbilitySystemSet->GiveAbilitiesToAbilitySystem(AbilitySystemComponent);
+			AbilitySystemSet->GiveToAbilitySystem(AbilitySystemComponent);
 		}
-	}
-
-	OnPawnSet.AddDynamic(this, &ThisClass::OnPawnChanged);
-}
-
-void AEscapeChroniclesPlayerState::OnPawnChanged(APlayerState* ThisPlayerState, APawn* NewPawn, APawn* OldPawn)
-{
-	// Don't do anything if the new pawn is invalid (for example, if it was removed instead of being set)
-	if (!IsValid(NewPawn))
-	{
-		return;
-	}
-
-	// Don't reapply any effects if the new pawn is a spectator
-	if (NewPawn->IsA<ASpectatorPawn>())
-	{
-		// Remember the last pawn that wasn't a spectator
-		LastNotSpectatorPawn = OldPawn;
-
-		return;
-	}
-
-	/**
-	 * Don't reapply effects if the new pawn is the same as the last pawn that wasn't a spectator (for example, if we
-	 * had the pawn, then switched to a spectator, then switched back to the pawn).
-	 */
-	if (LastNotSpectatorPawn.IsValid() && NewPawn == LastNotSpectatorPawn)
-	{
-		// Forget about the last pawn that wasn't a spectator
-		LastNotSpectatorPawn.Reset();
-
-		return;
-	}
-
-	// Initialize attributes BEFORE the gameplay effects are applied. They may want to use attributes.
-	InitializeAttributes();
-
-	/**
-	 * Reapply (or apply for the first time) effects from AbilitySystemSets to the AbilitySystemComponent when the new
-	 * pawn is set.
-	 */
-	for (UAbilitySystemSet* AbilitySystemSet : AbilitySystemSets)
-	{
-		if (AbilitySystemSet)
-		{
-			AbilitySystemSet->TakeEffectsFromAbilitySystem(AbilitySystemComponent);
-			AbilitySystemSet->GiveEffectsToAbilitySystem(AbilitySystemComponent);
-		}
-
-		// We also want to apply blocking attributes by tags only after the gameplay effects are applied
-		AbilitySystemSet->ApplyBlockingAttributesByTags(AbilitySystemComponent);
 	}
 }
 
