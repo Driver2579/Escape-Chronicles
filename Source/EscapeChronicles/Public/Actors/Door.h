@@ -19,6 +19,12 @@ class ESCAPECHRONICLES_API ADoor : public AActor
 public:	
 	ADoor();
 
+	/*UPROPERTY(EditAnywhere, Category="Access")
+	bool bEnterRequiresKey = false;
+
+	UPROPERTY(EditAnywhere, Category="Access")
+	bool bExitRequiresKey = false;*/
+	
 protected:
 	virtual void BeginPlay() override;
 

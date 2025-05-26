@@ -113,6 +113,17 @@ public:
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
 	virtual void OnRep_PlayerState() override;
+
+	/**
+	 * Called when the character changes their fainting state.
+	 * @param bIsFainting true if the character is fainting and false if conscious.
+	 */
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnFaintingStateChanged, bool bIsFainting);
+
+	void AddFaintingStateChangedHandler(const FOnFaintingStateChanged::FDelegate& Delegate)
+	{
+		OnFaintingStateChanged.Add(Delegate);
+	}
 	
 protected:
 	virtual void BeginPlay() override;
@@ -266,6 +277,8 @@ private:
 	// Makes it a ragdoll if health is 0 or less
 	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
 
+	FOnFaintingStateChanged OnFaintingStateChanged;
+	
 	// Sets whether it is a ragdoll
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_UpdateFaintingState();

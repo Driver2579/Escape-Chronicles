@@ -171,7 +171,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	ActorAndViewDelta = GetActorRotation() - GetControlRotation();
+	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
 	ActorAndViewDelta.Normalize();
 	
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
@@ -736,6 +736,8 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 				FaintingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 					&AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded));
 		}
+
+		OnFaintingStateChanged.Broadcast(true);
 	}
 	else
 	{
@@ -750,6 +752,8 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintingEffectSpecHandle);
 		}
+
+		OnFaintingStateChanged.Broadcast(false);
 	}
 }
 
