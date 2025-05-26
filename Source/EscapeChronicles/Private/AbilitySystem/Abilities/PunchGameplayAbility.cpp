@@ -36,7 +36,6 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	SetupDamagingCollider();
 	LoadAndPlayAnimMontage();
 	LoadGameplayEffects();
-	LoadSounds();
 }
 
 void UPunchGameplayAbility::SetupDamagingCollider()
@@ -106,7 +105,7 @@ void UPunchGameplayAbility::LoadAndPlayAnimMontage()
 
 		return;
 	}
-
+	
 	LoadCurrentAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		DesiredAnimMontage.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 			&ThisClass::OnAnimMontageLoaded));
@@ -128,24 +127,6 @@ void UPunchGameplayAbility::LoadGameplayEffects()
 	LoadUnsuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		UnsuccessfulPunchEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 			&UPunchGameplayAbility::OnGameplayEffectLoaded, UnsuccessfulPunchEffectClass));
-}
-
-void UPunchGameplayAbility::LoadSounds()
-{
-	if (!ensureAlways(!SuccessfulPunchSound.IsNull() && !UnsuccessfulPunchSound.IsNull()))
-	{      
-		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-
-		return;
-	}
-	
-	LoadSuccessfulPunchSoundHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		SuccessfulPunchSound.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&UPunchGameplayAbility::OnSoundLoaded, SuccessfulPunchSound));
-
-	LoadUnsuccessfulPunchSoundHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		UnsuccessfulPunchSound.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&UPunchGameplayAbility::OnSoundLoaded, UnsuccessfulPunchSound));
 }
 
 void UPunchGameplayAbility::OnAnimMontageLoaded()
@@ -197,16 +178,6 @@ void UPunchGameplayAbility::OnGameplayEffectLoaded(const TSoftClassPtr<UGameplay
 	}
 }
 
-void UPunchGameplayAbility::OnSoundLoaded(const TSoftObjectPtr<USoundCue> LoadedSound)
-{
-	// Play sound if punch occurred but resource was not loaded by that time
-	if (IsPunchHappened && ensureAlways(DesiredToPlaySound.IsValid()) && DesiredToPlaySound == LoadedSound)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, DesiredToPlaySound.Get(),
-			CurrentActorInfo->AvatarActor.Get()->GetActorLocation());
-	}
-}
-
 void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
@@ -215,24 +186,24 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	{
 		return;
 	}
-	
-	TargetAbilitySystemComponent =
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
+
+	UAbilitySystemComponent* InstigatorAbilitySystemComponent = GetAbilitySystemComponentFromActorInfo();
+
+	if (!ensureAlways(IsValid(InstigatorAbilitySystemComponent)))
+	{
+		return;
+	}
+
+	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
 	DesiredDamagingCollider->OnComponentBeginOverlap.RemoveDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
 	IsPunchHappened = true;
 
-	// We perceive actors without ASC as a subject
+	// We can hit an object without ASC, but it will only cause visual effects
 	if (!TargetAbilitySystemComponent.IsValid())
 	{
-		DesiredToPlaySound = SuccessfulPunchSound;
+		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
 		
-		if (DesiredToPlaySound.IsValid())
-		{
-			UGameplayStatics::PlaySoundAtLocation(this, DesiredToPlaySound.Get(),
-				CurrentActorInfo->AvatarActor.Get()->GetActorLocation());
-		}
-
 		return;
 	}
 
@@ -240,12 +211,12 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	if (!TargetAbilitySystemComponent->HasMatchingGameplayTag(BlockingPunchesTag))
 	{
 		DesiredToApplyGameplayEffectClass = SuccessfulPunchEffectClass;
-		DesiredToPlaySound = SuccessfulPunchSound;
+		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
 	}
 	else
 	{
 		DesiredToApplyGameplayEffectClass = UnsuccessfulPunchEffectClass;
-		DesiredToPlaySound = UnsuccessfulPunchSound;
+		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
 	}
 
 	// == Whenever possible, we use desired asset ===
@@ -253,12 +224,6 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	if (DesiredToApplyGameplayEffectClass.IsValid())
 	{
 		ApplyDesiredGameplayEffect();
-	}
-
-	if (DesiredToPlaySound.IsValid())
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, DesiredToPlaySound.Get(),
-			CurrentActorInfo->AvatarActor.Get()->GetActorLocation());
 	}
 }
 
@@ -269,10 +234,10 @@ void UPunchGameplayAbility::ApplyDesiredGameplayEffect() const
 	{
 		return;
 	}
-
+	
 	const FGameplayEffectSpecHandle EffectSpecHandle = CurrentActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
 		DesiredToApplyGameplayEffectClass.Get(), GetAbilityLevel(), FGameplayEffectContextHandle());
-
+	
 	CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*EffectSpecHandle.Data.Get(),
 		TargetAbilitySystemComponent.Get());
 }
@@ -304,14 +269,11 @@ void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	UnloadByHandle(LoadCurrentAnimMontageHandle);
 	UnloadByHandle(LoadSuccessfulPunchEffectHandle);
 	UnloadByHandle(LoadUnsuccessfulPunchEffectHandle);
-	UnloadByHandle(LoadSuccessfulPunchSoundHandle);
-	UnloadByHandle(LoadUnsuccessfulPunchSoundHandle);
 
 	// Clear references
 	TargetAbilitySystemComponent = nullptr;
 	IsPunchHappened = false;
 	DesiredToApplyGameplayEffectClass.Reset();
-	DesiredToPlaySound.Reset();
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

@@ -11,8 +11,7 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"Mover",
-				"AIModule",
-				"InteractionSystem"
+				"AIModule"
 			]
 		}
 	],
@@ -34,6 +33,10 @@
 		},
 		{
 			"Name": "MoverExamples",
+			"Enabled": true
+		},
+		{
+			"Name": "AudioModulation",
 			"Enabled": true
 		}
 	]

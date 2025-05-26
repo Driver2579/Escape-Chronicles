@@ -5,14 +5,12 @@
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
-#include "AI/NavigationSystemBase.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
-#include "Components/ActorComponents/CarryableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -47,7 +45,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
-	
+
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
@@ -150,7 +148,7 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
 	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
-	
+
 	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
@@ -165,8 +163,9 @@ void AEscapeChroniclesCharacter::BeginPlay()
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
-	ActorAndViewDelta = GetActorRotation() - GetControlRotation();
+
+	// TODO: Maybe come up with a better option in the future to make the turn animations work
+	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
 	ActorAndViewDelta.Normalize();
 	
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
@@ -206,6 +205,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
+
+	// === Subscribe to changes in the health attribute ===
 	
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
@@ -269,7 +270,7 @@ FVector AEscapeChroniclesCharacter::ConsumeMovementInputVector()
 }
 
 void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
-                                                             FMoverInputCmdContext& InputCmdResult)
+	FMoverInputCmdContext& InputCmdResult)
 {
 	// === The code below was copied from the MoverExamplesCharacter::OnProduceInput method with some modifications ===
 
@@ -542,7 +543,7 @@ void AEscapeChroniclesCharacter::OnRep_PlayerState()
 }
 
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
-                                                       const FName& NewMovementModeName)
+	const FName& NewMovementModeName)
 {
 	/**
 	 * Even though the movement mode is changed, we need to wait for the next tick because gameplay tags in the
@@ -623,8 +624,9 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 	AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Mode_Running,
 		CharacterMoverComponent->IsRunGroundSpeedModeActive() ? 1 : 0);
 }
+
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
-                                                                  const EStanceMode NewStance) const
+	const EStanceMode NewStance) const
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
