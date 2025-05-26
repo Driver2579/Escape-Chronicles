@@ -5,11 +5,13 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "Interfaces/Saveable.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UInventoryManagerComponent;
+class UCarryableComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -64,7 +66,14 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
+	UFUNCTION(BlueprintCallable)
+	bool GetIsTurning() const { return bIsTurning; }
+
+	UFUNCTION(BlueprintCallable)
+	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
+	
 	virtual void PostLoad() override;
+	virtual void OnPostLoadObject() override;
 
 	virtual FVector GetNavAgentLocation() const override;
 
@@ -103,9 +112,13 @@ public:
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
+	virtual void OnRep_PlayerState() override;
+	
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaSeconds) override;
+	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
@@ -129,6 +142,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStartTurning = 90;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStopTurning = 10;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float TurningInterpSpeed = 7;
+	/**
+	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
+	 * “FaintingGameplayTag”
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainting")
+	TSoftClassPtr<class UGameplayEffect> FaintingEffectClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainting")
+	int32 FaintingEffectLevel;
+	
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
@@ -214,6 +245,9 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
+	bool bIsTurning = false;
+	FRotator ActorAndViewDelta;
+	
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
 	 * values that should be gotten when OnStanceChanged is called.
@@ -228,4 +262,18 @@ private:
 	 */
 	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
 		const EGroundSpeedMode NewGroundSpeedMode) const;
+	
+	// Makes it a ragdoll if health is 0 or less
+	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
+
+	// Sets whether it is a ragdoll
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_UpdateFaintingState();
+	
+	FName DefaultMeshCollisionProfileName;
+	FName DefaultCapsuleCollisionProfileName;
+	
+	TSharedPtr<FStreamableHandle> LoadFaintingEffectClassHandle;
+	FActiveGameplayEffectHandle FaintingEffectSpecHandle;
+	void OnFaintingEffectClassLoaded();
 };

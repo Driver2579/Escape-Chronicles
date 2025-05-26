@@ -18,6 +18,12 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	// Make movement impossible (sets movement mode to MOVE_None)
+	void DisableMovement();
+
+	//Set movement mode to the default based on the current physics volume
+	void SetDefaultMovementMode();
+	
 	virtual bool CanCrouch() override { return !IsAirborne(); }
 
 	/**
@@ -43,6 +49,8 @@ public:
 
 	FOnGroundSpeedModeChangedDelegate OnGroundSpeedModeChanged;
 
+	const static FName NullModeName;
+	
 protected:
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;

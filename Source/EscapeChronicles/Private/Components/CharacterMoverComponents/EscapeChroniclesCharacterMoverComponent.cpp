@@ -10,6 +10,8 @@
 #include "Mover/MovementModifiers/GroundSpeedModeModifier.h"
 #include "Mover/MovementSettings/GroundSpeedModeSettings.h"
 
+const FName UEscapeChroniclesCharacterMoverComponent::NullModeName(TEXT("Null"));
+
 #if WITH_EDITOR
 void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
@@ -30,6 +32,21 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 	}
 }
 #endif
+
+void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
+{
+	QueueNextMode(NullModeName);
+
+	// TODO: Find out how to disable Mover completely and do it here
+	//CachedLastSyncState.SyncStateCollection.Empty();
+	//CachedLastSyncState.Reset();
+	//LastMoverDefaultSyncState = nullptr;
+}
+
+void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
+{
+	QueueNextMode(StartingMovementMode);
+}
 
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
 {
