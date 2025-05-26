@@ -12,9 +12,8 @@ class UInteractionManagerComponent;
  * Delegate called when interacting with the actor
  * @param InteractionManagerComponent Reference to the manager of the actor that call the event
  */
-	
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
-	
+DECLARE_MULTICAST_DELEGATE_OneParam(FInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
+
 // A component that makes an actor interactive
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
@@ -24,22 +23,12 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
-	FName GetHintMeshTag() const
-	{
-		return HintMeshTag;
-	}
-
-	FName GetHintWidgetTag() const
-	{
-		return HintWidgetTag;
-	}
-	
-	// Calls the interaction delegate (OnInteract)
+	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 
-	// Adds an interaction event handler (OnInteract)
-	void AddInteractionHandler(const FOnInteractDelegate::FDelegate& Callback);
-
+	// Adds an interaction event handler (InteractDelegate)
+	void AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate);
+	
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
 	
@@ -51,15 +40,15 @@ private:
 	void InitializeHintWidget();
 	
 	// A delegate called when interacting with an actor
-	FOnInteractDelegate OnInteract;
+	FInteractDelegate InteractDelegate;
 
 	// Tag to find meshes to hint when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")
-	FName HintMeshTag = "HintMesh";
+	FName HintMeshTag = TEXT("HintMesh");
 
 	// Tag to find widget that is visible when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")
-	FName HintWidgetTag = "HintWidget";
+	FName HintWidgetTag = TEXT("HintWidget");
 	
 	// Material applied to the meshes when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")

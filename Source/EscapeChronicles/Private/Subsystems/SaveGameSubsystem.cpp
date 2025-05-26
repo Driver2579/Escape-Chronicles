@@ -96,6 +96,8 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 {
 	OnSaveGameCalled.Broadcast();
 
+	bGameSavingInProgress = true;
+
 	UEscapeChroniclesSaveGame* SaveGameObject = GetOrCreateSaveGameObjectChecked();
 
 	/**
@@ -169,16 +171,19 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		// Save the player state separately with the player-specific actors
 		if (PlayerState)
 		{
-			SavePlayerOrBotToSaveGameObjectChecked(SaveGameObject, PlayerState);
+			SavePlayerOrBotChecked(SaveGameObject, PlayerState);
 
 			continue;
 		}
+
+		// Check if an actor was dynamically spawned
+		const bool bDynamicallySpawnedActor = !Actor->HasAnyFlags(RF_WasLoaded);
 
 		/**
 		 * Skip dynamically spawned actors if they are not in the allowed list and player-specific actors
 		 * (player-specific actors are saved separately).
 		 */
-		const bool bCanSaveActor = (!Actor->HasAnyFlags(RF_WasLoaded) || IsAllowedDynamicallySpawnedActor(Actor)) &&
+		const bool bCanSaveActor = (!bDynamicallySpawnedActor || IsAllowedDynamicallySpawnedActor(Actor)) &&
 			!IsPlayerSpecificActor(Actor);
 
 		if (!bCanSaveActor)
@@ -189,8 +194,19 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		FActorSaveData ActorSaveData;
 		SaveActorToSaveDataChecked(Actor, ActorSaveData);
 
-		// Add actor's SaveData to the save game object
-		SaveGameObject->AddStaticSavedActor(Actor->GetFName(), ActorSaveData);
+		/**
+		 * Add actor's SaveData to the save game object. If an actor wasn't dynamically spawned, then add it to static
+		 * actors.
+		 */
+		if (!bDynamicallySpawnedActor)
+		{
+			SaveGameObject->AddStaticSavedActor(Actor->GetFName(), ActorSaveData);
+		}
+		// Otherwise, if an actor was dynamically spawned, then add it to dynamically spawned actors
+		else
+		{
+			SaveGameObject->AddDynamicallySpawnedSavedActor(Actor->GetClass(), ActorSaveData);
+		}
 	}
 
 	if (bAsync)
@@ -207,7 +223,7 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 	}
 }
 
-void USaveGameSubsystem::SavePlayerOrBotToSaveGameObjectChecked(UEscapeChroniclesSaveGame* SaveGameObject,
+void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveGameObject,
 	AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
@@ -377,17 +393,19 @@ void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>
 	Object->Serialize(Ar);
 }
 
-void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess) const
+void USaveGameSubsystem::OnSavingFinished(const FString& SlotName, int32 UserIndex, bool bSuccess)
 {
-	if (!bSuccess)
+	if (bSuccess)
+	{
+		OnGameSaved_Internal.Broadcast();
+		OnGameSaved.Broadcast();
+	}
+	else
 	{
 		OnFailedToSaveGame.Broadcast();
-
-		return;
 	}
 
-	OnGameSaved_Internal.Broadcast();
-	OnGameSaved.Broadcast();
+	bGameSavingInProgress = false;
 }
 
 void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, const bool bAsync)
@@ -407,6 +425,8 @@ void USaveGameSubsystem::LoadGameAndInitializeUniquePlayerIDs(FString SlotName, 
 
 		return;
 	}
+
+	bGameLoadingInProgress = true;
 
 	if (bAsync)
 	{
@@ -438,6 +458,9 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Forbid loading the game if level names don't match
 	if (!bLevelNamesMatch)
 	{
+		OnFailedToLoadGame.Broadcast();
+		bGameLoadingInProgress = false;
+
 		return;
 	}
 
@@ -556,6 +579,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// TODO: Also load bots once bots are implemented
 
 	OnGameLoaded.Broadcast();
+
+	bGameLoadingInProgress = false;
 }
 
 bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,

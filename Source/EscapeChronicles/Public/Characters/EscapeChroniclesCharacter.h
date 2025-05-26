@@ -186,7 +186,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> InteractionZone;
-	
+
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Camera", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<USpringArmComponent> CameraBoomComponent;
@@ -196,7 +196,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UEscapeChroniclesCharacterMoverComponent> CharacterMoverComponent;
-	
+
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
