@@ -21,6 +21,12 @@ void FCurrentEventStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& Cont
 		return;
 	}
 
+	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
+
+	// Initialize current events tags
+	InstanceData.CurrentScheduledEventTag = GameState->GetCurrentScheduledEventData().EventTag;
+	InstanceData.CurrentActiveEventTag = GameState->GetCurrentActiveEventData().EventTag;
+
 	// === Listen for current events to be changed ===
 
 	OnCurrentScheduledEventChangedDelegateHandle = GameState->OnCurrentScheduledEventChanged.AddRaw(this,
