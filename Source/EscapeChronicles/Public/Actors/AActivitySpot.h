@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "GameFramework/Actor.h"
 #include "AActivitySpot.generated.h"
 
@@ -41,11 +42,13 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
-	TWeakObjectPtr<AEscapeChroniclesCharacter> OccupyingSpotCharacter;
-
 	void OnGameplayEffectLoaded();
 	void OnAnimMontageLoaded();
 
 	TSharedPtr<FStreamableHandle> GameplayEffectHandle;
 	TSharedPtr<FStreamableHandle> AnimMontageHandle;
+
+	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
+
+	TWeakObjectPtr<AEscapeChroniclesCharacter> OccupyingSpotCharacter;
 };

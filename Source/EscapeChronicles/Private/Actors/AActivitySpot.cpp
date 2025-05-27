@@ -5,6 +5,7 @@
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ActorComponents/InteractableComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
 
 AAActivitySpot::AAActivitySpot()
@@ -24,6 +25,27 @@ AAActivitySpot::AAActivitySpot()
 void AAActivitySpot::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
+		&ThisClass::InteractHandler));
+}
+
+void AAActivitySpot::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
+{
+	if (!ensureAlways(IsValid(InteractableComponent)))
+	{
+		return;
+	}
+	
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
+		InteractionManagerComponent->GetOwner());
+
+	if (!ensureAlways(IsValid(Character)))
+	{
+		return;
+	}
+	
+	OccupySpot(Character);
 }
 
 void AAActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
@@ -37,26 +59,30 @@ void AAActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	{
 		return;
 	}
-		
-	OccupyingSpotCharacter = Character;
 
 	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 	UCapsuleComponent* Capsule = Character->GetCapsuleComponent();
+	UEscapeChroniclesCharacterMoverComponent* Mover = Character->GetCharacterMoverComponent();
 
 	if (!ensureAlways(IsValid(CharacterMesh) && IsValid(Capsule)))
 	{
 		return;
 	}
 
-	CharacterMesh->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);
-
-	Capsule->SetCollisionProfileName(TEXT("NoCollision"));
+	Character->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);
+	Mover->DisableMovement();
 	
+	//Capsule->SetCollisionProfileName(TEXT("NoCollision"));
+	
+	/*
 	GameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(GameplayEffectClass.ToSoftObjectPath(),
 		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded));
 
 	AnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(AnimMontage.ToSoftObjectPath(),
 		FStreamableDelegate::CreateUObject(this, &ThisClass::OnAnimMontageLoaded));
+		*/
+
+	OccupyingSpotCharacter = Character;
 }
 
 void AAActivitySpot::VacateSeat()
@@ -82,3 +108,4 @@ void AAActivitySpot::OnAnimMontageLoaded()
 {
 	
 }
+
