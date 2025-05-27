@@ -6,6 +6,8 @@
 #include "DetourCrowdAIController.h"
 #include "EscapeChroniclesAIController.generated.h"
 
+class UStateTreeAIComponent;
+
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesAIController : public ADetourCrowdAIController
 {
@@ -16,7 +18,14 @@ public:
 
 	virtual void InitPlayerState() override;
 
+protected:
+	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI", meta=(AllowPrivateAccess ="true"))
+	UStateTreeAIComponent* StateTreeAIComponent;
+
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<class AEscapeChroniclesPlayerState> PlayerStateClassOverride;
 };
