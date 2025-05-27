@@ -9,9 +9,7 @@
 class UInteractionManagerComponent;
 class UInteractableComponent;
 
-/**
- * Pickup item in the game
- */
+// You can interact with this item to pick it up in your inventory
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesInventoryPickupItem : public AInventoryPickupItem
 {

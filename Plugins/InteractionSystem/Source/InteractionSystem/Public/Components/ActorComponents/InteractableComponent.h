@@ -25,7 +25,6 @@ public:
 
 	const FName& GetHintMeshTag() const { return HintMeshTag; }
 
-
 	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
 	
 	// Calls the interaction delegate (InteractDelegate)

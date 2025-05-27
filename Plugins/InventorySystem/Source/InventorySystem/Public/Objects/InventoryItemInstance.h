@@ -18,7 +18,6 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 
 public:
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
-	FLocalData& GetLocalData() { return LocalData; }
 	bool IsInitialized() const { return bInitialized; }
 
 	template<typename T>
@@ -26,7 +25,9 @@ public:
 
 	template<typename T>
 	void GetFragmentsByClass(TArray<T*>& OutFragments) const;
-	
+
+	// You must call this method once before the user can interact with it in any way (e.g. in BeginPlay or before the
+	// item is displayed in the inventory)
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
@@ -34,12 +35,14 @@ public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// This is where the fragments of definitions save the data that is needed specifically for this item
+	UPROPERTY(EditAnywhere, Replicated)
+	FLocalData LocalData;
+	
 private:
+	// Determines what the item can do (Can be thrown away, is a tool, key, etc.)
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> Definition;
-
-	UPROPERTY(Replicated)
-	FLocalData LocalData;
 	
 	bool bInitialized = false;
 };

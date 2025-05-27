@@ -17,8 +17,8 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 	{
 		Definition = InDefinition;
 	}
-	else if (!ensureAlwaysMsgf(IsValid(Definition), TEXT(
-		"Definition must be valid either by InDefinition or by default before initialization!")))
+	else if (!ensureAlwaysMsgf(IsValid(Definition),
+		TEXT("Definition must be valid either by InDefinition or by default before initialization!")))
 	{
 		return;
 	}
@@ -44,7 +44,7 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	{
 		return nullptr;
 	}
-	
+
 	UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(Outer);
 
 	if (!IsValid(NewItemInstance))

@@ -16,7 +16,7 @@ UCLASS()
 class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
 {
 	GENERATED_BODY()
-	
+
 public:
 	AInventoryPickupItem();
 
@@ -32,17 +32,17 @@ public:
 			ItemInstance = InItemInstance;
 		}
 	}
-	
+
 	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
-	
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
 		override;
-	
+
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual void BeginPlay() override;
-	
+
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
 	/**
@@ -53,11 +53,11 @@ protected:
 
 	// Set the settings  mesh as default object
 	virtual void SetDefaultSettings() const;
-	
+
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
-	
+
 	UPROPERTY(EditInstanceOnly, Instanced, ReplicatedUsing="OnRep_ItemInstance")
 	TObjectPtr<UInventoryItemInstance> ItemInstance;
 

@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Actors/EscapeChroniclesInventoryPickupItem.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
@@ -23,7 +22,6 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 		&AEscapeChroniclesInventoryPickupItem::InteractHandler));
 }
 
-// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
 {
 	if (!ensureAlways(IsValid(InteractableComponent)))

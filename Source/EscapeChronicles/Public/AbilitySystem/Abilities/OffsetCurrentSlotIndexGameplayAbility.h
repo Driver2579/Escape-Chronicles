@@ -6,9 +6,7 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "OffsetCurrentSlotIndexGameplayAbility.generated.h"
 
-/**
- * 
- */
+// Moves the item selection in the inventory with the help of UInventoryManagerSelectorFragment
 UCLASS()
 class ESCAPECHRONICLES_API UOffsetCurrentSlotIndexGameplayAbility : public UEscapeChroniclesGameplayAbility
 {

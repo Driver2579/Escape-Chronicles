@@ -70,7 +70,7 @@ protected:
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")
 	TObjectPtr<UEscapeChroniclesAbilitySystemComponent> AbilitySystemComponent;
-	
+
 	// Ability system sets to grant to this pawn's ability system
 	UPROPERTY(EditDefaultsOnly, Category = "Ability System|Abilities")
 	TArray<TObjectPtr<UAbilitySystemSet>> AbilitySystemSets;
