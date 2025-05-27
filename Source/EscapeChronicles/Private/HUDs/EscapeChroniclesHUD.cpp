@@ -2,8 +2,7 @@
 
 #include "HUDs/EscapeChroniclesHUD.h"
 
-#include "UI/Widgets/ActivatableWidgets/EscapeChroniclesContainerWidget.h"
-#include "UI/Widgets/ActivatableWidgets/MenuWidgets/MenuWidget.h"
+#include "UI/Widgets/UserWidgets/RootContainerWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 AEscapeChroniclesHUD::AEscapeChroniclesHUD()
@@ -14,78 +13,99 @@ AEscapeChroniclesHUD::AEscapeChroniclesHUD()
 void AEscapeChroniclesHUD::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// === Create and add RootWidget to viewport ===
 	
-	if (ensureAlways(IsValid(ContainerWidgetClass)))
-	{
-		ContainerWidget = CreateWidget<UEscapeChroniclesContainerWidget>(GetOwningPlayerController(),
-				ContainerWidgetClass.Get());
-	}
+	APlayerController* PlayerController = GetOwningPlayerController();
 	
-	if (!ensureAlways(IsValid(ContainerWidget)))
-	{
-		return;
-	}
-
-	ContainerWidget->AddToViewport();
-
-	CurrentMenuTag = RootMenuTag;
-}
-
-void AEscapeChroniclesHUD::GoToMenu(FGameplayTag NewMenuTag)
-{
-	if (!ensureAlways(NewMenuTag.IsValid()) || NewMenuTag == CurrentMenuTag)
-	{
-		return;
-	}
-
-	if (NewMenuTag == RootMenuTag)
-	{
-		GoToRootMenu();
-		
-		return;
-	}
-
-	const TSubclassOf<UMenuWidget>* StateWidget = Menus.Find(NewMenuTag);
-
-	if (!ensureAlways(StateWidget))
+	if (!ensureAlways(RootWidgetClass && IsValid(PlayerController)))
 	{
 		return;
 	}
 	
-	UCommonActivatableWidgetStack* WidgetStack = ContainerWidget->GetWidgetStack();
-
-	if (!ensureAlways(IsValid(WidgetStack)))
-	{
-		return;
-	}
-
-	WidgetStack->ClearWidgets();
+	RootWidget = CreateWidget<URootContainerWidget>(PlayerController, RootWidgetClass);
 	
-	const UMenuWidget* MenuWidget = WidgetStack->AddWidget<UMenuWidget>(*StateWidget);
-
-	if (!ensureAlways(IsValid(MenuWidget)))
+	if (!ensureAlways(RootWidget))
 	{
 		return;
 	}
 
-	// Since when exiting this menu we will definitely get to the root widget, we must change CurrentMenuTag
-	MenuWidget->OnDeactivated().AddLambda([&]()
+	RootWidget->AddToViewport();
+	
+	// === Configure root content handling ===
+
+	const UCommonActivatableWidgetStack* ContentStack = RootWidget->GetContentStack();
+
+	if (!ensureAlways(IsValid(ContentStack)))
 	{
-		CurrentMenuTag = RootMenuTag;
+		return;
+	}
+
+	const UCommonActivatableWidget* RootContent = ContentStack->GetRootContent();
+
+	if (!ensureAlways(IsValid(RootContent)))
+	{
+		return;
+	}
+
+	RootContent->OnActivated().AddLambda([this]
+	{
+		SetInputMode(RootInputMode, bRootCursorVisible);
 	});
-	
-	CurrentMenuTag = NewMenuTag;
 }
 
-void AEscapeChroniclesHUD::GoToRootMenu()
+void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
 {
-	UCommonActivatableWidgetStack* WidgetStack = ContainerWidget->GetWidgetStack();
-
-	if (!ensureAlways(IsValid(WidgetStack)))
+	if (!ensureAlways(RouteName.IsValid() && RootWidget))
 	{
 		return;
 	}
 
-	WidgetStack->ClearWidgets();
-	CurrentMenuTag = RootMenuTag;
+	UCommonActivatableWidgetStack* ContentStack = RootWidget->GetContentStack();
+	
+	const FHUDRoute& Route = *Routes.Find(RouteName);
+
+	if (!ensureAlways(IsValid(Route.WidgetClass) && IsValid(ContentStack)))
+	{
+		return;
+	}
+	
+	ContentStack->ClearWidgets();
+	ContentStack->AddWidget(Route.WidgetClass);
+
+	SetInputMode(Route.InputMode, Route.bCursorVisible);
+}
+
+void AEscapeChroniclesHUD::GoToRoot() const
+{
+	if (!IsValid(RootWidget))
+	{
+		return;
+	}
+
+	UCommonActivatableWidgetStack* ContentStack = RootWidget->GetContentStack();
+	
+	if (ensureAlways(IsValid(ContentStack)))
+	{
+		ContentStack->ClearWidgets();
+	}
+}
+
+void AEscapeChroniclesHUD::SetInputMode(const ERouteInputMode NewInputMode, const bool bNewCursorVisible) const
+{
+	APlayerController* PlayerController = GetOwningPlayerController();
+
+	if (!ensureAlways(IsValid(PlayerController)))
+	{
+		return;
+	}
+
+	PlayerController->SetShowMouseCursor(bNewCursorVisible);
+
+	switch (NewInputMode)
+	{
+		case ERouteInputMode::Game:			PlayerController->SetInputMode(FInputModeGameOnly());	break;
+		case ERouteInputMode::Ui:			PlayerController->SetInputMode(FInputModeUIOnly());		break;
+		case ERouteInputMode::GameAndUi:	PlayerController->SetInputMode(FInputModeGameAndUI());	break;
+	}
 }
