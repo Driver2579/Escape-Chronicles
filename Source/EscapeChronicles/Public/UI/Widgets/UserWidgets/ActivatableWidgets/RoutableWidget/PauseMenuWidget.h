@@ -25,15 +25,15 @@ private:
 	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
 
 	// Button to resume gameplay 
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ContinueButton;
 
 	// Button to open options submenu 
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> OptionsButton;
 
 	// Button to initiate exit flow 
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ExitButton;
 
 	UFUNCTION()

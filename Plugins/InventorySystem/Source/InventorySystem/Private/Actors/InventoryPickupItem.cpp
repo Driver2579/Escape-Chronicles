@@ -12,7 +12,7 @@ AInventoryPickupItem::AInventoryPickupItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	
-	bReplicates = true;
+	SetReplicates(true);
 	bReplicateUsingRegisteredSubObjectList = true;
 	
 	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));

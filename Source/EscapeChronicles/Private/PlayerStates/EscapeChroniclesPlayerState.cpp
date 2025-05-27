@@ -2,7 +2,6 @@
 
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-#include "ActorComponents/InventoryManagerComponent.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
@@ -14,7 +13,7 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 {
 	AbilitySystemComponent = CreateDefaultSubobject<UEscapeChroniclesAbilitySystemComponent>(
 		TEXT("AbilitySystemComponent"));
-	
+
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	

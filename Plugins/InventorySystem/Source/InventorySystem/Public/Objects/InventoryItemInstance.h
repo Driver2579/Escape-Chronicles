@@ -26,7 +26,9 @@ public:
 
 	template<typename T>
 	void GetFragmentsByClass(TArray<T*>& OutFragments) const;
-	
+
+	// You must call this method once before the user can interact with it in any way (e.g. in BeginPlay or before the
+	// item is displayed in the inventory)
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
@@ -40,11 +42,13 @@ public:
 	
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	UPROPERTY(Replicated)
+
+	// This is where the fragments of definitions save the data that is needed specifically for this item
+	UPROPERTY(EditAnywhere, Replicated)
 	FLocalData LocalData;
 	
 private:
+	// Determines what the item can do (Can be thrown away, is a tool, key, etc.)
 	DECLARE_DELEGATE_OneParam(FOnShouldBeBroken, UInventoryItemInstance*);
 	
 	FOnShouldBeBroken OnShouldBeRemoved;
@@ -93,7 +97,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 
 	OutFragments.Empty();
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!IsValid(GetDefinition()))
 	{
 		return;
 	}
@@ -101,7 +105,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return;
 	}

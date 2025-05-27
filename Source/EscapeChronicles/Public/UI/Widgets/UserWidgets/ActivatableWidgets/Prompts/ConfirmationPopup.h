@@ -16,8 +16,9 @@ class ESCAPECHRONICLES_API UConfirmationPopup : public UPromptWidget
 	GENERATED_BODY()
 	
 public:
-	// Gets the result event delegate 
+	// Delegate to receive a response from the user 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FResultDelegate, bool bConfirmed)
+	
 	FResultDelegate& OnResult() { return ResultDelegate; }
 	
 	void SetDisplayedText(const FText& InTitleText) const;
@@ -28,16 +29,16 @@ protected:
 private:
 	FResultDelegate ResultDelegate;
 
-	// Text display component
-	UPROPERTY(meta = (BindWidget))  
+	// Displayed text when the widget is displayed
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextBlock> DisplayedText;
 
 	// Confirmation action button 
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ConfirmButton;
 
 	// Cancel action button 
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> CancelButton;
 	
 	UFUNCTION()  

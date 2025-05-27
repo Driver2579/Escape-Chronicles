@@ -16,7 +16,7 @@ class UInteractionManagerComponent;
 DECLARE_MULTICAST_DELEGATE_OneParam(FInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
 
 // A component that makes an actor interactive
-UCLASS(BlueprintType, Blueprintable, meta = (BlueprintSpawnableComponent))
+UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -25,6 +25,7 @@ public:
 	UInteractableComponent();
 
 	const FName& GetHintMeshTag() const { return HintMeshTag; }
+
 	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
 	
 	// Calls the interaction delegate (InteractDelegate)

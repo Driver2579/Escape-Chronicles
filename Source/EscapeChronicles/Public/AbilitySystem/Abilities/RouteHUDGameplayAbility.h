@@ -21,5 +21,5 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag RouteName;
+	FGameplayTag RouteTag;
 };

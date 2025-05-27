@@ -13,7 +13,7 @@ class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 	GENERATED_BODY()
 
 public:
-	FText GetName() { return DisplayName; }
+	const FText& GetName() { return DisplayName; }
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
 
 #if WITH_EDITOR

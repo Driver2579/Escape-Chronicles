@@ -8,20 +8,20 @@ void UConfirmationPopup::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 	
-	if (ensureAlways(IsValid(ConfirmButton)))
+	if (ensureAlways(ConfirmButton))
 	{
-		ConfirmButton->OnClicked().AddUObject(this, &UConfirmationPopup::OnConfirmButtonClicked);
+		ConfirmButton->OnClicked().AddUObject(this, &ThisClass::OnConfirmButtonClicked);
 	}
 
-	if (ensureAlways(IsValid(CancelButton)))
+	if (ensureAlways(CancelButton))
 	{
-		CancelButton->OnClicked().AddUObject(this, &UConfirmationPopup::OnCancelButtonClicked);
+		CancelButton->OnClicked().AddUObject(this, &ThisClass::OnCancelButtonClicked);
 	}
 }
 
 void UConfirmationPopup::SetDisplayedText(const FText& InTitleText) const
 {
-	if (ensureAlways(IsValid(DisplayedText)))
+	if (ensureAlways(DisplayedText))
 	{
 		DisplayedText->SetText(InTitleText);
 	}

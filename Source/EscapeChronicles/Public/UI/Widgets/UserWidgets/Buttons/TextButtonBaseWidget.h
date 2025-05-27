@@ -24,6 +24,6 @@ private:
 	FText ButtonText;
 
 	// Bound text block component that renders ButtonText
-	UPROPERTY(meta = (BindWidget))  
+	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<class UTextBlock> DisplayedText;
 };

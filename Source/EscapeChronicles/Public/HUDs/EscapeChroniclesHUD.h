@@ -11,13 +11,14 @@ class URootContainerWidget;
 class UCommonActivatableWidget;
 
 UENUM(BlueprintType)
-enum class  ERouteInputMode : uint8 {
+enum class ERouteInputMode : uint8
+{
 	Game,       // Input handled by game only (no UI interaction)
 	Ui,         // Input handled by UI only (game paused or ignored)
 	GameAndUi   // Hybrid mode (e.g. for menus that don't ignored the game)
 };
 
-// Defines a HUD route configuration including
+// Defines a HUD route configuration
 USTRUCT(BlueprintType)
 struct ESCAPECHRONICLES_API FHUDRoute
 {
@@ -76,11 +77,11 @@ private:
 
 	// Default input mode when no routes are active 
 	UPROPERTY(EditDefaultsOnly)
-	ERouteInputMode RootInputMode;
+	ERouteInputMode RootInputMode = ERouteInputMode::Game;
 
 	// Default cursor visibility when no routes are active 
 	UPROPERTY(EditDefaultsOnly)
-	bool bRootCursorVisible;
+	bool bRootCursorVisible = false;
 	
 	/**
 	 * Route definitions mapping GameplayTags to widget configurations.
