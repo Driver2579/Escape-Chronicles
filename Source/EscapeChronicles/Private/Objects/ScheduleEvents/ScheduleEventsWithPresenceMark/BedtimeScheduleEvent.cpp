@@ -213,7 +213,7 @@ void UBedtimeScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState
 		ScheduleEventManagerComponent->PushEvent(AlertEventData, true);
 	}
 
-	const FScheduleEventData& CurrentActiveEvent = ScheduleEventManagerComponent->GetCurrentActiveEventData();
+	const FScheduleEventData& CurrentActiveEvent = ScheduleEventManagerComponent->GetCurrentActiveEventDataChecked();
 
 	// Add the player that missed an event to the wanted players in alert event if it's the current active one
 	if (CurrentActiveEvent.EventTag == AlertEventData.EventTag)
