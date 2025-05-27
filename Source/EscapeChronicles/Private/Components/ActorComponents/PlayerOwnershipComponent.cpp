@@ -10,3 +10,30 @@ void UPlayerOwnershipComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 
 	DOREPLIFETIME(ThisClass, OwningPlayer);
 }
+
+void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer)
+{
+#if DO_ENSURE
+	ensureAlways(!OwningPlayer.IsValid());
+	ensureAlways(NewOwningPlayer.IsValid());
+#endif
+
+	OwningPlayer = NewOwningPlayer;
+
+	// Broadcast the delegate and clear it because we don't need it anymore
+	OnOwningPlayerInitialized.Broadcast(this, OwningPlayer);
+	OnOwningPlayerInitialized.Clear();
+}
+
+void UPlayerOwnershipComponent::CallOrRegister_OnOwningPlayerInitialized(
+	const FOnOwningPlayerInitializedDelegate::FDelegate& Callback)
+{
+	if (OwningPlayer.IsValid())
+	{
+		Callback.ExecuteIfBound(this, OwningPlayer);
+	}
+	else
+	{
+		OnOwningPlayerInitialized.Add(Callback);
+	}
+}

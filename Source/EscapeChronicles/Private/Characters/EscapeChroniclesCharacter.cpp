@@ -9,6 +9,8 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
@@ -90,6 +92,16 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	// Disable Actor-level movement replication, since our Mover component will handle it
 	SetReplicatingMovement(false);
+
+	// === Interaction ===
+	
+	InteractionManagerComponent = CreateDefaultSubobject<UInteractionManagerComponent>(
+		TEXT("Interaction Manager Component"));
+	
+	InteractionManagerComponent->SetupAttachment(RootComponent);
+
+	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("Interaction Zone"));
+	InteractionZone->SetupAttachment(InteractionManagerComponent);
 }
 
 UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
@@ -238,17 +250,8 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 
 	if (NavMoverComponent)
 	{
-		bRequestedNavMovement = NavMoverComponent->bRequestedNavMovement;
-
-		if (bRequestedNavMovement)
-		{
-			ControlInputVector = NavMoverComponent->CachedNavMoveInputIntent;
-			CachedMoveInputVelocity = NavMoverComponent->CachedNavMoveInputVelocity;
-
-			NavMoverComponent->bRequestedNavMovement = false;
-			NavMoverComponent->CachedNavMoveInputIntent = FVector::ZeroVector;
-			NavMoverComponent->CachedNavMoveInputVelocity = FVector::ZeroVector;
-		}
+		bRequestedNavMovement = NavMoverComponent->ConsumeNavMovementData(ControlInputVector,
+			CachedMoveInputVelocity);
 	}
 
 	// Favor velocity input
@@ -256,22 +259,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 
 	if (bUsingInputIntentForMove)
 	{
-		FRotator Rotator = CharacterInputs.ControlRotation;
-		FVector FinalDirectionalIntent;
-
-		if (CharacterMoverComponent)
-		{
-			if (CharacterMoverComponent->IsOnGround() || CharacterMoverComponent->IsFalling())
-			{
-				const FVector RotationProjectedOntoUpDirection = FVector::VectorPlaneProject(Rotator.Vector(),
-					CharacterMoverComponent->GetUpDirection()).GetSafeNormal();
-
-				Rotator = RotationProjectedOntoUpDirection.Rotation();
-			}
-
-			FinalDirectionalIntent = Rotator.RotateVector(ControlInputVector);
-		}
-
+		const FVector FinalDirectionalIntent = CharacterInputs.ControlRotation.RotateVector(ControlInputVector);
 		CharacterInputs.SetMoveInput(EMoveInputType::DirectionalIntent, FinalDirectionalIntent);
 	}
 	else
@@ -289,7 +277,7 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		CachedMoveInputVelocity = FVector::ZeroVector;
 	}
 
-	static float RotationMagMin(1e-3);
+	static constexpr float RotationMagMin(1e-3);
 
 	const bool bHasAffirmativeMoveInput = CharacterInputs.GetMoveInput().Size() >= RotationMagMin;
 
@@ -333,7 +321,9 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 
 	if (bUseBaseRelativeMovement)
 	{
-		if (UPrimitiveComponent* MovementBase = CharacterMoverComponent->GetMovementBase())
+		UPrimitiveComponent* MovementBase = CharacterMoverComponent->GetMovementBase();
+
+		if (IsValid(MovementBase))
 		{
 			const FName MovementBaseBoneName = CharacterMoverComponent->GetMovementBaseBoneName();
 
