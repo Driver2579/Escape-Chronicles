@@ -2,6 +2,7 @@
 
 #include "ActorComponents/InventoryManagerComponent.h"
 
+#include "InventorySystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerFragment.h"
 
@@ -218,7 +219,7 @@ void UInventoryManagerComponent::LogInventoryContent() const
 	const FString Separator = TEXT("========================================\n");
     
 	// Header
-	FString Output = "UInventoryManagerComponent::LogInventoryContent:\n";
+	FString Output = "UInventoryManagerComponent:\n";
 	Output += FString::Printf(TEXT("Owner: %s | Component instance: %p\n"), *GetOwner()->GetName(), this);
 	Output += Separator;
 
@@ -249,5 +250,5 @@ void UInventoryManagerComponent::LogInventoryContent() const
 		Output += Separator;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("%s"), *Output);
+	UE_LOG(LogInventorySystem, Log, TEXT("%s"), *Output);
 }

@@ -2,6 +2,7 @@
 
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 
+#include "InventorySystem.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
 
@@ -64,5 +65,5 @@ void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex()
 
 void UInventoryManagerSelectorFragment::LogCurrentSlotIndex() const
 {
-	UE_LOG(LogTemp, Log, TEXT("UInventoryManagerSelectorFragment::LogCurrentSlotIndex: %i"), CurrentSlotIndex);
+	UE_LOG(LogInventorySystem, Log, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);
 }
