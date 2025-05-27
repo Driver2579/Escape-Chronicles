@@ -560,7 +560,7 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		}
 
 		// Try to add an Actor to AllowedDynamicallySpawnedActors if it's a dynamically spawned actor
-		if (Actor->HasAnyFlags(RF_WasLoaded))
+		if (!Actor->HasAnyFlags(RF_WasLoaded))
 		{
 			if (IsAllowedDynamicallySpawnedActor(Actor))
 			{
