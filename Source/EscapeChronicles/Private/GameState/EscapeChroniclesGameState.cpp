@@ -36,6 +36,9 @@ void AEscapeChroniclesGameState::BeginPlay()
 	 * clients.
 	 */
 	RestartTickGameTimeTimer();
+
+	// Register the ScheduleEventManagerComponent data on the server
+	RegisterScheduleEventManagerData();
 }
 
 void AEscapeChroniclesGameState::RegisterScheduleEventManagerData()
