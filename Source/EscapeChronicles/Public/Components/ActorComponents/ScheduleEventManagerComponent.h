@@ -40,11 +40,17 @@ public:
 	// Sets default values for this component's properties
 	UScheduleEventManagerComponent();
 
+	// The same as GetCurrentScheduledEventDataChecked but returns an empty event if there are no events in the stack
+	FScheduleEventData GetCurrentScheduledEventData() const
+	{
+		return !EventsStack.IsEmpty() ? GetCurrentScheduledEventDataChecked() : FScheduleEventData();
+	}
+
 	/**
 	 * @return An event that is set by the schedule is changed. Isn't necessarily active, could be paused due to the
 	 * override by another event.
 	 */
-	const FScheduleEventData& GetCurrentScheduledEventData() const
+	const FScheduleEventData& GetCurrentScheduledEventDataChecked() const
 	{
 #if DO_CHECK
 		check(!EventsStack.IsEmpty());
@@ -53,10 +59,16 @@ public:
 		return EventsStack[0];
 	}
 
+	// The same as GetCurrentActiveEventDataChecked but returns an empty event if there are no events in the stack
+	FScheduleEventData GetCurrentActiveEventData() const
+	{
+		return !EventsStack.IsEmpty() ? GetCurrentActiveEventDataChecked() : FScheduleEventData();
+	}
+
 	/**
 	 * @return An event that is currently active.
 	 */
-	const FScheduleEventData& GetCurrentActiveEventData() const
+	const FScheduleEventData& GetCurrentActiveEventDataChecked() const
 	{
 #if DO_CHECK
 		check(!EventsStack.IsEmpty());
