@@ -111,7 +111,7 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 #endif
 
 	// Make sure we don't restart the same event
-	if (!EventsStack.IsEmpty() && *NewScheduledEvent == GetCurrentScheduledEventData())
+	if (!EventsStack.IsEmpty() && *NewScheduledEvent == GetCurrentScheduledEventDataChecked())
 	{
 		return;
 	}
@@ -164,7 +164,7 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 	// Pause the current event if it exists
 	if (!EventsStack.IsEmpty())
 	{
-		UScheduleEvent* EventInstance = GetCurrentActiveEventData().GetEventInstance();
+		UScheduleEvent* EventInstance = GetCurrentActiveEventDataChecked().GetEventInstance();
 
 		/**
 		 * The instance could still be loading. If it's valid already, then pause it now. Otherwise, it will be paused
@@ -245,7 +245,7 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 	EventInstance->SetEventData(EventData);
 
 	// Always start the event when it's created, but start it paused if the event is not the current active one
-	if (EventData == GetCurrentActiveEventData())
+	if (EventData == GetCurrentActiveEventDataChecked())
 	{
 		EventInstance->StartEvent(false);
 	}
@@ -332,7 +332,7 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 		 * The current active event is the last one in the stack, so it's changed automatically after we removed the
 		 * previous one.
 		 */
-		const FScheduleEventData& CurrentActiveEventData = GetCurrentActiveEventData();
+		const FScheduleEventData& CurrentActiveEventData = GetCurrentActiveEventDataChecked();
 
 		UScheduleEvent* EventInstance = CurrentActiveEventData.GetEventInstance();
 
