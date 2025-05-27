@@ -487,6 +487,22 @@ void UScheduleEventManagerComponent::OnPreLoadObject()
 
 void UScheduleEventManagerComponent::OnPostLoadObject()
 {
+	FScheduleEventData OldScheduledEvent;
+	FScheduleEventData OldActiveEvent;
+
+	/**
+	 * If there were any events in the stack before loading, then remember which ones were scheduled and which once were
+	 * active before loading.
+	 */
+	if (!EventsStackBeforeLoadingGame.IsEmpty())
+	{
+		// The first event in the stack is always scheduled
+		OldScheduledEvent = EventsStackBeforeLoadingGame[0];
+
+		// The last event in the stack is always active
+		OldActiveEvent = EventsStackBeforeLoadingGame.Last();
+	}
+
 	// End and unload all events that are not in the EventsStack after loading anymore
 	for (FScheduleEventData& EventData : EventsStackBeforeLoadingGame)
 	{
@@ -500,12 +516,27 @@ void UScheduleEventManagerComponent::OnPostLoadObject()
 	// We don't need to keep it anymore
 	EventsStackBeforeLoadingGame.Empty();
 
-	// Create instances for events that were added to the stack by the loading
+	// Create instances and notify about event changes for events that were added to the stack by the loading
 	for (FScheduleEventData& EventData : EventsStack)
 	{
 		if (!IsValid(EventData.GetEventInstance()) && !LoadEventInstancesHandles.Contains(EventData))
 		{
 			CreateEventInstanceAndStartOrPauseIt(EventData);
 		}
+	}
+
+	// === Notify about the current scheduled and active events changes ===
+
+	const FScheduleEventData CurrentScheduledEvent = GetCurrentScheduledEventData();
+	const FScheduleEventData CurrentActiveEvent = GetCurrentActiveEventData();
+
+	if (OldScheduledEvent != CurrentScheduledEvent)
+	{
+		OnCurrentScheduledEventChanged.Broadcast(OldScheduledEvent, CurrentScheduledEvent);
+	}
+
+	if (OldActiveEvent != CurrentActiveEvent)
+	{
+		OnCurrentActiveEventChanged.Broadcast(OldActiveEvent, CurrentActiveEvent);
 	}
 }
