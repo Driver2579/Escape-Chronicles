@@ -110,8 +110,10 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 	check(NewScheduledEvent);
 #endif
 
+	const FScheduleEventData OldScheduledEvent = GetCurrentScheduledEventData();
+
 	// Make sure we don't restart the same event
-	if (!EventsStack.IsEmpty() && *NewScheduledEvent == GetCurrentScheduledEventDataChecked())
+	if (*NewScheduledEvent == OldScheduledEvent)
 	{
 		return;
 	}
@@ -121,6 +123,7 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 	{
 		EventsStack.Add(*NewScheduledEvent);
 	}
+	// Otherwise, replace the first event in the stack with the new one (the first event is always the scheduled one)
 	else
 	{
 		RemoveEventByIndex(0, EAllowShrinking::No);
@@ -134,6 +137,15 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 	if (EventsStack.Num() == 1)
 	{
 		CreateEventInstanceAndStartOrPauseIt(*NewScheduledEvent);
+	}
+
+	// Notify that the current scheduled event has changed
+	OnCurrentScheduledEventChanged.Broadcast(OldScheduledEvent, *NewScheduledEvent);
+
+	// Notify that the current active event has changed if the new scheduled event is the current active one
+	if (*NewScheduledEvent == GetCurrentActiveEventDataChecked())
+	{
+		OnCurrentActiveEventChanged.Broadcast(OldScheduledEvent, *NewScheduledEvent);
 	}
 }
 
@@ -161,10 +173,12 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 	ensureAlways(!EventsStack.Contains(EventData));
 #endif
 
+	const FScheduleEventData OldActiveEvent = GetCurrentActiveEventData();
+
 	// Pause the current event if it exists
-	if (!EventsStack.IsEmpty())
+	if (OldActiveEvent.IsValid())
 	{
-		UScheduleEvent* EventInstance = GetCurrentActiveEventDataChecked().GetEventInstance();
+		UScheduleEvent* EventInstance = OldActiveEvent.GetEventInstance();
 
 		/**
 		 * The instance could still be loading. If it's valid already, then pause it now. Otherwise, it will be paused
@@ -181,6 +195,9 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 
 	// Create the event instance and start or pause it when it's ready
 	CreateEventInstanceAndStartOrPauseIt(EventData, bLoadEventClassSynchronously);
+
+	// Notify that the active event has changed
+	OnCurrentActiveEventChanged.Broadcast(OldActiveEvent, EventData);
 }
 
 void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData,
