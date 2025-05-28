@@ -20,7 +20,7 @@ void AEscapeChroniclesAIController::PostInitializeComponents()
 
 	AEscapeChroniclesGameMode* GameMode = GetWorld()->GetAuthGameMode<AEscapeChroniclesGameMode>();
 
-	if (ensureAlways(IsValid(GameMode)))
+	if (IsValid(GameMode))
 	{
 		GameMode->OnPlayerOrBotInitialized.AddUObject(this, &ThisClass::OnBotInitialized);
 	}
