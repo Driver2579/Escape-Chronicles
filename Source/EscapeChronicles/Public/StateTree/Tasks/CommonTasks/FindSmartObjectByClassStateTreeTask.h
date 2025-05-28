@@ -20,6 +20,13 @@ struct FFindSmartObjectByClassStateTreeTaskInstanceData
 	UPROPERTY(EditAnywhere, Category="Parameter")
 	FSmartObjectRequestFilter SmartObjectRequestFilter;
 
+	/**
+	 * If true, the smart object that is nearest to the UserActor will be returned instead of the first one found.
+	 * @remark You must specify the UserActor for this to work.
+	 */
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	bool bFindNearest = false;
+
 	// An actor that is going to use the smart object
 	UPROPERTY(EditAnywhere, Category="Context")
 	TObjectPtr<AActor> UserActor;
@@ -29,7 +36,7 @@ struct FFindSmartObjectByClassStateTreeTaskInstanceData
 	FSmartObjectRequestResult OutSmartObjectRequestResult;
 };
 
-// Finds all actors of a specified class and returns the first unclaimed smart object in found actors
+// Finds all actors of a specified class and returns the first or nearest unclaimed smart object in found actors
 USTRUCT(Category="Smart Objects", meta=(DisplayName="Find Smart Object by Class"))
 struct FFindSmartObjectByClassStateTreeTask : public FStateTreeTaskCommonBase
 {

@@ -53,8 +53,33 @@ EStateTreeRunStatus FFindSmartObjectByClassStateTreeTask::EnterState(FStateTreeE
 		return EStateTreeRunStatus::Failed;
 	}
 
-	// Return the first found smart object
-	InstanceData.OutSmartObjectRequestResult = FindSmartObjectsResults[0];
+	// Return the nearest smart object if requested and if the UserActor is specified
+	if (InstanceData.bFindNearest && ensureAlways(InstanceData.UserActor))
+	{
+		const FVector UserActorLocation = InstanceData.UserActor->GetActorLocation();
+
+		double ClosestDistance = TNumericLimits<double>::Max();
+
+		for (const FSmartObjectRequestResult& FindSmartObjectResult : FindSmartObjectsResults)
+		{
+			FTransform SlotTransform;
+			SmartObjectSubsystem->GetSlotTransformFromRequestResult(FindSmartObjectResult, SlotTransform);
+
+			const double Distance = FVector::Dist(UserActorLocation, SlotTransform.GetLocation());
+
+			// Remember the smart object if it's closer to the UserActor than the previously found one
+			if (Distance < ClosestDistance)
+			{
+				ClosestDistance = Distance;
+				InstanceData.OutSmartObjectRequestResult = FindSmartObjectResult;
+			}
+		}
+	}
+	// Otherwise, return the first found smart object
+	else
+	{
+		InstanceData.OutSmartObjectRequestResult = FindSmartObjectsResults[0];
+	}
 
 	return EStateTreeRunStatus::Succeeded;
 }
