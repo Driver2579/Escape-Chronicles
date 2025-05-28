@@ -333,6 +333,7 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 #if DO_ENSURE
 				ensureAlways(false);
 #endif
+				break;
 		}
 	}
 	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
