@@ -9,8 +9,13 @@ void URollCallScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerStat
 {
 	Super::NotifyPlayerMissedEvent(PlayerThatMissedAnEvent);
 
+	// Don't do anything if there is no AlertEventData specified
+	if (!ensure(AlertEventData.IsValid()))
+	{
+		return;
+	}
+
 #if DO_ENSURE
-	ensureAlways(AlertEventData.IsValid());
 	ensureAlways(AlertEventData.EventTag == EscapeChroniclesGameplayTags::ScheduleEvent_Alert);
 #endif
 
