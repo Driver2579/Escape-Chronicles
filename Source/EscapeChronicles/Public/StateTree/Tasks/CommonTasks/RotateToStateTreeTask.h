@@ -21,6 +21,15 @@ struct FRotateToStateTreeTaskInstanceData
 	// Speed at which the actor will rotate to face the target rotation
 	UPROPERTY(EditAnywhere, Category="Parameter", meta=(ClampMin=0.1))
 	float InterpolationSpeed = 5;
+
+	// Tolerance for how close the actor's rotation must be to the target rotation to consider it "facing" the target
+	UPROPERTY(EditAnywhere, Category="Parameter", meta=(ClampMin=0))
+	float RotationTolerance = 0.001;
+
+#if WITH_EDITORONLY_DATA
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	bool bLogRotation = false;
+#endif
 };
 
 // Rotates the given actor to face the specified rotation in world space with the specified speed

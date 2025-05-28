@@ -10,12 +10,25 @@ EStateTreeRunStatus FRotateToStateTreeTask::Tick(FStateTreeExecutionContext& Con
 
 	// Interpolate the rotation of the actor towards the target rotation with the specified speed
 	const FRotator NewRotation = FMath::RInterpTo(InstanceData.ActorToRotate->GetActorRotation(),
-		InstanceData.TargetRotation, DeltaTime, InstanceData.InterpolationSpeed);
+	InstanceData.TargetRotation, DeltaTime, InstanceData.InterpolationSpeed);
+
+#if WITH_EDITORONLY_DATA
+	if (InstanceData.bLogRotation)
+	{
+		UE_LOG(LogTemp, Display,
+			TEXT("FRotateToStateTreeTask::Tick: Rotating Actor: %s OldRotation: %s NewRotation: %s "
+				"TargetRotation: %s"),
+			*InstanceData.ActorToRotate->GetName(),
+			*InstanceData.ActorToRotate->GetActorRotation().ToString(),
+			*NewRotation.ToString(),
+			*InstanceData.TargetRotation.ToString());
+	}
+#endif
 
 	InstanceData.ActorToRotate->SetActorRotation(NewRotation);
 
 	// Return Succeeded once the new rotation is close enough to the target rotation
-	if (NewRotation.Equals(InstanceData.TargetRotation))
+	if (NewRotation.Equals(InstanceData.TargetRotation, InstanceData.RotationTolerance))
 	{
 		return EStateTreeRunStatus::Succeeded;
 	}
