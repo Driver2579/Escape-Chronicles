@@ -23,11 +23,11 @@ struct FCurrentEventStateTreeEvaluatorInstanceData
 
 	// A delegate that is called when the CurrentScheduledEventTag changes
 	UPROPERTY(EditAnywhere)
-	FStateTreeDelegateDispatcher CurrentScheduledEventChangedDispatcher;
+	FStateTreeDelegateDispatcher OnCurrentScheduledEventChangedDispatcher;
 
 	// A delegate that is called when the CurrentActiveEventTag changes
 	UPROPERTY(EditAnywhere)
-	FStateTreeDelegateDispatcher CurrentActiveEventChangedDispatcher;
+	FStateTreeDelegateDispatcher OnCurrentActiveEventChangedDispatcher;
 };
 
 /**

@@ -45,13 +45,13 @@ void FCurrentEventStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, 
 	if (CurrentScheduledEventTag != InstanceData.CurrentScheduledEventTag)
 	{
 		InstanceData.CurrentScheduledEventTag = CurrentScheduledEventTag;
-		Context.BroadcastDelegate(InstanceData.CurrentScheduledEventChangedDispatcher);
+		Context.BroadcastDelegate(InstanceData.OnCurrentScheduledEventChangedDispatcher);
 	}
 
 	if (CurrentActiveEventTag != InstanceData.CurrentActiveEventTag)
 	{
 		InstanceData.CurrentActiveEventTag = CurrentActiveEventTag;
-		Context.BroadcastDelegate(InstanceData.CurrentActiveEventChangedDispatcher);
+		Context.BroadcastDelegate(InstanceData.OnCurrentActiveEventChangedDispatcher);
 	}
 }
 
