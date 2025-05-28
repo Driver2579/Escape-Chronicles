@@ -13,7 +13,6 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
-#include "Components/ActorComponents/CarryableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -170,7 +169,8 @@ void AEscapeChroniclesCharacter::BeginPlay()
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
+
+	// TODO: Maybe come up with a better option in the future to make the turn animations work
 	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
 	ActorAndViewDelta.Normalize();
 	
@@ -211,6 +211,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
+
+	// === Subscribe to changes in the health attribute ===
 	
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 

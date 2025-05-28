@@ -71,7 +71,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	{
 		return;
 	}
-	
+
 	// === When the object enters the interaction zone - add it to the pool ===
 	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();

@@ -11,7 +11,6 @@
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UInventoryManagerComponent;
-class UCarryableComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -57,11 +56,6 @@ public:
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
-
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const
-	{
-		return InventoryManagerComponent;
-	}
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
@@ -102,7 +96,7 @@ public:
 
 	// Should be called for crouch input completion
 	void UnCrouch();
-
+	
 	// Should be called for any input trigger that wants to override the ground speed mode (e.g., walk, jog, run)
 	void OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride);
 
@@ -245,7 +239,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
-	
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 

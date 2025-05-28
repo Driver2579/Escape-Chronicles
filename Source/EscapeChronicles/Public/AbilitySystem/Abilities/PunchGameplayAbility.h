@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayCueInterface.h"
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "PunchGameplayAbility.generated.h"
 
@@ -13,14 +14,14 @@ USTRUCT(BlueprintType)
 struct FPunchConfiguration
 {
 	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	FName DamagingColliderTag;
-
-	TWeakObjectPtr<UShapeComponent> DamagingCollider;
 	
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UAnimMontage> AnimMontage;
+
+	UPROPERTY(EditDefaultsOnly)
+	FName DamagingColliderTag;
+	
+	TWeakObjectPtr<UShapeComponent> DamagingCollider;
 };
 
 // Ability class for executing a punch with animation, damage effects, and audio feedback
@@ -57,14 +58,14 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TSoftClassPtr<UGameplayEffect> UnsuccessfulPunchEffectClass;
 
-	// Sound to play on a successful punch
+	// Gameplay cue to apply on a successful punch (dealing damage)
 	UPROPERTY(EditDefaultsOnly)
-	TSoftObjectPtr<USoundCue> SuccessfulPunchSound;
+	FGameplayCueTag SuccessfulPunchGameplayCueTag;
 
-	// Sound to play on a failed punch
+	// Gameplay cue to apply on an unsuccessful punch (blocked)
 	UPROPERTY(EditDefaultsOnly)
-	TSoftObjectPtr<USoundCue> UnsuccessfulPunchSound;
-
+	FGameplayCueTag UnsuccessfulPunchGameplayCueTag;
+	
 	// Tag that marks actors or states that block punches
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag BlockingPunchesTag; 
@@ -78,13 +79,11 @@ private:
 	// Async load assets
 	void LoadAndPlayAnimMontage();
 	void LoadGameplayEffects();
-	void LoadSounds();
 
 	// Handling asset events
 	void OnAnimMontageLoaded();
 	void OnAnimMontageBlendingOut(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnGameplayEffectLoaded(const TSoftClassPtr<UGameplayEffect> LoadedEffect);
-	void OnSoundLoaded(const TSoftObjectPtr<USoundCue> LoadedSound);
 
 	// Called when the punch hitbox overlaps another actor's collider
 	UFUNCTION()
@@ -105,16 +104,12 @@ private:
 	TSharedPtr<FStreamableHandle> LoadCurrentAnimMontageHandle;
 	TSharedPtr<FStreamableHandle> LoadSuccessfulPunchEffectHandle;
 	TSharedPtr<FStreamableHandle> LoadUnsuccessfulPunchEffectHandle;
-	TSharedPtr<FStreamableHandle> LoadSuccessfulPunchSoundHandle;
-	TSharedPtr<FStreamableHandle> LoadUnsuccessfulPunchSoundHandle;
 
 	// Ability system component references for instigator and target
-	//TObjectPtr<UAbilitySystemComponent> InstigatorAbilitySystemComponent;
 	TWeakObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent;
 
 	// Cache to be applied after punch resolution
 	TSoftClassPtr<UGameplayEffect> DesiredToApplyGameplayEffectClass;
-	TSoftObjectPtr<USoundCue> DesiredToPlaySound;
 	TWeakObjectPtr<UShapeComponent> DesiredDamagingCollider;
 
 	// Index of the current punch configuration being executed

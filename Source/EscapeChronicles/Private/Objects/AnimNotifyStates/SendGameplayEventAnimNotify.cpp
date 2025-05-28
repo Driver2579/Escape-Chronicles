@@ -10,9 +10,9 @@ void USendGameplayEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAni
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	UAbilitySystemComponent* InstigatorAbilitySystemComponent
-		= UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MeshComp->GetOwner());
-    
+	UAbilitySystemComponent* InstigatorAbilitySystemComponent =
+		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MeshComp->GetOwner());
+
 	if (IsValid(InstigatorAbilitySystemComponent))
 	{
 		FGameplayEventData GameplayEventData;
