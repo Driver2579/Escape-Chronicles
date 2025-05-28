@@ -6,7 +6,6 @@
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "DefaultMovementSet/Settings/CommonLegacyMovementSettings.h"
-#include "Engine/SpringInterpolator.h"
 #include "Mover/MovementModifiers/GroundSpeedModeModifier.h"
 #include "Mover/MovementSettings/GroundSpeedModeSettings.h"
 
@@ -185,11 +184,11 @@ void UEscapeChroniclesCharacterMoverComponent::ApplyImpactPhysicsForces(const FH
 				const FVector ComponentVelocity = ImpactComponent->GetPhysicsLinearVelocity();
 				const FVector VirtualVelocity =
 					ImpactAcceleration.IsZero() ? ImpactVelocity : ImpactAcceleration.GetSafeNormal() * GetMaxSpeed();
-				
-				float Dot = 0.0f;
 
 				if (bScalePushForceToVelocity && !ComponentVelocity.IsNearlyZero())
 				{
+					float Dot = 0.0f;
+					
 					Dot = ComponentVelocity | VirtualVelocity;
 
 					if (Dot > 0.0f && Dot < 1.0f)
@@ -204,8 +203,8 @@ void UEscapeChroniclesCharacterMoverComponent::ApplyImpactPhysicsForces(const FH
 				}
 				
 				Force *= PushForceModificator;
-				const float ZeroVelocityTolerance = 1.0f;
-				if (ComponentVelocity.IsNearlyZero(ZeroVelocityTolerance))
+
+				if (ComponentVelocity.IsNearlyZero(1.0f))
 				{
 					Force *= InitialPushForceFactor;
 					ImpactComponent->AddImpulseAtLocation(Force, ForcePoint, Impact.BoneName);

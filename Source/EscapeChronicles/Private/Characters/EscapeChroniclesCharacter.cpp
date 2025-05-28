@@ -6,7 +6,6 @@
 #include "EscapeChroniclesGameplayTags.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
-#include "AI/NavigationSystemBase.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"

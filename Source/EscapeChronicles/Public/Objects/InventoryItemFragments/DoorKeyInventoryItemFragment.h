@@ -19,8 +19,6 @@ public:
 	const FGameplayTagContainer& GetCompatibleAccessTags() const { return CompatibleAccessTags; }
 	bool IsUseDurability() const { return bUseDurability; }
 
-	//void UseKey(UInventoryItemInstance* Instance) {}
-
 	virtual bool HasValidProperties(UInventoryItemDefinition* ItemDefinition) override
 	{
 		if (!bUseDurability)

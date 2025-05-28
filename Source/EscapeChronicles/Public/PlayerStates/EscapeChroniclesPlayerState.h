@@ -9,7 +9,6 @@
 #include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesPlayerState.generated.h"
 
-class UInventoryManagerComponent;
 class UAbilitySystemSet;
 
 UCLASS()
