@@ -13,8 +13,8 @@ struct FEmptyStateTreeTaskInstanceData
 };
 
 /**
- * An empty task that does nothing and simply returns Succeeded status. Can be used if you want a state that has no
- * tasks (such states run forever by default).
+ * An empty task that does nothing and simply returns Succeeded status. Can be used if you want a state with custom
+ * transition that has no tasks (only if no transitions are specified if you have no tasks).
  */
 USTRUCT(meta=(DisplayName="Empty Task"))
 struct FEmptyStateTreeTask : public FStateTreeTaskCommonBase
