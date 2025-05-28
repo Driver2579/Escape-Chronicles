@@ -7,6 +7,22 @@
 #include "SmartObjectRequestTypes.h"
 #include "FindSmartObjectByClassStateTreeTask.generated.h"
 
+UENUM(BlueprintType)
+enum class EFindSmartObjectMethod : uint8
+{
+	// Returns the first found smart object
+	First,
+
+	// Returns the nearest smart object to the UserActor (without checking the path)
+	Nearest,
+
+	/**
+	 * Returns the nearest smart object to the UserActor that is within an acceptable radius. If no such smart object is
+	 * found, returns the first one.
+	 */
+	NearestInAcceptableRadius
+};
+
 USTRUCT()
 struct FFindSmartObjectByClassStateTreeTaskInstanceData
 {
@@ -20,12 +36,12 @@ struct FFindSmartObjectByClassStateTreeTaskInstanceData
 	UPROPERTY(EditAnywhere, Category="Parameter")
 	FSmartObjectRequestFilter SmartObjectRequestFilter;
 
-	/**
-	 * If true, the smart object that is nearest to the UserActor will be returned instead of the first one found.
-	 * @remark You must specify the UserActor for this to work.
-	 */
 	UPROPERTY(EditAnywhere, Category="Parameter")
-	bool bFindNearest = false;
+	EFindSmartObjectMethod FindSmartObjectMethod = EFindSmartObjectMethod::First;
+
+	UPROPERTY(EditAnywhere, Category="Parameter",
+		meta=(ClampMin=0.1, EditCondition="FindSmartObjectMethod == EFindSmartObjectMethod::NearestInAcceptableRadius"))
+	float AcceptableRadius = 200;
 
 	// An actor that is going to use the smart object
 	UPROPERTY(EditAnywhere, Category="Context")

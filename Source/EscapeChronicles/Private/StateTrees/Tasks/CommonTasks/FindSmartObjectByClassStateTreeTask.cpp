@@ -2,6 +2,7 @@
 
 #include "StateTree/Tasks/CommonTasks/FindSmartObjectByClassStateTreeTask.h"
 
+#include "NavigationSystem.h"
 #include "SmartObjectRequestTypes.h"
 #include "SmartObjectSubsystem.h"
 #include "StateTreeExecutionContext.h"
@@ -54,7 +55,7 @@ EStateTreeRunStatus FFindSmartObjectByClassStateTreeTask::EnterState(FStateTreeE
 	}
 
 	// Return the nearest smart object if requested and if the UserActor is specified
-	if (InstanceData.bFindNearest && ensureAlways(InstanceData.UserActor))
+	if (InstanceData.FindSmartObjectMethod != EFindSmartObjectMethod::First && ensureAlways(InstanceData.UserActor))
 	{
 		const FVector UserActorLocation = InstanceData.UserActor->GetActorLocation();
 
@@ -67,19 +68,38 @@ EStateTreeRunStatus FFindSmartObjectByClassStateTreeTask::EnterState(FStateTreeE
 
 			const double Distance = FVector::Dist(UserActorLocation, SlotTransform.GetLocation());
 
-			// Remember the smart object if it's closer to the UserActor than the previously found one
-			if (Distance < ClosestDistance)
+			// We can't select the smart object if it's not in an acceptable radius it should be checked
+			const bool bCanSelectSmartObject =
+				InstanceData.FindSmartObjectMethod != EFindSmartObjectMethod::NearestInAcceptableRadius ||
+					Distance <= InstanceData.AcceptableRadius;
+
+			/**
+			 * If we can select this smart object, then remember the smart object if it's closer to the UserActor than
+			 * the previously found one.
+			 */
+			if (bCanSelectSmartObject && Distance < ClosestDistance)
 			{
 				ClosestDistance = Distance;
 				InstanceData.OutSmartObjectRequestResult = FindSmartObjectResult;
 			}
 		}
+
+		/**
+		 * Return the succeeded status if we found the smart object in the acceptable radius (it will always be valid if
+		 * we didn't have to check for the acceptable radius).
+		 */
+		if (InstanceData.OutSmartObjectRequestResult.IsValid())
+		{
+			return EStateTreeRunStatus::Succeeded;
+		}
 	}
-	// Otherwise, return the first found smart object
-	else
-	{
-		InstanceData.OutSmartObjectRequestResult = FindSmartObjectsResults[0];
-	}
+
+	/**
+	 * Always fall back to the first found smart object if we didn't find it in the code above. This will only be
+	 * triggered if the finding method is set to First, or if the UserActor is not specified, or if the finding method
+	 * is set to NearestInAcceptableRadius and no smart object was found within the acceptable radius.
+	 */
+	InstanceData.OutSmartObjectRequestResult = FindSmartObjectsResults[0];
 
 	return EStateTreeRunStatus::Succeeded;
 }
