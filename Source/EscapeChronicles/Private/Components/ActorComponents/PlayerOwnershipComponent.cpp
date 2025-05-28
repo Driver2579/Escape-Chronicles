@@ -222,9 +222,9 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		break;
 	}
 
-#if DO_ENSURE
-	ensureAlwaysMsgf(bFoundGroup,
-		TEXT("No group was found for player %s! Consider adding more groups to the level that this player can "
+#if !NO_LOGGING
+	UE_LOG(LogTemp, Display,
+		TEXT("No group was found for player %s. Consider adding more groups to the level that this player can "
 			"be assigned to"),
 		*PlayerState->GetPlayerName());
 #endif
