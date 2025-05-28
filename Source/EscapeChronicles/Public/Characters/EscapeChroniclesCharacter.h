@@ -3,11 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystemInterface.h"
 #include "MoverSimulationTypes.h"
+#include "AbilitySystemInterface.h"
+#include "Interfaces/Saveable.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UBoxComponent;
+class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
@@ -18,7 +21,8 @@ enum class EStanceMode : uint8;
 enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
-class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface
+class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface,
+	public ISaveable
 {
 	GENERATED_BODY()
 
@@ -42,6 +46,9 @@ public:
 	// Returns FollowCameraComponent subobject
 	UCameraComponent* GetFollowCameraComponent() const { return FollowCameraComponent; }
 
+	// Returns InteractionManagerComponent subobject
+	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
+	
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -167,6 +174,12 @@ private:
 	UPROPERTY(VisibleAnywhere, Category="Components")
 	TObjectPtr<UArrowComponent> ArrowComponent;
 #endif
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<class UInteractionManagerComponent> InteractionManagerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> InteractionZone;
 
 	// Camera boom positioning the camera behind the character
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Camera", meta=(AllowPrivateAccess="true"))
