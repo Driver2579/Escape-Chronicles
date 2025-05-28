@@ -27,7 +27,8 @@ struct FResetGroundSpeedModeStateTreeTaskInstanceData
 	EGroundSpeedMode GroundSpeedModeOverrideToReset;
 };
 
-USTRUCT(Category="AI|Action", meta=(DisplayName="Reset Movement Mode"))
+// Resets the ground speed mode for the character to the default one
+USTRUCT(Category="AI|Action", meta=(DisplayName="Reset Ground Speed Mode"))
 struct FResetGroundSpeedModeStateTreeTask : public FStateTreeAIActionTaskBase
 {
 	GENERATED_BODY()

@@ -22,15 +22,20 @@ struct FSetGroundSpeedModeStateTreeTaskInstanceData
 	UPROPERTY(EditAnywhere, Category="Parameter")
 	EGroundSpeedMode GroundSpeedMode;
 
+	// If true, the task will run forever until it's explicitly ended by a transition
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	bool bRunTaskForever = false;
+
 	/**
 	 * If true, the ground speed mode will be reset to the default one when the task ends (unless it was overriden to
 	 * another mode by something else).
 	 */
-	UPROPERTY(EditAnywhere, Category="Parameter")
+	UPROPERTY(EditAnywhere, Category="Parameter", meta=(EditCondition="bRunTaskForever"))
 	bool bResetGroundSpeedModeOnTaskEnd = false;
 };
 
-USTRUCT(Category="AI|Action", meta=(DisplayName="Set Movement Mode"))
+// Sets the ground speed mode for the character and, if needed, resets it when the task ends
+USTRUCT(Category="AI|Action", meta=(DisplayName="Set Ground Speed Mode"))
 struct FSetGroundSpeedModeStateTreeTask : public FStateTreeAIActionTaskBase
 {
 	GENERATED_BODY()

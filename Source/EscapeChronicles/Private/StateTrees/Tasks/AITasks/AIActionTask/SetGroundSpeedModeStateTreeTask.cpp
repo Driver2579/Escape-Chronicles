@@ -21,7 +21,7 @@ EStateTreeRunStatus FSetGroundSpeedModeStateTreeTask::EnterState(FStateTreeExecu
 
 	InstanceData.OwnerCharacter->OverrideGroundSpeedMode(InstanceData.GroundSpeedMode);
 
-	return EStateTreeRunStatus::Running;
+	return InstanceData.bRunTaskForever ? EStateTreeRunStatus::Running : EStateTreeRunStatus::Succeeded;
 }
 
 void FSetGroundSpeedModeStateTreeTask::ExitState(FStateTreeExecutionContext& Context,
