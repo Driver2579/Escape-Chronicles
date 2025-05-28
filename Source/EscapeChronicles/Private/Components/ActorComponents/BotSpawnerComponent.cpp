@@ -5,7 +5,7 @@
 #include "AIController.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Engine/AssetManager.h"
-#include "GameFramework/GameModeBase.h"
+#include "GameModes/EscapeChroniclesGameMode.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Subsystems/SaveGameSubsystem.h"
 
@@ -175,10 +175,6 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 		return;
 	}
 
-	const UWorld* World = GetWorld();
-
-	AGameModeBase* GameMode = World->GetAuthGameMode();
-
 #if DO_CHECK
 	check(IsValid(NewPawn->GetController()));
 #endif
@@ -189,6 +185,18 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 
 	AController* Controller = NewPawn->GetController();
 
+	const UWorld* World = GetWorld();
+
+	AEscapeChroniclesGameMode* GameMode = World->GetAuthGameMode<AEscapeChroniclesGameMode>();
+
+	if (!ensureAlways(IsValid(GameMode)))
+	{
+		// Unsubscribe from the pawn changes if we ever subscribed to them
+		Controller->OnPossessedPawnChanged.RemoveDynamic(this, &ThisClass::OnControllerPossessedPawnChanged);
+
+		return;
+	}
+
 	/**
 	 * Restart the AI controller. This will choose a PlayerStart for the character and move it there. If there was no
 	 * character spawned, the default one will be spawned.
@@ -198,24 +206,27 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 		GameMode->RestartPlayer(Controller);
 	}
 
-	/**
-	 * Call the USaveGameSubsystem::LoadBotOrGenerateUniquePlayerID function for the bot because it's required to
-	 * generate the UniquePlayerID for the bot and load the bot if it has any save data. But first we need to make sure
-	 * the PlayerState is valid.
-	 */
 	if (ensureAlways(Controller->PlayerState))
 	{
 #if DO_CHECK
 		check(Controller->PlayerState->IsA<AEscapeChroniclesPlayerState>());
 #endif
 
+		AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(Controller->PlayerState);
+
 		const USaveGameSubsystem* SaveGameSubsystem = World->GetSubsystem<USaveGameSubsystem>();
 
+		/**
+		 * Call the USaveGameSubsystem::LoadBotOrGenerateUniquePlayerID function for the bot because it's required to
+		 * generate the UniquePlayerID for the bot and load the bot if it has any save data.
+		 */
 		if (ensureAlways(IsValid(SaveGameSubsystem)))
 		{
-			SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(
-				CastChecked<AEscapeChroniclesPlayerState>(Controller->PlayerState));
+			SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
 		}
+
+		// The bot is now spawned, restarted, possessed and loaded. Finish initializing it via the GameMode as required.
+		GameMode->PostLoadInitPlayerOrBot(PlayerState);
 	}
 
 	// Unsubscribe from the pawn changes if we ever subscribed to them
