@@ -40,8 +40,13 @@ void AEscapeChroniclesAIController::InitPlayerState()
 	}
 }
 
-void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState)
+void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState) const
 {
+	if (InitializedPlayerState != PlayerState)
+	{
+		return;
+	}
+
 #if DO_ENSURE
 	ensureAlways(HasActorBegunPlay());
 	ensureAlways(IsValid(GetPawn()));

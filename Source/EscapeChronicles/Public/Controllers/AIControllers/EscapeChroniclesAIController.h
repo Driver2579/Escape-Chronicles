@@ -21,13 +21,12 @@ public:
 
 	virtual void InitPlayerState() override;
 
-protected:
-	virtual void OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState);
-
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI", meta=(AllowPrivateAccess ="true"))
 	UStateTreeAIComponent* StateTreeAIComponent;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+
+	void OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState) const;
 };
