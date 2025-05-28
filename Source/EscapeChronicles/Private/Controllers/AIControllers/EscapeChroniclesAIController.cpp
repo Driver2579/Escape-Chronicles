@@ -3,6 +3,7 @@
 #include "Controllers/AIControllers/EscapeChroniclesAIController.h"
 
 #include "Components/StateTreeAIComponent.h"
+#include "GameModes/EscapeChroniclesGameMode.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesAIController::AEscapeChroniclesAIController()
@@ -11,6 +12,18 @@ AEscapeChroniclesAIController::AEscapeChroniclesAIController()
 	StateTreeAIComponent->SetStartLogicAutomatically(false);
 
 	bWantsPlayerState = true;
+}
+
+void AEscapeChroniclesAIController::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	AEscapeChroniclesGameMode* GameMode = GetWorld()->GetAuthGameMode<AEscapeChroniclesGameMode>();
+
+	if (ensureAlways(IsValid(GameMode)))
+	{
+		GameMode->OnPlayerOrBotInitialized.AddUObject(this, &ThisClass::OnBotInitialized);
+	}
 }
 
 void AEscapeChroniclesAIController::InitPlayerState()
@@ -27,27 +40,16 @@ void AEscapeChroniclesAIController::InitPlayerState()
 	}
 }
 
-void AEscapeChroniclesAIController::BeginPlay()
+void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState)
 {
-	Super::BeginPlay();
-
-	// Start the StateTree logic if the pawn is already possessed (it will be started in OnPossess otherwise)
-	if (IsValid(GetPawn()))
-	{
-		StateTreeAIComponent->StartLogic();
-	}
-}
-
-void AEscapeChroniclesAIController::OnPossess(APawn* InPawn)
-{
-	Super::OnPossess(InPawn);
+#if DO_ENSURE
+	ensureAlways(HasActorBegunPlay());
+	ensureAlways(IsValid(GetPawn()));
+#endif
 
 	/**
-	 * Start the StateTree logic when the pawn is possessed if the game has already begun (it will be started in
-	 * BeginPlay otherwise).
+	 * Start the State Tree logic once the bot is fully initialized. This is the place where the controller should've
+	 * already called the BeginPlay and OnPossessed functions.
 	 */
-	if (HasActorBegunPlay())
-	{
-		StateTreeAIComponent->StartLogic();
-	}
+	StateTreeAIComponent->StartLogic();
 }
