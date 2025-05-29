@@ -4,12 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "Tasks/StateTreeAITask.h"
-#include "GetRandomPointStateTreeTask.generated.h"
+#include "GetRandomReachablePointInRadiusStateTreeTask.generated.h"
 
 class AAIController;
 
 USTRUCT()
-struct FGetRandomPointStateTreeTaskInstanceData
+struct FGetRandomReachablePointInRadiusStateTreeTaskInstanceData
 {
 	GENERATED_BODY()
 
@@ -20,15 +20,8 @@ struct FGetRandomPointStateTreeTaskInstanceData
 	UPROPERTY(EditAnywhere, Category="Context")
 	TObjectPtr<APawn> Pawn;
 
-	/**
-	 * If true, the task will find a random reachable point	withing the specified radius. Otherwise, it will find a
-	 * random point in all navigable space.
-	 */
-	UPROPERTY(EditAnywhere, Category="Parameter")
-	bool bUseRadius = true;
-
 	// The radius within the random reachable point will be searched
-	UPROPERTY(EditAnywhere, Category="Parameter", meta=(ClampMin=0.1, EditCondition="bUseRadius"))
+	UPROPERTY(EditAnywhere, Category="Parameter", meta=(ClampMin=0.1))
 	float Radius = 1000;
 
 	// Filter to use when searching for points. Can be left empty if you don't need any specific filtering.
@@ -41,18 +34,17 @@ struct FGetRandomPointStateTreeTaskInstanceData
 };
 
 /**
- * Finds a random point in navigable space either within a specified radius or anywhere in the navigable area. Once the
- * point is found, the Succeeded status will be returned. Otherwise, if no point was found, the Failed status will be
- * returned.
+ * Finds a random reachable point in a navigable space within a specified radius. Once the point is found, the Succeeded
+ * status will be returned. Otherwise, if no point was found, the Failed status will be returned.
  */
 USTRUCT(Category="AI", meta=(DisplayName="Get Random Reachable Point in Radius"))
-struct FGetRandomPointStateTreeTask : public FStateTreeAIActionTaskBase
+struct FGetRandomReachablePointInRadiusStateTreeTask : public FStateTreeAIActionTaskBase
 {
 	GENERATED_BODY()
 
-	FGetRandomPointStateTreeTask();
+	FGetRandomReachablePointInRadiusStateTreeTask();
 
-	using FInstanceDataType = FGetRandomPointStateTreeTaskInstanceData;
+	using FInstanceDataType = FGetRandomReachablePointInRadiusStateTreeTaskInstanceData;
 
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 
