@@ -8,6 +8,8 @@
 #include "Tasks/StateTreeAITask.h"
 #include "CurrentEventStateTreeEvaluator.generated.h"
 
+class AEscapeChroniclesGameState;
+
 USTRUCT()
 struct FCurrentEventStateTreeEvaluatorInstanceData
 {
@@ -28,10 +30,12 @@ struct FCurrentEventStateTreeEvaluatorInstanceData
 	// A delegate that is called when the CurrentActiveEventTag changes
 	UPROPERTY(EditAnywhere)
 	FStateTreeDelegateDispatcher OnCurrentActiveEventChangedDispatcher;
+
+	TWeakObjectPtr<AEscapeChroniclesGameState> CachedGameState;
 };
 
 /**
- * An evaluator that listens for current events that are set in the GameState. Once any type of current event is
+ * An evaluator that listens for current events that are set in the CachedGameState. Once any type of current event is
  * changed, the delegate is broadcast.
  */
 USTRUCT(meta=(DisplayName="Current Event"))
@@ -46,23 +50,4 @@ struct FCurrentEventStateTreeEvaluator : public FStateTreeEvaluatorCommonBase
 	virtual void TreeStart(FStateTreeExecutionContext& Context) const override;
 
 	virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
-
-	virtual void TreeStop(FStateTreeExecutionContext& Context) const override;
-
-private:
-	mutable FDelegateHandle OnCurrentScheduledEventChangedDelegateHandle;
-	mutable FDelegateHandle OnCurrentActiveEventChangedDelegateHandle;
-
-	void OnCurrentScheduledEventChanged(const FScheduleEventData& OldEventData,
-		const FScheduleEventData& NewEventData) const;
-
-	void OnCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
-		const FScheduleEventData& NewEventData) const;
-
-	/**
-	 * I don't really like that we have to make these mutable, but it's the only way to update these from delegates
-	 * instead of the tick. We still use the tick here, of course, but it's still more optimized to make it this way.
-	 */
-	mutable FGameplayTag CurrentScheduledEventTag;
-	mutable FGameplayTag CurrentActiveEventTag;
 };

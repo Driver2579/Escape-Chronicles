@@ -14,31 +14,33 @@ void FCurrentEventStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& Cont
 		return;
 	}
 
-	AEscapeChroniclesGameState* GameState = World->GetGameState<AEscapeChroniclesGameState>();
+	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
 
-	if (!ensureAlways(IsValid(GameState)))
+	InstanceData.CachedGameState = World->GetGameState<AEscapeChroniclesGameState>();
+
+	if (!ensureAlways(InstanceData.CachedGameState.IsValid()))
 	{
 		return;
 	}
 
-	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
-
 	// Initialize current events tags
-	InstanceData.CurrentScheduledEventTag = GameState->GetCurrentScheduledEventData().EventTag;
-	InstanceData.CurrentActiveEventTag = GameState->GetCurrentActiveEventData().EventTag;
-
-	// === Listen for current events to be changed ===
-
-	OnCurrentScheduledEventChangedDelegateHandle = GameState->OnCurrentScheduledEventChanged.AddRaw(this,
-		&FCurrentEventStateTreeEvaluator::OnCurrentScheduledEventChanged);
-
-	OnCurrentActiveEventChangedDelegateHandle = GameState->OnCurrentActiveEventChanged.AddRaw(this,
-		&FCurrentEventStateTreeEvaluator::OnCurrentActiveEventChanged);
+	InstanceData.CurrentScheduledEventTag = InstanceData.CachedGameState->GetCurrentScheduledEventData().EventTag;
+	InstanceData.CurrentActiveEventTag = InstanceData.CachedGameState->GetCurrentActiveEventData().EventTag;
 }
 
 void FCurrentEventStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
+
+	// We should have a CachedGameState by now
+	if (!ensureAlways(InstanceData.CachedGameState.IsValid()))
+	{
+		return;
+	}
+
+	// Get the current events tags to check if they changed
+	const FGameplayTag CurrentScheduledEventTag = InstanceData.CachedGameState->GetCurrentScheduledEventData().EventTag;
+	const FGameplayTag CurrentActiveEventTag = InstanceData.CachedGameState->GetCurrentActiveEventData().EventTag;
 
 	// === Change the current events tags in instance data and broadcast the delegates if current events got changed ===
 
@@ -52,36 +54,5 @@ void FCurrentEventStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, 
 	{
 		InstanceData.CurrentActiveEventTag = CurrentActiveEventTag;
 		Context.BroadcastDelegate(InstanceData.OnCurrentActiveEventChangedDispatcher);
-	}
-}
-
-void FCurrentEventStateTreeEvaluator::OnCurrentScheduledEventChanged(const FScheduleEventData& OldEventData,
-	const FScheduleEventData& NewEventData) const
-{
-	CurrentScheduledEventTag = NewEventData.EventTag;
-}
-
-void FCurrentEventStateTreeEvaluator::OnCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
-	const FScheduleEventData& NewEventData) const
-{
-	CurrentActiveEventTag = NewEventData.EventTag;
-}
-
-void FCurrentEventStateTreeEvaluator::TreeStop(FStateTreeExecutionContext& Context) const
-{
-	const UWorld* World = Context.GetWorld();
-
-	if (!IsValid(World))
-	{
-		return;
-	}
-
-	AEscapeChroniclesGameState* GameState = World->GetGameState<AEscapeChroniclesGameState>();
-
-	// Unsubscribe from the delegates
-	if (IsValid(GameState))
-	{
-		GameState->OnCurrentScheduledEventChanged.Remove(OnCurrentScheduledEventChangedDelegateHandle);
-		GameState->OnCurrentActiveEventChanged.Remove(OnCurrentActiveEventChangedDelegateHandle);
 	}
 }
