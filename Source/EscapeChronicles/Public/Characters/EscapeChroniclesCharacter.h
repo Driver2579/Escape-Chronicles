@@ -116,9 +116,14 @@ public:
 	 */
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnFaintingStateChanged, bool bIsFainting);
 
-	void AddFaintingStateChangedHandler(const FOnFaintingStateChanged::FDelegate& Delegate)
+	FDelegateHandle AddFaintingStateChangedHandler(const FOnFaintingStateChanged::FDelegate& Delegate)
 	{
-		OnFaintingStateChanged.Add(Delegate);
+		return OnFaintingStateChanged.Add(Delegate);
+	}
+
+	bool RemoveFaintingStateChangedHandler(const FDelegateHandle Handle)
+	{
+		return OnFaintingStateChanged.Remove(Handle);
 	}
 	
 protected:

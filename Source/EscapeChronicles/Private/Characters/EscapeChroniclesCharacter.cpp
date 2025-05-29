@@ -169,7 +169,8 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// TODO: Maybe come up with a better option in the future to make the turn animations work
+	//TODO: There will be a better solution for this, but for now it bothers me, so I will comment on it
+	/*
 	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
 	ActorAndViewDelta.Normalize();
 	
@@ -191,7 +192,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 	SetActorRotation(ActorRotation);
 
 	// Check or end the current turn
-	bIsTurning = AbsoluteYawDelta > AngleToStopTurning;
+	bIsTurning = AbsoluteYawDelta > AngleToStopTurning;*/
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
