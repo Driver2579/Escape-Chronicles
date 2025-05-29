@@ -15,6 +15,7 @@ class AEscapeChroniclesCharacter;
 class UInteractableComponent;
 class UGameplayEffect;
 
+// Actor is a place with which the character can interact and receive an effect
 UCLASS()
 class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemInterface
 {
@@ -23,6 +24,11 @@ class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemI
 public:
 	AActivitySpot();
 
+	/**
+	 * Determines who is currently occupying
+	 * @param Character The one who wants to occupy, or nullptr to unoccupy current character
+	 * @return True on success, false otherwise
+	 */
 	bool SetCharacterOccupyingSpot(AEscapeChroniclesCharacter* Character);
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -31,8 +37,26 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void OccupySpot(AEscapeChroniclesCharacter* Character);
+	void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 	
 private:
+	UPROPERTY(EditAnywhere)
+	FName AttachSocketName;
+    
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	// === Interaction ===
+	
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UInteractableComponent> InteractableComponent;
+    
+	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
+    
+	// === Effect ===
+    
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<UGameplayEffect> GameplayEffectClass;
 
@@ -40,49 +64,34 @@ private:
 	int32 EffectLevel;
 
 	FActiveGameplayEffectHandle ActiveEffectSpecHandle;
-	
+
+	// === Animation montage ===
+    
 	UPROPERTY(EditAnywhere)
 	TArray<TSoftObjectPtr<UAnimMontage>> AnimMontages;
 
 	int32 SelectedAnimMontage;
 
-	UPROPERTY(EditAnywhere)
-	FName AttachSocketName;
-	
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh;
+	// === Occupying ===
 
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<UInteractableComponent> InteractableComponent;
-	
-
-	
-	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
-
-	UPROPERTY(ReplicatedUsing="OnRep_CharacterOccupyingSpot")
-	TObjectPtr<AEscapeChroniclesCharacter> CharacterOccupyingSpot;
+	UPROPERTY(ReplicatedUsing="OnRep_CachedCharacterOccupying")
+	TObjectPtr<AEscapeChroniclesCharacter> CachedCharacterOccupying;
 
 	UFUNCTION()
-	void OnRep_CharacterOccupyingSpot(AEscapeChroniclesCharacter* OldValue);
+	void OnRep_CachedCharacterOccupying(AEscapeChroniclesCharacter* OldValue);
 
-	
-
-	void OccupySpot(AEscapeChroniclesCharacter* Character);
-	void UnoccupySpot(AEscapeChroniclesCharacter* Character);
-	
 	FName CachedCapsuleCollisionProfileName;
 	FTransform CachedMeshTransform;
-	USceneComponent* CachedMeshAttachParent;
+	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
 
+	// === Unoccupy handlers ===
 
-	
-	void UnoccupyIfAttributeHasDecreased(const FOnAttributeChangeData& AttributeChangeData);
-	
+	void OnOccupyingCharacterHealthChanged(const FOnAttributeChangeData& AttributeChangeData);
+
 	FDelegateHandle UnoccupyIfAttributeHasDecreasedDelegateHandle;
 
+	// === Asset loading ===
 
-	
-	
 	void OnAnimMontageLoaded();
 	void OnGameplayEffectLoaded();
 
