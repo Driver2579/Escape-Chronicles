@@ -5,14 +5,13 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/Saveable.h"
+#include "GameplayTagContainer.h"
 #include "Common/Enums/ControlledCharacterType.h"
 #include "Common/Structs/UniquePlayerID.h"
 #include "PlayerOwnershipComponent.generated.h"
 
 class AEscapeChroniclesPlayerState;
 class UPlayerOwnershipComponent;
-
-enum class EControlledCharacterType : uint8;
 
 /**
  * The group of the UPlayerOwnershipComponent. All components of the same group share the same settings and must share
@@ -25,10 +24,17 @@ struct FPlayerOwnershipComponentGroupTableRow : public FTableRowBase
 
 	/**
 	 * What type of player can be an OwningPlayer for this component. If the player doesn't match the given value, then
-	 * you must not set him as the OwningPlayer.
+	 * he can't become an OwningPlayer of this component.
 	 */
 	UPROPERTY(EditAnywhere)
 	TSet<EControlledCharacterType> AllowedControlledCharacterTypes;
+
+	/**
+	 * What tags the player must have to become an OwningPlayer of this component. If the player doesn't have any of
+	 * these tags, then he can't become an OwningPlayer of this component.
+	 */
+	UPROPERTY(EditAnywhere)
+	FGameplayTagContainer RequiredTags;
 
 #if WITH_EDITOR
 	virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override;
