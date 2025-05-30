@@ -146,13 +146,6 @@ void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UCrowdManager* CrowdManager = UCrowdManager::GetCurrent(this);
-
-	if (ensureAlways(IsValid(CrowdManager)))
-	{
-		CrowdManager->RegisterAgent(this);
-	}
-
 	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
 
@@ -169,16 +162,25 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	if (!IsValid(AbilitySystemComponent))
+	if (IsValid(AbilitySystemComponent))
 	{
-		return;
+		// InitAbilityActorInfo on server and client
+		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+
+		// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
+		SyncCharacterMoverComponentTagsWithAbilitySystem();
 	}
 
-	// InitAbilityActorInfo on server and client
-	AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
+	// Register the character as a crowd agent only if the character isn't a bot
+	if (IsValid(NewPlayerState) && !NewPlayerState->IsABot())
+	{
+		UCrowdManager* CrowdManager = UCrowdManager::GetCurrent(this);
 
-	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
-	SyncCharacterMoverComponentTagsWithAbilitySystem();
+		if (ensureAlways(IsValid(CrowdManager)))
+		{
+			CrowdManager->RegisterAgent(this);
+		}
+	}
 }
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
