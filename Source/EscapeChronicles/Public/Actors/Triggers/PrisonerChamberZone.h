@@ -3,13 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Interfaces/Saveable.h"
 #include "PrisonerChamberZone.generated.h"
 
 class UBoxComponent;
 class UPlayerOwnershipComponent;
 
 UCLASS()
-class ESCAPECHRONICLES_API APrisonerChamberZone : public AActor
+class ESCAPECHRONICLES_API APrisonerChamberZone : public AActor, public ISaveable
 {
 	GENERATED_BODY()
 
