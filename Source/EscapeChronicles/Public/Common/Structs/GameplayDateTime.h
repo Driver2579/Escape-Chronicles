@@ -196,7 +196,7 @@ struct FGameplayDateTime
 	}
 
 	// Postfix increment
-	FGameplayDateTime& operator++(int)
+	FGameplayDateTime operator++(int)
 	{
 		FGameplayDateTime OldGameplayTime = *this;
 		++*this;
@@ -213,7 +213,7 @@ struct FGameplayDateTime
 	}
 
 	// Postfix decrement
-	FGameplayDateTime& operator--(int)
+	FGameplayDateTime operator--(int)
 	{
 		FGameplayDateTime OldGameplayTime = *this;
 		--*this;
