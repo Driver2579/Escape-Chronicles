@@ -957,8 +957,13 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 	// Notify the actor it's about to be loaded
 	SaveableActor->OnPreLoadObject();
 
-	// Load actor's transform and all properties marked with "SaveGame"
-	Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
+	// Load actor's transform if its RootComponent is Movable
+	if (Actor->GetRootComponent()->Mobility == EComponentMobility::Movable)
+	{
+		Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
+	}
+
+	// Load all actor's properties marked with "SaveGame"
 	LoadObjectSaveGameFields(Actor, ActorSaveData.ActorSaveData.ByteData);
 
 	for (UActorComponent* Component : Actor->GetComponents())
@@ -988,8 +993,8 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 
 		USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
 
-		// Load component's transform if it's a scene component
-		if (SceneComponent)
+		// Load component's transform if it's a movable scene component
+		if (SceneComponent && SceneComponent->Mobility == EComponentMobility::Movable)
 		{
 			SceneComponent->SetRelativeTransform(ComponentSaveData->Transform);
 		}
