@@ -4,6 +4,7 @@
 
 #include "AIController.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Common/DataAssets/BotNames.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
@@ -213,13 +214,59 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 
 		AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(Controller->PlayerState);
 
+		// Select the name for this bot
+		FString BotName;
+		SelectBotName(BotName);
+
+		// Set the name of the bot to the PlayerState. It will be overriden by the save if it was saved
+		PlayerState->SetPlayerName(BotName);
+
 		/**
-		 * The bot is now spawned, restarted and possessed. Load and finish initializing it via the GameMode as
-		 * required.
+		 * The bot is now spawned, restarted, possessed and has a name. Load and finish initializing it via the GameMode
+		 * as required.
 		 */
 		GameMode->LoadAndInitBot(PlayerState);
 	}
 
 	// Unsubscribe from the pawn changes if we ever subscribed to them
 	Controller->OnPossessedPawnChanged.RemoveDynamic(this, &ThisClass::OnControllerPossessedPawnChanged);
+}
+
+void UBotSpawnerComponent::SelectBotName(FString& OutName)
+{
+	if (!ensureAlways(BotNamesDataAsset))
+	{
+		return;
+	}
+
+	// Get all unclaimed names
+	TSet<FString> SelectableBotNames = BotNamesDataAsset->GetBotNames().Difference(ClaimedBotNames);
+
+	// Use any bot name if there are no unclaimed names left
+	if (SelectableBotNames.IsEmpty())
+	{
+		SelectableBotNames = BotNamesDataAsset->GetBotNames();
+	}
+
+	// Select a random index for the name
+	int32 RandomIndex = FMath::RandRange(0, SelectableBotNames.Num() - 1);
+
+	// Iterate through the names and select the one at the random index
+	for (const FString& Name : SelectableBotNames)
+	{
+		/**
+		 * Decrement the index until it reaches zero. This will make sure we iterate to the needed index (because there
+		 * are no indexes in TSet).
+		 */
+		if (RandomIndex-- > 0)
+		{
+			continue;
+		}
+
+		// Return the name and remember that we claimed it
+		OutName = Name;
+		ClaimedBotNames.Add(Name);
+
+		break;
+	}
 }

@@ -12,6 +12,14 @@ class ESCAPECHRONICLES_API ABotPlayerState : public AEscapeChroniclesPlayerState
 {
 	GENERATED_BODY()
 
+public:
+	virtual void OnPreSaveObject() override;
+	virtual void OnPostLoadObject() override;
+
 protected:
 	virtual void OnUniquePlayerIdInitializedOrChanged() override;
+
+private:
+	UPROPERTY(Transient, SaveGame)
+	FString SavedBotName;
 };

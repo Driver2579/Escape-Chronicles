@@ -16,3 +16,19 @@ void ABotPlayerState::OnUniquePlayerIdInitializedOrChanged()
 		SaveGameSubsystem->RegisterBotUniquePlayerID(GetUniquePlayerID());
 	}
 }
+
+void ABotPlayerState::OnPreSaveObject()
+{
+	Super::OnPreSaveObject();
+
+	// Save the name of the bot
+	SavedBotName = GetPlayerName();
+}
+
+void ABotPlayerState::OnPostLoadObject()
+{
+	// Set the name of the bot to the loaded one
+	SetPlayerName(SavedBotName);
+
+	Super::OnPostLoadObject();
+}

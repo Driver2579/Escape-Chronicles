@@ -4,16 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Interfaces/Saveable.h"
 #include "Engine/StreamableManager.h"
 #include "BotSpawnerComponent.generated.h"
 
+class UBotNames;
 class AEscapeChroniclesAIController;
 class AEscapeChroniclesCharacter;
 
 struct FStreamableHandle;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class ESCAPECHRONICLES_API UBotSpawnerComponent : public UActorComponent
+class ESCAPECHRONICLES_API UBotSpawnerComponent : public UActorComponent, public ISaveable
 {
 	GENERATED_BODY()
 
@@ -77,4 +79,17 @@ private:
 
 	UFUNCTION()
 	void OnControllerPossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
+
+	/**
+	 * A data asset that contains the names that can be assigned to the bots. The name will be selected randomly from
+	 * those that aren't claimed yet. If all names are claimed, any random name will be selected.
+	 */
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UBotNames> BotNamesDataAsset;
+
+	UPROPERTY(Transient, SaveGame)
+	TSet<FString> ClaimedBotNames;
+
+	// Selects a random unclaimed name for the bot. If all names are claimed, any random name will be selected.
+	void SelectBotName(FString& OutName);
 };
