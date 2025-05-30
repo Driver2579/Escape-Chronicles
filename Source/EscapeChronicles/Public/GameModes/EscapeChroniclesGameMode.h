@@ -39,10 +39,12 @@ public:
 	virtual void RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform) override;
 
 	/**
-	 * Initializes the player or bot after he's loaded or failed to be loaded.
-	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
+	 * Initializes the bot after he's loaded or failed to be loaded, but only after the initial game loading has
+	 * finished or failed.
+	 * @remark Players are initialized automatically, but bots MUST call this manually after they are spawned and loaded
+	 * (or if failed to load)!
 	 */
-	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
+	void RequestPostLoadInitBot(AEscapeChroniclesPlayerState* PlayerState);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
 		AEscapeChroniclesPlayerState* PlayerState)
@@ -58,6 +60,8 @@ protected:
 
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
+
+	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
 
 	virtual void BeginPlay() override;
 
@@ -91,6 +95,12 @@ private:
 	 * or not.
 	 */
 	TArray<TWeakObjectPtr<APlayerController>> PlayersWaitingToBeLoadedAndInitialized;
+
+	/**
+	 * Bots in this list are the bots that called RequestPostLoadInitBot before the game has finished its loading. They
+	 * are going to be initialized when the loading is finished regardless of whether the loading was successful or not.
+	 */
+	TSet<TWeakObjectPtr<AEscapeChroniclesPlayerState>> BotsWaitingToBeInitialized;
 
 	/**
 	 * Attempts to load and initialized the player now if he already has a pawn. If the player doesn't have a pawn yet,

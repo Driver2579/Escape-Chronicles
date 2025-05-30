@@ -257,7 +257,6 @@ void AEscapeChroniclesGameMode::RestartPlayerAtTransform(AController* NewPlayer,
 		FinishRestartPlayer(NewPlayer, SpawnRotation);
 	}
 }
-
 void AEscapeChroniclesGameMode::OnLoadGameCalled()
 {
 	bInitialGameLoadFinishedOrFailed = false;
@@ -337,6 +336,7 @@ void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 {
 	bInitialGameLoadFinishedOrFailed = true;
 
+	// Load and initialize all players that were waiting for the game to finish loading
 	for (const TWeakObjectPtr<APlayerController>& PlayerController : PlayersWaitingToBeLoadedAndInitialized)
 	{
 		if (PlayerController.IsValid())
@@ -344,6 +344,19 @@ void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 			LoadAndInitPlayerNowOrWhenPawnIsPossessed(PlayerController.Get());
 		}
 	}
+
+	// Initialize all bots that were waiting for the game to finish loading
+	for (const TWeakObjectPtr<AEscapeChroniclesPlayerState>& PlayerState : BotsWaitingToBeInitialized)
+	{
+		if (PlayerState.IsValid())
+		{
+			PostLoadInitPlayerOrBot(PlayerState.Get());
+		}
+	}
+
+	// Clear the arrays as we don't need them anymore
+	PlayersWaitingToBeLoadedAndInitialized.Empty();
+	BotsWaitingToBeInitialized.Empty();
 }
 
 void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController)
@@ -410,8 +423,35 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* Playe
 	PostLoadInitPlayerOrBot(PlayerState);
 }
 
+void AEscapeChroniclesGameMode::RequestPostLoadInitBot(AEscapeChroniclesPlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+	// If the game has already finished or failed the loading, then we can initialize the bot immediately
+	if (bInitialGameLoadFinishedOrFailed)
+	{
+		PostLoadInitPlayerOrBot(PlayerState);
+	}
+	// Otherwise, add the bot to the list of bots to be initialized when the game finishes or fails the loading
+	else
+	{
+		BotsWaitingToBeInitialized.Add(PlayerState);
+	}
+}
+
 void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)
 {
+#if DO_ENSURE
+	ensureAlwaysMsgf(bInitialGameLoadFinishedOrFailed,
+		TEXT("You must call this function only after the initial loading of the game has finished or failed!"));
+#endif
+
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
 	// Register the player in the player ownership system because we have a valid UniquePlayerID now
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
 

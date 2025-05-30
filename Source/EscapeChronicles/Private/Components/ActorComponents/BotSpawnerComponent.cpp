@@ -226,7 +226,7 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 		}
 
 		// The bot is now spawned, restarted, possessed and loaded. Finish initializing it via the GameMode as required.
-		GameMode->PostLoadInitPlayerOrBot(PlayerState);
+		GameMode->RequestPostLoadInitBot(PlayerState);
 	}
 
 	// Unsubscribe from the pawn changes if we ever subscribed to them
