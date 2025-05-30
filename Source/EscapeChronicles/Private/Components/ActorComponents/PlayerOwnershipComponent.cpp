@@ -74,6 +74,12 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		const FUniquePlayerID* OwningPlayer = PlayerOwnershipComponent->GetOwningPlayer();
 		const FPlayerOwnershipComponentGroup Group = PlayerOwnershipComponent->GetGroup();
 
+		// Go to the next component if this one doesn't have a group
+		if (!ensureAlways(Group.GroupSettings))
+		{
+			continue;
+		}
+
 		// Check if the component already has an OwningPlayer and if it's the given player
 		if (OwningPlayer && *OwningPlayer == UniquePlayerID)
 		{
@@ -104,7 +110,7 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 	const bool bPlayerAlreadyHasGroup = !GroupNameForPlayer.IsNone();
 
 	// This property is needed only for the "ensure" macro, so we wrap it with DO_ENSURE
-#if DO_ENSURE
+#if !NO_LOGGING
 	bool bFoundGroup = false;
 #endif
 
@@ -184,7 +190,7 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 					GetControlledCharacterTypeFromPlayerState(PlayerState));
 			}
 
-#if DO_ENSURE
+#if !NO_LOGGING
 			bFoundGroup = true;
 #endif
 		}
@@ -204,7 +210,7 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 				}
 			}
 
-#if DO_ENSURE
+#if !NO_LOGGING
 			bFoundGroup = true;
 #endif
 		}
@@ -216,11 +222,14 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 		break;
 	}
 
-#if DO_ENSURE
-	ensureAlwaysMsgf(bFoundGroup,
-		TEXT("No group was found for player %s! Consider adding more groups to the level that this player can "
-			"be assigned to"),
-		*PlayerState->GetPlayerName());
+#if !NO_LOGGING
+	if (!bFoundGroup)
+	{
+		UE_LOG(LogTemp, Display,
+			TEXT("No group was found for player %s. Consider adding more groups to the level that this player "
+				"can be assigned to"),
+			*PlayerState->GetPlayerName());
+	}
 #endif
 }
 
@@ -249,9 +258,23 @@ bool UPlayerOwnershipComponent::CanAssignOwningPlayerToGroup(const AEscapeChroni
 	ensureAlways(!OwningPlayerState->IsSpectator());
 #endif
 
+	const EControlledCharacterType ControlledCharacterType = GetControlledCharacterTypeFromPlayerState(
+		OwningPlayerState);
+
 	// Check if this type of player is allowed to be set as the OwningPlayer for this component
-	return Group.GroupSettings->AllowedControlledCharacterTypes.Contains(
-		GetControlledCharacterTypeFromPlayerState(OwningPlayerState));
+	if (!Group.GroupSettings->AllowedControlledCharacterTypes.Contains(ControlledCharacterType))
+	{
+		return false;
+	}
+
+	const UAbilitySystemComponent* AbilitySystemComponent = OwningPlayerState->GetAbilitySystemComponent();
+
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Check if the player has all required tags to be set as the OwningPlayer for this component
+	return AbilitySystemComponent->HasAllMatchingGameplayTags(Group.GroupSettings->RequiredTags);
 }
 
 void UPlayerOwnershipComponent::InitializeOwningPlayer(const FUniquePlayerID& NewOwningPlayer,
