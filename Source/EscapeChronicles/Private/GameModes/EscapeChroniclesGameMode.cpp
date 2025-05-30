@@ -332,6 +332,24 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 	return ParentResult;
 }
 
+void AEscapeChroniclesGameMode::LoadAndInitBot(AEscapeChroniclesPlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+	// If the game has already finished or failed the loading, then we can load and initialize the bot immediately
+	if (bInitialGameLoadFinishedOrFailed)
+	{
+		LoadAndInitBot_Implementation(PlayerState);
+	}
+	// Otherwise, add the bot to the list of bots to be initialized when the game finishes or fails the loading
+	else
+	{
+		BotsWaitingToBeLoadedAndInitialized.Add(PlayerState);
+	}
+}
+
 void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 {
 	bInitialGameLoadFinishedOrFailed = true;
@@ -345,18 +363,18 @@ void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 		}
 	}
 
-	// Initialize all bots that were waiting for the game to finish loading
-	for (const TWeakObjectPtr<AEscapeChroniclesPlayerState>& PlayerState : BotsWaitingToBeInitialized)
+	// Load and initialize all bots that were waiting for the game to finish loading
+	for (const TWeakObjectPtr<AEscapeChroniclesPlayerState>& PlayerState : BotsWaitingToBeLoadedAndInitialized)
 	{
 		if (PlayerState.IsValid())
 		{
-			PostLoadInitPlayerOrBot(PlayerState.Get());
+			LoadAndInitBot_Implementation(PlayerState.Get());
 		}
 	}
 
 	// Clear the arrays as we don't need them anymore
 	PlayersWaitingToBeLoadedAndInitialized.Empty();
-	BotsWaitingToBeInitialized.Empty();
+	BotsWaitingToBeLoadedAndInitialized.Empty();
 }
 
 void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController)
@@ -423,22 +441,24 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* Playe
 	PostLoadInitPlayerOrBot(PlayerState);
 }
 
-void AEscapeChroniclesGameMode::RequestPostLoadInitBot(AEscapeChroniclesPlayerState* PlayerState)
+void AEscapeChroniclesGameMode::LoadAndInitBot_Implementation(AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
 #endif
 
-	// If the game has already finished or failed the loading, then we can initialize the bot immediately
-	if (bInitialGameLoadFinishedOrFailed)
+#if DO_ENSURE
+	ensureAlways(bInitialGameLoadFinishedOrFailed);
+#endif
+
+	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
+
+	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		PostLoadInitPlayerOrBot(PlayerState);
+		SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
 	}
-	// Otherwise, add the bot to the list of bots to be initialized when the game finishes or fails the loading
-	else
-	{
-		BotsWaitingToBeInitialized.Add(PlayerState);
-	}
+
+	PostLoadInitPlayerOrBot(PlayerState);
 }
 
 void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)

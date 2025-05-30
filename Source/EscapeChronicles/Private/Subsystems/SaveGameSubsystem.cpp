@@ -845,8 +845,8 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 	{
 		for (const TPair<FUniquePlayerID, FPlayerSaveData>& BotSaveDataPair : *BotsSaveDataOfBotType)
 		{
-			// Go to the next pair if UniquePlayerID from this pair was already taken by another bot
-			if (!RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
+			// Go to the next pair if another bot already took UniquePlayerID from this pair
+			if (RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
 			{
 				continue;
 			}

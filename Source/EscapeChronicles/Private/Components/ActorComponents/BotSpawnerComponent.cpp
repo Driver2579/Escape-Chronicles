@@ -7,7 +7,6 @@
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
-#include "Subsystems/SaveGameSubsystem.h"
 
 UBotSpawnerComponent::UBotSpawnerComponent()
 {
@@ -214,19 +213,11 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 
 		AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(Controller->PlayerState);
 
-		const USaveGameSubsystem* SaveGameSubsystem = World->GetSubsystem<USaveGameSubsystem>();
-
 		/**
-		 * Call the USaveGameSubsystem::LoadBotOrGenerateUniquePlayerID function for the bot because it's required to
-		 * generate the UniquePlayerID for the bot and load the bot if it has any save data.
+		 * The bot is now spawned, restarted and possessed. Load and finish initializing it via the GameMode as
+		 * required.
 		 */
-		if (ensureAlways(IsValid(SaveGameSubsystem)))
-		{
-			SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
-		}
-
-		// The bot is now spawned, restarted, possessed and loaded. Finish initializing it via the GameMode as required.
-		GameMode->RequestPostLoadInitBot(PlayerState);
+		GameMode->LoadAndInitBot(PlayerState);
 	}
 
 	// Unsubscribe from the pawn changes if we ever subscribed to them

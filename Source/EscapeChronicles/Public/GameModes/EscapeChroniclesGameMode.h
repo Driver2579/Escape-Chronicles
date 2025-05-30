@@ -39,12 +39,13 @@ public:
 	virtual void RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform) override;
 
 	/**
-	 * Initializes the bot after he's loaded or failed to be loaded, but only after the initial game loading has
-	 * finished or failed.
-	 * @remark Players are initialized automatically, but bots MUST call this manually after they are spawned and loaded
-	 * (or if failed to load)!
+	 * Loads the bot and initializes it after it's loaded or failed to be loaded. This will be delayed until the initial
+	 * game loading is finished or failed if it isn't already.
+	 * @remark Players are loaded and initialized automatically, but bots MUST call this manually after they are
+	 * spawned!
+	 * @remark See LoadAndInitPlayer_Implementation for more details.
 	 */
-	void RequestPostLoadInitBot(AEscapeChroniclesPlayerState* PlayerState);
+	void LoadAndInitBot(AEscapeChroniclesPlayerState* PlayerState);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
 		AEscapeChroniclesPlayerState* PlayerState)
@@ -97,10 +98,10 @@ private:
 	TArray<TWeakObjectPtr<APlayerController>> PlayersWaitingToBeLoadedAndInitialized;
 
 	/**
-	 * Bots in this list are the bots that called RequestPostLoadInitBot before the game has finished its loading. They
+	 * Bots in this list are the bots that called LoadAndInitBot before the game has finished its loading. They
 	 * are going to be initialized when the loading is finished regardless of whether the loading was successful or not.
 	 */
-	TSet<TWeakObjectPtr<AEscapeChroniclesPlayerState>> BotsWaitingToBeInitialized;
+	TSet<TWeakObjectPtr<AEscapeChroniclesPlayerState>> BotsWaitingToBeLoadedAndInitialized;
 
 	/**
 	 * Attempts to load and initialized the player now if he already has a pawn. If the player doesn't have a pawn yet,
@@ -119,4 +120,10 @@ private:
 	 * generates the new FUniquePlayerID for this player. After that, it calls PostLoadInitPlayerOrBot for the player.
 	 */
 	void LoadAndInitPlayer(const APlayerController* PlayerController);
+
+	/**
+	 * Loads the bot from the last save game object that was saved or loaded if any, or if failed to load, then
+	 * generates the new FUniquePlayerID for this bot. After that, it calls PostLoadInitPlayerOrBot for the bot.
+	 */
+	void LoadAndInitBot_Implementation(AEscapeChroniclesPlayerState* PlayerState);
 };
