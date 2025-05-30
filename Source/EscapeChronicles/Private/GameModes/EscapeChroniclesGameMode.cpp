@@ -142,7 +142,7 @@ void AEscapeChroniclesGameMode::RestartPlayerAtPlayerStart(AController* NewPlaye
 	 * implementation doesn't do in this case.
 	 */
 
-	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	if (!NewPlayer || NewPlayer->IsPendingKillPending())
 	{
 		return;
 	}
@@ -172,7 +172,7 @@ void AEscapeChroniclesGameMode::RestartPlayerAtPlayerStart(AController* NewPlaye
 	}
 
 	// Try to create a pawn to use of the default class for this player if it doesn't already have one
-	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer) != nullptr)
+	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer))
 	{
 		APawn* NewPawn = SpawnDefaultPawnFor(NewPlayer, StartSpot);
 
@@ -181,7 +181,7 @@ void AEscapeChroniclesGameMode::RestartPlayerAtPlayerStart(AController* NewPlaye
 			NewPlayer->SetPawn(NewPawn);
 		}
 	}
-	
+
 	if (!IsValid(NewPlayer->GetPawn()))
 	{
 		FailedToRestartPlayer(NewPlayer);
@@ -281,6 +281,53 @@ void AEscapeChroniclesGameMode::OnLoadGameCalled()
 		OnFailedToLoadGameDelegateHandle = SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
 			&ThisClass::OnInitialGameLoadFinishedOrFailed);
 	}
+}
+
+void AEscapeChroniclesGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+#if DO_CHECK
+	check(IsValid(NewPlayer));
+	check(IsValid(NewPlayer->GetPawn()));
+#endif
+
+	/**
+	 * The code below is based on the default implementation of FinishRestartPlayer in AGameModeBase. It was mostly
+	 * copied with some small modifications. The main difference here is that we don't possess the pawn if the same pawn
+	 * is already possessed by the controller to avoid it being repossessed.
+	 */
+
+	AController* OldController = NewPlayer->GetPawn()->GetController();
+
+	// Possess the pawn only if the controller has changed
+	if (OldController != NewPlayer)
+	{
+		// Unpossess the pawn from the old controller if it was set
+		if (OldController)
+		{
+			OldController->UnPossess();
+		}
+
+		NewPlayer->Possess(NewPlayer->GetPawn());
+
+		// If the Pawn is destroyed as part of possession, we have to abort
+		if (!IsValid(NewPlayer->GetPawn()))
+		{
+			FailedToRestartPlayer(NewPlayer);
+
+			return;
+		}
+	}
+
+	// Set initial control rotation to starting rotation
+	NewPlayer->ClientSetRotation(NewPlayer->GetPawn()->GetActorRotation(), true);
+
+	FRotator NewControllerRot = StartRotation;
+	NewControllerRot.Roll = 0.f;
+	NewPlayer->SetControlRotation(NewControllerRot);
+
+	SetPlayerDefaults(NewPlayer->GetPawn());
+
+	K2_OnRestartPlayer(NewPlayer);
 }
 
 FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerController,
