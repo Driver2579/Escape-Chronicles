@@ -6,6 +6,7 @@
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
 #include "Interfaces/Saveable.h"
+#include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
@@ -22,7 +23,7 @@ enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface,
-	public ISaveable
+	public ISaveable, public ICrowdAgentInterface
 {
 	GENERATED_BODY()
 
@@ -68,6 +69,15 @@ public:
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void UpdateNavigationRelevance() override;
+
+	virtual FVector GetCrowdAgentLocation() const override
+	{
+		return GetNavAgentLocation();
+	}
+
+	virtual FVector GetCrowdAgentVelocity() const override;
+	virtual void GetCrowdAgentCollisions(float& CylinderRadius, float& CylinderHalfHeight) const override;
+	virtual float GetCrowdAgentMaxSpeed() const override;
 
 	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1.0f, bool bForce = false) override;
 	virtual FVector ConsumeMovementInputVector() override;

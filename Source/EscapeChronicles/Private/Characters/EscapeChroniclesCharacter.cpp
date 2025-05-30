@@ -14,6 +14,7 @@
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
+#include "Navigation/CrowdManager.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -85,13 +86,21 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	CharacterMoverComponent = CreateDefaultSubobject<UEscapeChroniclesCharacterMoverComponent>(TEXT("Mover Component"));
 
-	if (USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent())
+	USceneComponent* UpdatedComponent = CharacterMoverComponent->GetUpdatedComponent();
+
+	if (UpdatedComponent)
 	{
 		UpdatedComponent->SetCanEverAffectNavigation(bCanAffectNavigationGeneration);
 	}
 
 	// Disable Actor-level movement replication, since our Mover component will handle it
 	SetReplicatingMovement(false);
+
+	/**
+	 * Create the NavMoverComponent for bots to being able to move on the NavMesh and for players to support being the
+	 * crowd agents.
+	 */
+	NavMoverComponent = CreateDefaultSubobject<UNavMoverComponent>(TEXT("Nav Mover Component"));
 
 	// === Interaction ===
 	
@@ -137,8 +146,12 @@ void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// NavMoverComponent is optionally added to the character blueprint to support AI navigation
-	NavMoverComponent = FindComponentByClass<UNavMoverComponent>();
+	UCrowdManager* CrowdManager = UCrowdManager::GetCurrent(this);
+
+	if (ensureAlways(IsValid(CrowdManager)))
+	{
+		CrowdManager->RegisterAgent(this);
+	}
 
 	CharacterMoverComponent->OnPostMovement.AddDynamic(this, &ThisClass::OnMoverPostMovement);
 	CharacterMoverComponent->OnPreSimulationTick.AddDynamic(this, &ThisClass::OnMoverPreSimulationTick);
@@ -170,25 +183,7 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
 {
-	// === The code below was copied from the MoverExamplesCharacter::GetNavAgentLocation method ===
-
-	FVector AgentLocation = FNavigationSystem::InvalidLocation;
-
-	const USceneComponent* UpdatedComponent =
-		CharacterMoverComponent ? CharacterMoverComponent->GetUpdatedComponent() : nullptr;
-
-	if (NavMoverComponent)
-	{
-		AgentLocation = NavMoverComponent->GetFeetLocation();
-	}
-
-	if (FNavigationSystem::IsValidLocation(AgentLocation) == false && UpdatedComponent != nullptr)
-	{
-		AgentLocation = UpdatedComponent->GetComponentLocation() -
-			FVector(0, 0, UpdatedComponent->Bounds.BoxExtent.Z);
-	}
-
-	return AgentLocation;
+	return NavMoverComponent->GetFeetLocation();
 }
 
 void AEscapeChroniclesCharacter::UpdateNavigationRelevance()
@@ -202,6 +197,21 @@ void AEscapeChroniclesCharacter::UpdateNavigationRelevance()
 			UpdatedComponent->SetCanEverAffectNavigation(bCanAffectNavigationGeneration);
 		}
 	}
+}
+
+FVector AEscapeChroniclesCharacter::GetCrowdAgentVelocity() const
+{
+	return CharacterMoverComponent->GetVelocity();
+}
+
+void AEscapeChroniclesCharacter::GetCrowdAgentCollisions(float& CylinderRadius, float& CylinderHalfHeight) const
+{
+	NavMoverComponent->GetSimpleCollisionCylinder(CylinderRadius, CylinderHalfHeight);
+}
+
+float AEscapeChroniclesCharacter::GetCrowdAgentMaxSpeed() const
+{
+	return NavMoverComponent->GetMaxSpeedForNavMovement();
 }
 
 void AEscapeChroniclesCharacter::AddMovementInput(const FVector WorldDirection, const float ScaleValue,
@@ -248,13 +258,8 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 
 	CharacterInputs.ControlRotation = GetControlRotation();
 
-	bool bRequestedNavMovement = false;
-
-	if (NavMoverComponent)
-	{
-		bRequestedNavMovement = NavMoverComponent->ConsumeNavMovementData(ControlInputVector,
-			CachedMoveInputVelocity);
-	}
+	const bool bRequestedNavMovement = NavMoverComponent->ConsumeNavMovementData(
+		ControlInputVector, CachedMoveInputVelocity);
 
 	// Favor velocity input
 	const bool bUsingInputIntentForMove = CachedMoveInputVelocity.IsZero();
