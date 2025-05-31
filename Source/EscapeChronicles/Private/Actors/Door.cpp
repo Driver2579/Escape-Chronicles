@@ -50,29 +50,33 @@ void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedCompo
 		return;
 	}
 
+	// Open the doors for character if it already has access to it
 	if (ConfirmedCharactersPool.Contains(Character))
 	{
-		SetLockDoorway(Character, true);
+		SetLockDoorway(Character, false);
 
 		return;
 	}
-	
+
+	// Determine whether character needs a key under the current conditions
 	const bool bRequiresKey = IsRequiresKey(Character);
-	
-	if (!bRequiresKey || HasCharacterAccess(Character))
+
+	// Unlock the door if the key is not required or the character has an access tag
+	if (!bRequiresKey || HasCharacterAccessTag(Character))
 	{
-		SetLockDoorway(Character, true);
+		SetLockDoorway(Character, false);
 
 		ConfirmedCharactersPool.Add(Character);
 		
 		return;
 	}
-	
+
+	// If character has the required key, use it
 	if (HasCharacterMatchingKey(Character))
 	{
 		UseKey(Character);
 
-		SetLockDoorway(Character, true);
+		SetLockDoorway(Character, false);
 
 		ConfirmedCharactersPool.Add(Character);
 	}
@@ -88,7 +92,8 @@ void ADoor::OnDoorwayBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedCompone
 		return;
 	}
 
-	SetLockDoorway(Character, false);
+	// Close the door after passing through
+	SetLockDoorway(Character, true);
 }
 
 void ADoor::OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -101,6 +106,7 @@ void ADoor::OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedCom
 		return;
 	}
 
+	// Remove the character's pass when he has completely passed through the door
 	if (!DoorwayBoxOverlap->IsOverlappingActor(Character))
 	{
 		ConfirmedCharactersPool.Remove(Character);
@@ -121,31 +127,24 @@ bool ADoor::IsRequiresKey(const AEscapeChroniclesCharacter* Character) const
 	return ensureAlwaysMsgf(true, TEXT("During this check, the character must be in one of the direction boxes."));
 }
 
-bool ADoor::IsOppositeSideRequiresKey(const AEscapeChroniclesCharacter* Character) const
-{
-	if (EnterBox->IsOverlappingActor(Character))
-	{
-		return bExitRequiresKey;
-	}
-	if (ExitBox->IsOverlappingActor(Character))
-	{
-		return bEnterRequiresKey;
-	}
-
-	return ensureAlwaysMsgf(true, TEXT("During this check, the character must be in one of the direction boxes."));
-}
-
 void ADoor::SetLockDoorway(const AEscapeChroniclesCharacter* Character, const bool IsLock) const
 {
-	Character->GetCapsuleComponent()->IgnoreComponentWhenMoving(DoorwayBoxBlock, IsLock);
+	UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
 
-	if (ensureAlways(IsValid(Character->GetMesh())))
+	if (ensureAlways(IsValid(CharacterCapsule)))
 	{
-		DoorwayBoxBlock->IgnoreComponentWhenMoving(Character->GetMesh(), IsLock);
+		CharacterCapsule->IgnoreComponentWhenMoving(DoorwayBoxBlock, !IsLock);
+	}
+	
+	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
+	
+	if (ensureAlways(IsValid(CharacterMesh)))
+	{
+		DoorwayBoxBlock->IgnoreComponentWhenMoving(CharacterMesh, !IsLock);
 	}
 }
 
-bool ADoor::HasCharacterAccess(const AEscapeChroniclesCharacter* Character) const
+bool ADoor::HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) const
 {
 	const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
 
@@ -189,6 +188,11 @@ bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character)
 
 void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
 	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
 
 	if (!ensureAlways(IsValid(Inventory)))
@@ -196,13 +200,15 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 		return;
 	}
 
+	// Cache data to reduce durability from a suitable key if necessary
 	UInventoryItemInstance* CachedItemInstance = nullptr;
 	const UDurabilityInventoryItemFragment* CachedDurabilityFragment = nullptr;
-	
+
 	bool bHasUnbreakableKey = false;
 	
 	Inventory->ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
 	{
+		// Do not continue the search if there is already unbreakable key.
 		if (bHasUnbreakableKey)
 		{
 			return;
@@ -218,6 +224,7 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 		
 		bHasUnbreakableKey = !DoorKeyFragment->IsUseDurability();
 
+		// If the key is not unbreakable, it must have a durability fragment
 		if (IsValid(CachedDurabilityFragment) || bHasUnbreakableKey)
 		{
 			return; 
@@ -233,7 +240,7 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 		}
 	});
 
-	if (HasAuthority() && !bHasUnbreakableKey)
+	if (!bHasUnbreakableKey)
 	{
 		CachedDurabilityFragment->ReduceDurability(CachedItemInstance, 1);
 	}
