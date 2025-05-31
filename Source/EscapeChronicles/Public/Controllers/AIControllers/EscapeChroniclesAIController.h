@@ -17,13 +17,23 @@ class ESCAPECHRONICLES_API AEscapeChroniclesAIController : public ADetourCrowdAI
 public:
 	AEscapeChroniclesAIController();
 
+	UStateTreeAIComponent* GetStateTreeComponent()
+	{
+		return StateTreeAIComponent;
+	}
+
+	const UStateTreeAIComponent* GetStateTreeAIComponent() const
+	{
+		return StateTreeAIComponent;
+	}
+
 	virtual void PostInitializeComponents() override;
 
 	virtual void InitPlayerState() override;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI", meta=(AllowPrivateAccess ="true"))
-	UStateTreeAIComponent* StateTreeAIComponent;
+	TObjectPtr<UStateTreeAIComponent> StateTreeAIComponent;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AEscapeChroniclesPlayerState> PlayerStateClassOverride;
