@@ -238,6 +238,8 @@ private:
 	bool bIsTurning = false;
 	FRotator ActorAndViewDelta;
 	
+	FRotator InitialMeshRotation;
+	
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
 	 * values that should be gotten when OnStanceChanged is called.

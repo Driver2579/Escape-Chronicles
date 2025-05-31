@@ -45,7 +45,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
-
+	MeshComponent->SetUsingAbsoluteRotation(true);
+	
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
@@ -158,14 +159,18 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
+
+	InitialMeshRotation = MeshComponent->GetRelativeRotation();
 }
 
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	// TODO: Maybe come up with a better option in the future to make the turn animations work
-	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
+	
+	const FRotator MeshRotation = MeshComponent->GetComponentRotation() - InitialMeshRotation;
+	const FRotator ActorRotation = GetActorRotation();
+	
+	ActorAndViewDelta = MeshRotation - ActorRotation;
 	ActorAndViewDelta.Normalize();
 	
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
@@ -176,17 +181,18 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	// === Rotate actor ===
-	
-	FRotator ActorRotation = GetActorRotation();
-
-	ActorRotation.Yaw = FMath::FInterpTo(ActorRotation.Yaw, ActorRotation.Yaw - ActorAndViewDelta.Yaw, DeltaSeconds,
-		TurningInterpSpeed);
-	
-	SetActorRotation(ActorRotation);
-
 	// Check or end the current turn
 	bIsTurning = AbsoluteYawDelta > AngleToStopTurning;
+	
+	// === Rotate actor ===
+	
+	FRotator NewMeshRotation = MeshRotation;
+
+	NewMeshRotation.Yaw = ActorRotation.Yaw + InitialMeshRotation.Yaw - FMath::FInterpTo(-ActorAndViewDelta.Yaw,
+		0, DeltaSeconds, TurningInterpSpeed);
+	
+	MeshComponent->SetRelativeRotation(NewMeshRotation);
+	
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
