@@ -58,6 +58,11 @@ struct FPlayerOwnershipComponentGroup
 	{
 		return GroupName == Other.GroupName;
 	}
+
+	bool IsValid() const
+	{
+		return GroupSettings && !GroupName.IsNone();
+	}
 };
 
 // This is required to use FPlayerOwnershipComponentGroup as a key in TMap and TSet
