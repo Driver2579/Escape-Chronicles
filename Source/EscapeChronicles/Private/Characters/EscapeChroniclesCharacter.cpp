@@ -176,7 +176,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
 	
 	// Check if we have to rotate the actor
-	if (!bIsTurning && AbsoluteYawDelta <= AngleToStartTurning)
+	if (!bIsTurning && AbsoluteYawDelta <= AngleToStartTurning && CharacterMoverComponent->GetVelocity().Length() == 0)
 	{
 		return;
 	}
@@ -192,7 +192,6 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 		0, DeltaSeconds, TurningInterpSpeed);
 	
 	MeshComponent->SetRelativeRotation(NewMeshRotation);
-	
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
