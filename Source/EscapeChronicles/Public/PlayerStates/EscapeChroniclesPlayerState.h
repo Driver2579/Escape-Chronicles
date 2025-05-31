@@ -5,17 +5,20 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
-#include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
+#include "GenericTeamAgentInterface.h"
+#include "Interfaces/Saveable.h"
 #include "Common/Structs/UniquePlayerID.h"
+#include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 #include "EscapeChroniclesPlayerState.generated.h"
 
+class UTeamIDsSet;
 class UAbilitySystemSet;
 
 enum class ECharacterRole : uint8;
 
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesPlayerState : public APlayerState, public IAbilitySystemInterface,
-	public ISaveable
+	public ISaveable, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -54,6 +57,9 @@ public:
 
 	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamID; }
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamID) override { TeamID = NewTeamID; }
+
 protected:
 	/**
 	 * Called from the GenerateUniquePlayerIdIfInvalid function if it generates the new UniquePlayerID and from the
@@ -71,4 +77,10 @@ private:
 
 	UPROPERTY(Transient, Replicated)
 	FUniquePlayerID UniquePlayerID;
+
+	// The set of team IDs that the player will use to determine its team
+	UPROPERTY(EditDefaultsOnly, Category="Team")
+	TObjectPtr<UTeamIDsSet> TeamIDsSet;
+
+	FGenericTeamId TeamID;
 };

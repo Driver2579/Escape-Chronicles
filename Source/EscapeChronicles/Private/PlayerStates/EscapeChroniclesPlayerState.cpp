@@ -4,6 +4,7 @@
 
 #include "EscapeChroniclesGameplayTags.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
+#include "Common/DataAssets/TeamIDsSet.h"
 #include "Common/Enums/CharacterRole.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/GameStateBase.h"
@@ -106,6 +107,12 @@ void AEscapeChroniclesPlayerState::PostInitializeComponents()
 		{
 			AbilitySystemSet->GiveToAbilitySystem(AbilitySystemComponent);
 		}
+	}
+
+	// Initialize the team ID for the player
+	if (TeamIDsSet)
+	{
+		SetGenericTeamId(TeamIDsSet->GetTeamForAbilitySystemComponent(AbilitySystemComponent));
 	}
 }
 

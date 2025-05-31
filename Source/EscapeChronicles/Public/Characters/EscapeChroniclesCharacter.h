@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
+#include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
 #include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -23,7 +24,7 @@ enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface,
-	public ISaveable, public ICrowdAgentInterface
+	public ISaveable, public ICrowdAgentInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -121,6 +122,8 @@ public:
 		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
 	}
 
+	virtual FGenericTeamId GetGenericTeamId() const override;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -200,7 +203,7 @@ private:
 #endif
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<class UInteractionManagerComponent> InteractionManagerComponent;
+	TObjectPtr<UInteractionManagerComponent> InteractionManagerComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> InteractionZone;
@@ -243,4 +246,10 @@ private:
 	 */
 	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
 		const EGroundSpeedMode NewGroundSpeedMode) const;
+
+	/**
+	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the
+	 * character. We want to use the TeamID from PlayerState instead.
+	 */
+	virtual void SetGenericTeamId(const FGenericTeamId& TeamID) override {}
 };

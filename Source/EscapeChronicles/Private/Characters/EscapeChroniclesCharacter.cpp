@@ -644,3 +644,18 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const 
 			1);
 	}
 }
+
+FGenericTeamId AEscapeChroniclesCharacter::GetGenericTeamId() const
+{
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	// Return the team from the PlayerState if it's valid already
+	if (IsValid(EscapeChroniclesPlayerState))
+	{
+		return EscapeChroniclesPlayerState->GetGenericTeamId();
+	}
+
+	// Return NoTeam otherwise
+	return FGenericTeamId::NoTeam;
+}
