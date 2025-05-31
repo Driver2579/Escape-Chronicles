@@ -29,7 +29,12 @@ public:
 	 * @param Character The one who wants to occupy, or nullptr to unoccupy current character
 	 * @return True on success, false otherwise
 	 */
-	bool SetCharacterOccupyingSpot(AEscapeChroniclesCharacter* Character);
+	bool SetOccupyingCharacter(AEscapeChroniclesCharacter* Character);
+
+	AEscapeChroniclesCharacter* GetOccupyingCharacter()
+	{
+		return CachedOccupyingCharacter;
+	}
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
@@ -38,8 +43,8 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	void OccupySpot(AEscapeChroniclesCharacter* Character);
-	void UnoccupySpot(AEscapeChroniclesCharacter* Character);
+	virtual void OccupySpot(AEscapeChroniclesCharacter* Character);
+	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 	
 private:
 	UPROPERTY(EditAnywhere)
@@ -71,14 +76,13 @@ private:
 	TArray<TSoftObjectPtr<UAnimMontage>> AnimMontages;
 
 	int32 SelectedAnimMontage;
-
+	
 	// === Occupying ===
-
-	UPROPERTY(ReplicatedUsing="OnRep_CachedCharacterOccupying")
-	TObjectPtr<AEscapeChroniclesCharacter> CachedCharacterOccupying;
+	UPROPERTY(ReplicatedUsing="OnRep_CachedOccupyingCharacter")
+	TObjectPtr<AEscapeChroniclesCharacter> CachedOccupyingCharacter;
 
 	UFUNCTION()
-	void OnRep_CachedCharacterOccupying(AEscapeChroniclesCharacter* OldValue);
+	void OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue);
 
 	FName CachedCapsuleCollisionProfileName;
 	FTransform CachedMeshTransform;
@@ -99,4 +103,7 @@ private:
 	TSharedPtr<FStreamableHandle> GameplayEffectHandle;
 
 	void CancelAnimationAndEffect(AEscapeChroniclesCharacter* Character);
+
+	// Process the logout as unoccupy spot
+	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting);
 };

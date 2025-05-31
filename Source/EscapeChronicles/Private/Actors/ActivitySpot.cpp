@@ -10,6 +10,7 @@
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
+#include "GameFramework/GameModeBase.h"
 #include "Net/UnrealNetwork.h"
 
 AActivitySpot::AActivitySpot()
@@ -34,18 +35,20 @@ void AActivitySpot::BeginPlay()
 
 	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
 		&ThisClass::InteractHandler));
+
+	//FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &ThisClass::OnGameModeLogout);
 }
 
 UAbilitySystemComponent* AActivitySpot::GetAbilitySystemComponent() const
 {
-	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedCharacterOccupying);
+	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
 }
 
 void AActivitySpot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, CachedCharacterOccupying)
+	DOREPLIFETIME(ThisClass, CachedOccupyingCharacter)
 }
 
 void AActivitySpot::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
@@ -58,28 +61,28 @@ void AActivitySpot::InteractHandler(UInteractionManagerComponent* InteractionMan
 		return;
 	}
 
-	if (!IsValid(CachedCharacterOccupying))
+	if (!IsValid(CachedOccupyingCharacter))
 	{
-		SetCharacterOccupyingSpot(Character);
+		SetOccupyingCharacter(Character);
 	}
-	else if (CachedCharacterOccupying == Character)
+	else if (CachedOccupyingCharacter == Character)
 	{
-		SetCharacterOccupyingSpot(nullptr);
+		SetOccupyingCharacter(nullptr);
 	}
 }
 
-bool AActivitySpot::SetCharacterOccupyingSpot(AEscapeChroniclesCharacter* Character)
+bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 {
 	check(HasAuthority());
 	
-	if (CachedCharacterOccupying == Character)
+	if (CachedOccupyingCharacter == Character)
 	{
 		return false;
 	}
 	
 	// Determine whether you need the new or old character value to handle health changes in ASC
 	UAbilitySystemComponent* AbilitySystemComponent = Character == nullptr ?
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedCharacterOccupying) :
+		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter) :
 		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 
 	if (!IsValid(AbilitySystemComponent))
@@ -100,7 +103,7 @@ bool AActivitySpot::SetCharacterOccupyingSpot(AEscapeChroniclesCharacter* Charac
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 		
-		UnoccupySpot(CachedCharacterOccupying);
+		UnoccupySpot(CachedOccupyingCharacter);
 	}
 	else
 	{
@@ -111,7 +114,7 @@ bool AActivitySpot::SetCharacterOccupyingSpot(AEscapeChroniclesCharacter* Charac
 			.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
 	}
 
-	CachedCharacterOccupying = Character;
+	CachedOccupyingCharacter = Character;
 	return true;
 }
 
@@ -120,19 +123,19 @@ void AActivitySpot::OnOccupyingCharacterHealthChanged(const FOnAttributeChangeDa
 	// We need to unoccupy the character if his health is decreasing
 	if (AttributeChangeData.OldValue > AttributeChangeData.NewValue)
 	{
-		SetCharacterOccupyingSpot(nullptr);	
+		SetOccupyingCharacter(nullptr);	
 	}
 }
 
-void AActivitySpot::OnRep_CachedCharacterOccupying(AEscapeChroniclesCharacter* OldValue)
+void AActivitySpot::OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue)
 {
-	if (CachedCharacterOccupying == nullptr)
+	if (CachedOccupyingCharacter == nullptr)
 	{
 		UnoccupySpot(OldValue);
 	}
 	else
 	{
-		OccupySpot(CachedCharacterOccupying);
+		OccupySpot(CachedOccupyingCharacter);
 	}
 }
 
@@ -154,8 +157,6 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 
 	// === Block the movement of the actor and attach only the mesh to the desired location ===
 	
-	CharacterMover->DisableMovement();
-
 	CachedCapsuleCollisionProfileName = CharacterCapsule->GetCollisionProfileName();
 	CharacterCapsule->SetCollisionProfileName(TEXT("NoCollision"));
 
@@ -195,8 +196,6 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 	
 	// === Return the mesh to the state it was in before occupying spot ===
 	
-	CharacterMover->SetDefaultMovementMode();
-	
 	CharacterMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 	CharacterMesh->AttachToComponent(CachedMeshAttachParent.Get(), FAttachmentTransformRules::KeepWorldTransform);
 	CharacterMesh->SetRelativeTransform(CachedMeshTransform);
@@ -206,12 +205,12 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 
 void AActivitySpot::OnAnimMontageLoaded()
 {
-	if (!ensureAlways(IsValid(CachedCharacterOccupying)))
+	if (!ensureAlways(IsValid(CachedOccupyingCharacter)))
 	{
 		return;
 	}
 
-	const USkeletalMeshComponent* CharacterMesh = CachedCharacterOccupying->GetMesh();
+	const USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -284,5 +283,13 @@ void AActivitySpot::CancelAnimationAndEffect(AEscapeChroniclesCharacter* Charact
 	{
 		GameplayEffectHandle->CancelHandle();
 		GameplayEffectHandle.Reset();
+	}
+}
+
+void AActivitySpot::OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting)
+{
+	if (HasAuthority() && IsValid(CachedOccupyingCharacter))
+	{
+		SetOccupyingCharacter(nullptr);
 	}
 }

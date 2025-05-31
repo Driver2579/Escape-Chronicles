@@ -206,12 +206,14 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 		return;
 	}
 
-	// InitAbilityActorInfo on server and client
+	// Init AbilityActorInfo on server and client
 	AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
 
+	AbilitySystemComponent->RegisterGenericGameplayTagEvent().AddUObject(this, &ThisClass::DisablingMovementHandler);
+	
 	// === Subscribe to changes in the health attribute ===
 	
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
@@ -221,8 +223,10 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 		return;
 	}
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
-		.AddUObject(this, &AEscapeChroniclesCharacter::OnHealthChanged);
+	FOnGameplayAttributeValueChange& OnHealthValueChange =
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute());
+	
+	OnHealthValueChange.AddUObject(this, &AEscapeChroniclesCharacter::OnHealthChanged);
 }
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
@@ -730,8 +734,6 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		
 		MeshComponent->WakeAllRigidBodies();
 		
-		CharacterMoverComponent->DisableMovement();
-
 		if (!FaintingEffectSpecHandle.IsValid())
 		{
 			LoadFaintingEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
@@ -747,8 +749,6 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 		
 		MeshComponent->PutAllRigidBodiesToSleep();
-
-		CharacterMoverComponent->SetDefaultMovementMode();
 		
 		if (FaintingEffectSpecHandle.IsValid())
 		{
@@ -780,5 +780,24 @@ void AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded()
 	{
 		LoadFaintingEffectClassHandle->CancelHandle();
 		LoadFaintingEffectClassHandle.Reset();	
+	}
+}
+
+void AEscapeChroniclesCharacter::DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count)
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	{
+		return;
+	} 
+
+	if (AbilitySystemComponent->HasAnyMatchingGameplayTags(NullMovementGrantTags))
+	{
+		CharacterMoverComponent->DisableMovement();	
+	}
+	else
+	{
+		CharacterMoverComponent->SetDefaultMovementMode();
 	}
 }
