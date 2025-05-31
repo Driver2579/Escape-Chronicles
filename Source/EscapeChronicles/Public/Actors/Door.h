@@ -19,17 +19,29 @@ class ESCAPECHRONICLES_API ADoor : public AActor
 public:	
 	ADoor();
 
-	/*UPROPERTY(EditAnywhere, Category="Access")
-	bool bEnterRequiresKey = false;
+	bool IsEnterRequiresKey() const { return bEnterRequiresKey; };
+	bool IsExitRequiresKey() const { return bExitRequiresKey; };
+	
+	// Returns true if the character has access tag to this door
+	bool HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) const;
+	
+	// Returns true if the character has a matching key
+	bool HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const;
 
-	UPROPERTY(EditAnywhere, Category="Access")
-	bool bExitRequiresKey = false;*/
+	bool HasCharacterEnterAccess(const AEscapeChroniclesCharacter* Character) const
+	{
+		return HasCharacterAccessTag(Character) || !bEnterRequiresKey || HasCharacterMatchingKey(Character);
+	}
+	
+	bool HasCharacterExitAccess(const AEscapeChroniclesCharacter* Character) const
+	{
+		return HasCharacterAccessTag(Character) || !bExitRequiresKey || HasCharacterMatchingKey(Character);
+	}
 	
 protected:
 	virtual void BeginPlay() override;
 
 private:
-	//
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> EnterBox;
 	
@@ -41,10 +53,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> DoorwayBoxOverlap;
-	
+
+	// Tag witch must have the key to open this door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTag KeyAccessTag;
-	
+
+	// Characters who have one of these tags can pass freely through the door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTagContainer CharacterAccessTags;
 	
@@ -68,22 +82,13 @@ private:
 	
 	// Returns true if the key is needed in the current position
 	bool IsRequiresKey(const AEscapeChroniclesCharacter* Character) const;
-
-	// Returns true if the key is needed in the opposite side position
-	bool IsOppositeSideRequiresKey(const AEscapeChroniclesCharacter* Character) const;
 	
 	// Sets whether a character can pass through a door
 	void SetLockDoorway(const AEscapeChroniclesCharacter* Character, bool IsLock) const;
 	
-	// Returns true if the character has access to this door
-	bool HasCharacterAccess(const AEscapeChroniclesCharacter* Character) const;
-	
-	// Returns true if the character has a matching key
-	bool HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const;
-	
 	// Removes 1 unit of durability if needed
 	void UseKey(const AEscapeChroniclesCharacter* Character) const;
 
-	// The characters who used the key
+	// Characters who are in the process of going through the door
 	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ConfirmedCharactersPool;
 };
