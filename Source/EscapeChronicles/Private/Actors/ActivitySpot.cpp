@@ -35,13 +35,16 @@ void AActivitySpot::BeginPlay()
 
 	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
 		&ThisClass::InteractHandler));
-
-	//FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &ThisClass::OnGameModeLogout);
 }
 
 UAbilitySystemComponent* AActivitySpot::GetAbilitySystemComponent() const
 {
 	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
+}
+
+void AActivitySpot::AddOccupyingCharacterChangedHandler(const FOnOccupyingCharacterChanged::FDelegate& Callback)
+{
+	OnOccupyingCharacterChanged.Add(Callback);
 }
 
 void AActivitySpot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -115,6 +118,9 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	}
 
 	CachedOccupyingCharacter = Character;
+
+	OnOccupyingCharacterChanged.Broadcast(Character);
+	
 	return true;
 }
 
@@ -283,13 +289,5 @@ void AActivitySpot::CancelAnimationAndEffect(AEscapeChroniclesCharacter* Charact
 	{
 		GameplayEffectHandle->CancelHandle();
 		GameplayEffectHandle.Reset();
-	}
-}
-
-void AActivitySpot::OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting)
-{
-	if (HasAuthority() && IsValid(CachedOccupyingCharacter))
-	{
-		SetOccupyingCharacter(nullptr);
 	}
 }

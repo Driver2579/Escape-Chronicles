@@ -22,6 +22,8 @@ class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemI
 	GENERATED_BODY()
 	
 public:
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* Character);
+	
 	AActivitySpot();
 
 	/**
@@ -37,6 +39,8 @@ public:
 	}
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	void AddOccupyingCharacterChangedHandler(const FOnOccupyingCharacterChanged::FDelegate& Callback);
 	
 protected:
 	virtual void BeginPlay() override;
@@ -47,6 +51,8 @@ protected:
 	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 	
 private:
+	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
+	
 	UPROPERTY(EditAnywhere)
 	FName AttachSocketName;
     
@@ -103,7 +109,4 @@ private:
 	TSharedPtr<FStreamableHandle> GameplayEffectHandle;
 
 	void CancelAnimationAndEffect(AEscapeChroniclesCharacter* Character);
-
-	// Process the logout as unoccupy spot
-	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting);
 };
