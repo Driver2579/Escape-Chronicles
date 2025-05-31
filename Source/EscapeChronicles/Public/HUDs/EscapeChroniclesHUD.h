@@ -14,8 +14,8 @@ UENUM(BlueprintType)
 enum class ERouteInputMode : uint8
 {
 	Game,       // Input handled by game only (no UI interaction)
-	Ui,         // Input handled by UI only (game paused or ignored)
-	GameAndUi   // Hybrid mode (e.g. for menus that don't ignored the game)
+	UI,         // Input handled by UI only (game paused or ignored)
+	GameAndUI   // Hybrid mode (e.g. for menus that don't ignored the game)
 };
 
 // Defines a HUD route configuration

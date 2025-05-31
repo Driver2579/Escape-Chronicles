@@ -47,13 +47,16 @@ void UPauseMenuWidget::OnExitButtonClicked()
 	}
 
 	ConfirmationExitWidget->SetDisplayedText(ExitConfirmationWidgetText);
-	ConfirmationExitWidget->OnResult().AddLambda([this](bool bConfirmed)
+	ConfirmationExitWidget->OnResult.AddLambda([this](bool bConfirmed)
 	{
 		if (bConfirmed)
 		{
 			// TODO: Make an exit to the main menu
-			UKismetSystemLibrary::QuitGame(GetWorld(), GetWorld()->GetFirstPlayerController(), EQuitPreference::Quit,
-				false);
+			APlayerController* OwningPlayerController = GetOwningPlayer();
+			if (IsValid(OwningPlayerController))
+			{
+				OwningPlayerController->ConsoleCommand("quit");	
+			}
 		}
 	});
 }
