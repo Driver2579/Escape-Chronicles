@@ -206,7 +206,7 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 		return;
 	}
 
-	// Init AbilityActorInfo on server and client
+	// InitAbilityActorInfo on server and client
 	AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
@@ -790,13 +790,15 @@ void AEscapeChroniclesCharacter::DisablingMovementHandler(const FGameplayTag Gam
 	if (!ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return;
-	} 
+	}
+
+	const FName MovementModeName = CharacterMoverComponent->GetMovementModeName();
 
 	if (AbilitySystemComponent->HasAnyMatchingGameplayTags(NullMovementGrantTags))
 	{
-		CharacterMoverComponent->DisableMovement();	
+		CharacterMoverComponent->DisableMovement();
 	}
-	else
+	else if (MovementModeName == UEscapeChroniclesCharacterMoverComponent::NullModeName)
 	{
 		CharacterMoverComponent->SetDefaultMovementMode();
 	}
