@@ -313,6 +313,11 @@ void AEscapeChroniclesCharacter::ProduceInput_Implementation(int32 SimTimeMs,
 		// There is no movement intent, so use the last-known affirmative move input
 		CharacterInputs.OrientationIntent = LastAffirmativeMoveInput;
 	}
+	else if (bUseControllerRotationPitch || bUseControllerRotationYaw || bUseControllerRotationRoll)
+	{
+		// Set intent to the control rotation - often a player's camera rotation
+		CharacterInputs.OrientationIntent = CharacterInputs.ControlRotation.Vector().GetSafeNormal();
+	}
 
 	if (bShouldRemainVertical)
 	{
