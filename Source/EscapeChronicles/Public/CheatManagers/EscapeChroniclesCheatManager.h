@@ -32,6 +32,10 @@ public:
 	UFUNCTION(Exec)
 	void EndHosting() const;
 
+	// Overrides the base value of the Suspicion attribute in the USharedRelationshipAttributeSet
+	UFUNCTION(Exec)
+	void Cheat_SetSuspicionBaseAttributeValue(const float NewBaseValue) const;
+
 private:
 	// Called from the HostLevel when the session is created
 	static void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
