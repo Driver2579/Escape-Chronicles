@@ -8,9 +8,9 @@
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ActorComponents/InteractableComponent.h"
+#include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
-#include "GameFramework/GameModeBase.h"
 #include "Net/UnrealNetwork.h"
 
 AActivitySpot::AActivitySpot()
@@ -27,6 +27,8 @@ AActivitySpot::AActivitySpot()
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 
 	Mesh->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+
+	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("PlayerOwnershipComponent"));
 }
 
 void AActivitySpot::BeginPlay()
@@ -170,8 +172,8 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	// === Block the movement of the actor and attach only the mesh to the desired location ===
 	
 	CachedCapsuleCollisionProfileName = CharacterCapsule->GetCollisionProfileName();
-	CharacterCapsule->SetCollisionProfileName(TEXT("NoCollision"));
-
+	CharacterCapsule->SetCollisionProfileName(FName("NoCollision"));
+	
 	CachedMeshAttachParent = CharacterMesh->GetAttachParent();
 	CachedMeshTransform = CharacterMesh->GetRelativeTransform();
 	CharacterMesh->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);

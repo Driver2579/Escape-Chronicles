@@ -10,6 +10,7 @@
 #include "GameFramework/Actor.h"
 #include "ActivitySpot.generated.h"
 
+class UPlayerOwnershipComponent;
 struct FStreamableHandle;
 class AEscapeChroniclesCharacter;
 class UInteractableComponent;
@@ -59,6 +60,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UPlayerOwnershipComponent> PlayerOwnershipComponent;
+	
 	// === Interaction ===
 	
 	UPROPERTY(EditAnywhere)
