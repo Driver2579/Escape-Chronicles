@@ -63,7 +63,7 @@ private:
 	
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UInteractableComponent> InteractableComponent;
-    
+	
 	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
     
 	// === Effect ===
@@ -87,6 +87,9 @@ private:
 	UPROPERTY(ReplicatedUsing="OnRep_CachedOccupyingCharacter")
 	TObjectPtr<AEscapeChroniclesCharacter> CachedOccupyingCharacter;
 
+	UPROPERTY(EditAnywhere)
+	FGameplayTagContainer OccupyingBlockedTags;
+	
 	UFUNCTION()
 	void OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue);
 

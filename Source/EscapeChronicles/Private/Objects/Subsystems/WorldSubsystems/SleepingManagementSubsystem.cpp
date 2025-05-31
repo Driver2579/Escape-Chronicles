@@ -16,7 +16,10 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	
-	//AActivitySpot BedSpotClass
+	if (InWorld.GetNetMode() == NM_Client)
+	{
+		return;
+	}
 	
 	for (TActorIterator<AActor> It(&InWorld, BedSpotClass.Get()); It; ++It)
 	{
@@ -39,7 +42,7 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &ThisClass::OnGameModePostLogin);
 	FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &ThisClass::OnGameModeLogout);
 
-	NetMulticast_UpdateTimeSpeed_Implementation();
+	UpdateTimeSpeed();
 }
 
 void USleepingManagementSubsystem::OnBedOccupyingCharacterChanged(AEscapeChroniclesCharacter* Character)
@@ -47,7 +50,7 @@ void USleepingManagementSubsystem::OnBedOccupyingCharacterChanged(AEscapeChronic
 	if (GetWorld()->GetNetMode() != NM_Client)
 	{
 		// Updating as the total number of players has changed
-		NetMulticast_UpdateTimeSpeed_Implementation();
+		UpdateTimeSpeed();
 	}
 }
 
@@ -56,7 +59,7 @@ void USleepingManagementSubsystem::OnGameModePostLogin(AGameModeBase* GameMode, 
 	if (GetWorld()->GetNetMode() != NM_Client)
 	{
 		// Updating as the total number of players has changed
-		NetMulticast_UpdateTimeSpeed_Implementation();
+		UpdateTimeSpeed();
 	}
 }
 
@@ -65,7 +68,7 @@ void USleepingManagementSubsystem::OnGameModeLogout(AGameModeBase* GameMode, ACo
 	if (GetWorld()->GetNetMode() != NM_Client)
 	{
 		// Updating as the total number of players has changed
-		NetMulticast_UpdateTimeSpeed_Implementation();
+		UpdateTimeSpeed();
 	}
 }
 
@@ -86,14 +89,19 @@ int32 USleepingManagementSubsystem::GetSleepingPlayersNumber() const
 	return Result;
 }
 
-void USleepingManagementSubsystem::NetMulticast_UpdateTimeSpeed_Implementation() const
+void USleepingManagementSubsystem::UpdateTimeSpeed() const
 {
 	if (GetWorld()->GetNumPlayerControllers() == GetSleepingPlayersNumber())
 	{
-		GetWorld()->GetWorldSettings()->SetTimeDilation(SleepTimeDilation);
+		NetMulticast_SetTimeDilation(SleepTimeDilation);
 	}
 	else
 	{
-		GetWorld()->GetWorldSettings()->SetTimeDilation(DefaultTimeDilation);
+		NetMulticast_SetTimeDilation(DefaultTimeDilation);
 	}
+}
+
+void USleepingManagementSubsystem::NetMulticast_SetTimeDilation_Implementation(const float InTimeDilation) const
+{
+	GetWorld()->GetWorldSettings()->SetTimeDilation(InTimeDilation);
 }

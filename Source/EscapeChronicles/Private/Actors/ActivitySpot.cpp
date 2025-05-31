@@ -63,7 +63,7 @@ void AActivitySpot::InteractHandler(UInteractionManagerComponent* InteractionMan
 	{
 		return;
 	}
-
+	
 	if (!IsValid(CachedOccupyingCharacter))
 	{
 		SetOccupyingCharacter(Character);
@@ -110,6 +110,12 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	}
 	else
 	{
+		// Block the occupying if the character has a blocking tag
+		if (AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
+		{
+			return false;
+		}
+		
 		OccupySpot(Character);
 
 		// Start track changes in the health

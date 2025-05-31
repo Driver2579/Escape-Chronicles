@@ -8,9 +8,8 @@
 
 class AEscapeChroniclesCharacter;
 class AActivitySpot;
-/**
- * Accelerates time if the number of sleeping players is the same as the total number of players
- */
+
+// Accelerates time if the number of sleeping players is the same as the total number of players
 UCLASS(Blueprintable, BlueprintType)
 class ESCAPECHRONICLES_API USleepingManagementSubsystem : public UWorldSubsystem
 {
@@ -23,8 +22,7 @@ public:
 	
 	int32 GetSleepingPlayersNumber() const;
 
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_UpdateTimeSpeed() const;
+	void UpdateTimeSpeed() const;
 	
 private:
 	UPROPERTY(EditAnywhere)
@@ -35,6 +33,9 @@ private:
 
 	float DefaultTimeDilation = 1;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_SetTimeDilation(float InTimeDilation) const;
+	
 	void OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer);
 	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting);
 	
