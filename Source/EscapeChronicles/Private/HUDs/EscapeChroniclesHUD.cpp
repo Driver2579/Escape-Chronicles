@@ -56,7 +56,7 @@ void AEscapeChroniclesHUD::BeginPlay()
 
 void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
 {
-	if (!ensureAlways(RouteName.IsValid() && RootWidget))
+	if (!ensureAlways(RouteName.IsValid()) || !ensureAlways(RootWidget))
 	{
 		return;
 	}
