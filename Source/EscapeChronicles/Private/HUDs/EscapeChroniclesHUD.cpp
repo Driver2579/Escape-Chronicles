@@ -18,7 +18,7 @@ void AEscapeChroniclesHUD::BeginPlay()
 	
 	APlayerController* PlayerController = GetOwningPlayerController();
 	
-	if (!ensureAlways(RootWidgetClass) || !ensureAlways(IsValid(PlayerController)))
+	if (!ensureAlways(IsValid(RootWidgetClass)) || !ensureAlways(IsValid(PlayerController)))
 	{
 		return;
 	}

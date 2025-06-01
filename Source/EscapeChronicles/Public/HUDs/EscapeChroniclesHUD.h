@@ -55,10 +55,10 @@ public:
 
 	/**
 	 * Navigates to the specified route.
-	 * @param RouteName GameplayTag identifying the desired route (must exist in Routes map).
+	 * @param Route GameplayTag identifying the desired route (must exist in Routes map).
 	 * @note Will deactivate all currently active widgets in the root container.
 	 */
-	void GoTo(const FGameplayTag& RouteName);
+	void GoTo(const FGameplayTag& Route);
 
 	// Returns to the root state of the HUD 
 	void GoToRoot() const;
@@ -92,9 +92,9 @@ private:
 	TMap<FGameplayTag, FHUDRoute> Routes;
 
 	/**
-	 * Updates the player's input mode and cursor visibility
-	 * @param NewInputMode Desired input mode
-	 * @param bNewCursorVisible Should cursor be visible
+	 * Updates the player's input mode and cursor visibility.
+	 * @param NewInputMode Desired input mode.
+	 * @param bNewCursorVisible Whether the cursor should be visible.
 	 */
 	void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 };

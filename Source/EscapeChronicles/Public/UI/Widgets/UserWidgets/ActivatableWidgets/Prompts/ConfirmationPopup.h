@@ -19,7 +19,7 @@ public:
 	// Delegate to receive a response from the user 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnResultDelegate, bool bConfirmed)
 
-	// Standard confirmation dialog widget for user decision flows
+	// Called when the user clicks ConfirmButton or CancelButton
 	FOnResultDelegate OnResult;
 	
 	void SetDisplayedText(const FText& InTitleText) const;
