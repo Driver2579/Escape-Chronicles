@@ -23,6 +23,7 @@ class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemI
 	GENERATED_BODY()
 	
 public:
+	// When a character occupies or unoccupies this actor this delegate is triggered
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* Character);
 	
 	AActivitySpot();
@@ -34,10 +35,7 @@ public:
 	 */
 	bool SetOccupyingCharacter(AEscapeChroniclesCharacter* Character);
 
-	AEscapeChroniclesCharacter* GetOccupyingCharacter()
-	{
-		return CachedOccupyingCharacter;
-	}
+	AEscapeChroniclesCharacter* GetOccupyingCharacter() const { return CachedOccupyingCharacter; }
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
@@ -48,20 +46,27 @@ protected:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// Makes character occupy this actor (The value of CachedOccupyingCharacter does not change)
 	virtual void OccupySpot(AEscapeChroniclesCharacter* Character);
+
+	// Makes character unoccupy this actor (The value of CachedOccupyingCharacter does not change)
 	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 	
 private:
 	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
-	
-	UPROPERTY(EditAnywhere)
-	FName AttachSocketName;
-    
-	UPROPERTY(EditAnywhere)
-	TObjectPtr<UStaticMeshComponent> Mesh;
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UPlayerOwnershipComponent> PlayerOwnershipComponent;
+
+	// === Attaching ===
+	
+	// Mesh for display, interaction and attach to when character occupying
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStaticMeshComponent> Mesh;
+
+	// Socket on the mesh that the character will attach to when it occupying 
+	UPROPERTY(EditAnywhere)
+	FName AttachSocketName;
 	
 	// === Interaction ===
 	
@@ -71,49 +76,51 @@ private:
 	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
     
 	// === Effect ===
-    
+
+	// Effect that is applyed on the occupied character and is removed when he gets up.
 	UPROPERTY(EditAnywhere)
-	TSoftClassPtr<UGameplayEffect> GameplayEffectClass;
+	TSoftClassPtr<UGameplayEffect> OccupingEffectClass;
 
 	UPROPERTY(EditAnywhere)
 	int32 EffectLevel;
 
-	FActiveGameplayEffectHandle ActiveEffectSpecHandle;
+	FActiveGameplayEffectHandle OccupingEffectSpecHandle;
 
 	// === Animation montage ===
     
 	UPROPERTY(EditAnywhere)
-	TArray<TSoftObjectPtr<UAnimMontage>> AnimMontages;
+	TArray<TSoftObjectPtr<UAnimMontage>> OccupingAnimMontages;
 
-	int32 SelectedAnimMontage;
+	int32 SelectedOccupingAnimMontage;
 	
 	// === Occupying ===
+	
 	UPROPERTY(ReplicatedUsing="OnRep_CachedOccupyingCharacter")
 	TObjectPtr<AEscapeChroniclesCharacter> CachedOccupyingCharacter;
-
-	UPROPERTY(EditAnywhere)
-	FGameplayTagContainer OccupyingBlockedTags;
 	
 	UFUNCTION()
 	void OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue);
 
-	FName CachedCapsuleCollisionProfileName;
+	// OccupySpot does not work on characters with these tags
+	UPROPERTY(EditAnywhere)
+	FGameplayTagContainer OccupyingBlockedTags;
+	
 	FTransform CachedMeshTransform;
 	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
 
-	// === Unoccupy handlers ===
+	// === Events when unoccupy occupied character ===
 
+	// When health decreases
 	void OnOccupyingCharacterHealthChanged(const FOnAttributeChangeData& AttributeChangeData);
-
 	FDelegateHandle UnoccupyIfAttributeHasDecreasedDelegateHandle;
 
 	// === Asset loading ===
 
-	void OnAnimMontageLoaded();
-	void OnGameplayEffectLoaded();
+	void OnOccupyingAnimMontageLoaded();
+	void OnOccupyingEffectLoaded();
 
-	TSharedPtr<FStreamableHandle> AnimMontageHandle;
-	TSharedPtr<FStreamableHandle> GameplayEffectHandle;
+	TSharedPtr<FStreamableHandle> OccupyingAnimMontageHandle;
+	TSharedPtr<FStreamableHandle> OccupyingEffectHandle;
 
-	void CancelAnimationAndEffect(AEscapeChroniclesCharacter* Character);
+	void CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter* Character);
 };

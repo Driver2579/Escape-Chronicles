@@ -18,17 +18,15 @@ AActivitySpot::AActivitySpot()
 	PrimaryActorTick.bCanEverTick = false;
 
 	bReplicates = true;
+
+	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("PlayerOwnershipComponent"));
 	
-	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 	
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	Mesh->SetupAttachment(RootComponent);
-	
-	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 
 	Mesh->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
-
-	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("PlayerOwnershipComponent"));
 }
 
 void AActivitySpot::BeginPlay()
@@ -85,7 +83,6 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		return false;
 	}
 	
-	// Determine whether you need the new or old character value to handle health changes in ASC
 	UAbilitySystemComponent* AbilitySystemComponent = Character == nullptr ?
 		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter) :
 		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
@@ -104,7 +101,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	
 	if (Character == nullptr)
 	{
-		// End track changes in the health
+		// End track health changes
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 		
@@ -120,7 +117,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		
 		OccupySpot(Character);
 
-		// Start track changes in the health
+		// Start track health changes
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
 	}
@@ -169,10 +166,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 		return;
 	}
 
-	// === Block the movement of the actor and attach only the mesh to the desired location ===
-	
-	CachedCapsuleCollisionProfileName = CharacterCapsule->GetCollisionProfileName();
-	CharacterCapsule->SetCollisionProfileName(FName("NoCollision"));
+	// === Attach only the mesh to the desired location ===
 	
 	CachedMeshAttachParent = CharacterMesh->GetAttachParent();
 	CachedMeshTransform = CharacterMesh->GetRelativeTransform();
@@ -180,14 +174,20 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	
 	// === Load and apply animation and effect ===
 	
-	GameplayEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(GameplayEffectClass.ToSoftObjectPath(),
-			FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded));
+	OccupyingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		OccupingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+			&ThisClass::OnOccupyingEffectLoaded));
 
-	SelectedAnimMontage = FMath::Rand() % AnimMontages.Num();
+	if (!ensureAlways(OccupingAnimMontages.Num() != 0))
+	{
+		return;
+	}
 	
-	AnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		AnimMontages[SelectedAnimMontage].ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&ThisClass::OnAnimMontageLoaded));
+	SelectedOccupingAnimMontage = FMath::Rand() % OccupingAnimMontages.Num();
+	
+	OccupyingAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		OccupingAnimMontages[SelectedOccupingAnimMontage].ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+			&ThisClass::OnOccupyingAnimMontageLoaded));
 }
 
 void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
@@ -206,18 +206,16 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 		return;
 	}
 
-	CancelAnimationAndEffect(Character);
+	CancelOccupyingAnimationAndEffect(Character);
 	
 	// === Return the mesh to the state it was in before occupying spot ===
 	
 	CharacterMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 	CharacterMesh->AttachToComponent(CachedMeshAttachParent.Get(), FAttachmentTransformRules::KeepWorldTransform);
 	CharacterMesh->SetRelativeTransform(CachedMeshTransform);
-	
-	CharacterCapsule->SetCollisionProfileName(CachedCapsuleCollisionProfileName);
 }
 
-void AActivitySpot::OnAnimMontageLoaded()
+void AActivitySpot::OnOccupyingAnimMontageLoaded()
 {
 	if (!ensureAlways(IsValid(CachedOccupyingCharacter)))
 	{
@@ -235,11 +233,11 @@ void AActivitySpot::OnAnimMontageLoaded()
 
 	if (ensureAlways(IsValid(AnimInstance)))
 	{
-		AnimInstance->Montage_Play(AnimMontages[SelectedAnimMontage].Get());
+		AnimInstance->Montage_Play(OccupingAnimMontages[SelectedOccupingAnimMontage].Get());
 	}
 }
 
-void AActivitySpot::OnGameplayEffectLoaded()
+void AActivitySpot::OnOccupyingEffectLoaded()
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
@@ -249,12 +247,12 @@ void AActivitySpot::OnGameplayEffectLoaded()
 	}
 	
 	const FGameplayEffectSpecHandle EffectSpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
-		GameplayEffectClass.Get(), EffectLevel, AbilitySystemComponent->MakeEffectContext());
+		OccupingEffectClass.Get(), EffectLevel, AbilitySystemComponent->MakeEffectContext());
 
-	ActiveEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+	OccupingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
 }
 
-void AActivitySpot::CancelAnimationAndEffect(AEscapeChroniclesCharacter* Character)
+void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter* Character)
 {
 	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 
@@ -272,7 +270,7 @@ void AActivitySpot::CancelAnimationAndEffect(AEscapeChroniclesCharacter* Charact
 		return;
 	}
 
-	AnimInstance->Montage_Stop(0.0, AnimMontages[SelectedAnimMontage].Get());
+	AnimInstance->Montage_Stop(0.0, OccupingAnimMontages[SelectedOccupingAnimMontage].Get());
 
 	// === Stop effect ===
 
@@ -283,19 +281,19 @@ void AActivitySpot::CancelAnimationAndEffect(AEscapeChroniclesCharacter* Charact
 		return;
 	}
 
-	AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveEffectSpecHandle);
+	AbilitySystemComponent->RemoveActiveGameplayEffect(OccupingEffectSpecHandle);
 	
 	// === Releasing the memory ===
 	
-	if (AnimMontageHandle.IsValid())
+	if (OccupyingAnimMontageHandle.IsValid())
 	{
-		AnimMontageHandle->CancelHandle();
-		AnimMontageHandle.Reset();
+		OccupyingAnimMontageHandle->CancelHandle();
+		OccupyingAnimMontageHandle.Reset();
 	}
 
-	if (GameplayEffectHandle.IsValid())
+	if (OccupyingEffectHandle.IsValid())
 	{
-		GameplayEffectHandle->CancelHandle();
-		GameplayEffectHandle.Reset();
+		OccupyingEffectHandle->CancelHandle();
+		OccupyingEffectHandle.Reset();
 	}
 }

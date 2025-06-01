@@ -154,7 +154,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
-	// If AbilitySystemComponent has at least one of these tags then movement is disabled
+	// If has at least one of these tags then movement is disabled
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	FGameplayTagContainer NullMovementGrantTags;
 
@@ -295,6 +295,6 @@ private:
 	FActiveGameplayEffectHandle FaintingEffectSpecHandle;
 	void OnFaintingEffectClassLoaded();
 
-	// Checks if AbilitySystemComponent has a tag that block movement and does so
+	// Checks if has a tag that block movement and does so
 	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count);
 };

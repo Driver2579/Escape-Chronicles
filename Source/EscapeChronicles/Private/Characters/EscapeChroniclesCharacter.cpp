@@ -734,10 +734,9 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 	
 	if (bIsFainting)
 	{
-		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
-		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
-		
 		MeshComponent->WakeAllRigidBodies();
+
+		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		
 		if (!FaintingEffectSpecHandle.IsValid())
 		{
@@ -745,23 +744,20 @@ void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation
 				FaintingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 					&AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded));
 		}
-
-		OnFaintingStateChanged.Broadcast(true);
 	}
 	else
 	{
-		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
-		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-		
 		MeshComponent->PutAllRigidBodiesToSleep();
+
+		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 		
 		if (FaintingEffectSpecHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintingEffectSpecHandle);
 		}
-
-		OnFaintingStateChanged.Broadcast(false);
 	}
+
+	OnFaintingStateChanged.Broadcast(bIsFainting);
 }
 
 void AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded()
@@ -802,9 +798,11 @@ void AEscapeChroniclesCharacter::DisablingMovementHandler(const FGameplayTag Gam
 	if (AbilitySystemComponent->HasAnyMatchingGameplayTags(NullMovementGrantTags))
 	{
 		CharacterMoverComponent->DisableMovement();
+		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
 	}
 	else if (MovementModeName == UEscapeChroniclesCharacterMoverComponent::NullModeName)
 	{
 		CharacterMoverComponent->SetDefaultMovementMode();
+		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
 	}
 }

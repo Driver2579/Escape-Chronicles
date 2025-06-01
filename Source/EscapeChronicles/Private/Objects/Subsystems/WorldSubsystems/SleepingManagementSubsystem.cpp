@@ -21,7 +21,7 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		return;
 	}
 	
-	for (TActorIterator<AActor> It(&InWorld, BedSpotClass.Get()); It; ++It)
+	for (TActorIterator<AActor> It(&InWorld, BedClass.Get()); It; ++It)
 	{
 		AActivitySpot* Bed = Cast<AActivitySpot>(*It);
 
@@ -29,15 +29,13 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		{
 			continue;
 		}
-
-		Beds.Add(Bed);
 		
 		Bed->AddOccupyingCharacterChangedHandler(
 			AActivitySpot::FOnOccupyingCharacterChanged::FDelegate::CreateUObject(this,
 				&ThisClass::OnBedOccupyingCharacterChanged));
-	}
 
-	DefaultTimeDilation = InWorld.GetWorldSettings()->TimeDilation;
+		Beds.Add(Bed);
+	}
 	
 	FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &ThisClass::OnGameModePostLogin);
 	FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &ThisClass::OnGameModeLogout);
@@ -97,7 +95,7 @@ void USleepingManagementSubsystem::UpdateTimeSpeed() const
 	}
 	else
 	{
-		NetMulticast_SetTimeDilation(DefaultTimeDilation);
+		NetMulticast_SetTimeDilation(1);
 	}
 }
 
