@@ -33,12 +33,37 @@ EStateTreeRunStatus FGetRandomReachablePointInRadiusStateTreeTask::EnterState(FS
 			InstanceData.AIController, InstanceData.QueryFilterClass);
 	}
 
-	// We pass nullptr into the NavData, so it will use the MainNavData we used above
-	FNavLocation FoundLocation;
-	const bool bResult = NavigationSystem->GetRandomReachablePointInRadius(InstanceData.Pawn->GetActorLocation(),
-		InstanceData.Radius, FoundLocation, nullptr, QueryFilter);
+	const FVector PawnLocation = InstanceData.Pawn->GetActorLocation();
 
-	// Return Failed if we didn't find any point
+	FNavLocation FoundLocation;
+
+	// We pass nullptr into the NavData, so it will use the MainNavData we used above
+	bool bResult = NavigationSystem->GetRandomReachablePointInRadius(PawnLocation, InstanceData.Radius,
+		FoundLocation, nullptr,	QueryFilter);
+
+	/**
+	 * If we failed to find a random reachable point in the specified radius, then try to find a random point in the
+	 * navigable radius without checking if it's reachable instead, if we are allowed to do so.
+	 */
+	if (!bResult && InstanceData.bGetRandomPointInNavigableRadiusIfFailed)
+	{
+		bResult = NavigationSystem->GetRandomPointInNavigableRadius(PawnLocation, InstanceData.Radius, FoundLocation,
+			nullptr, QueryFilter);
+	}
+
+	/**
+	 * If we still didn't find the point, then the bot is probably outside of the navmesh or we were not allowed to find
+	 * the random point in navigable space without checking for reachability. In this case, try to use the
+	 * ProjectPointToNavigation function to get him a point that matches the query filter even if it's outside of the
+	 * given radius, but only if we are allowed to do so.
+	 */
+	if (!bResult && InstanceData.bProjectPointOnNavigationIfFailed)
+	{
+		bResult = NavigationSystem->ProjectPointToNavigation(PawnLocation, FoundLocation,
+			InstanceData.ProjectPointToNavigationExtent, nullptr, QueryFilter);
+	}
+
+	// Check if we found a random reachable point in the specified radius
 	if (!bResult)
 	{
 		return EStateTreeRunStatus::Failed;

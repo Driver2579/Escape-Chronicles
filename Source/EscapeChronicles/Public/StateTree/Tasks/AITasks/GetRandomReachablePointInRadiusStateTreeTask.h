@@ -28,6 +28,31 @@ struct FGetRandomReachablePointInRadiusStateTreeTaskInstanceData
 	UPROPERTY(EditAnywhere, Category="Parameter")
 	TSubclassOf<class UNavigationQueryFilter> QueryFilterClass;
 
+	/**
+	 * If true, then in case of failure to find a random reachable point in a specified radius, the random point in the
+	 * whole navigable space within the specified radius will be searched (without checking if the point is reachable).
+	 * This is needed to prevent the task from failure in case if the bot isn't in the navigable space that matches the
+	 * given query filter.
+	 */
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	bool bGetRandomPointInNavigableRadiusIfFailed = true;
+
+	/**
+	 * If true, then in case of failure to find a random reachable point in a specified radius or a random point in a
+	 * navigable radius, the ProjectPointToNavigation function will be called to find a point on the navigation mesh.
+	 * This is needed to prevent the task from failure in case if both of the searches have failed. Usually, this
+	 * happens if the bot is outside the navmesh.
+	 */
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	bool bProjectPointOnNavigationIfFailed = true;
+
+	/**
+	 * An extent to use for the ProjectPointToNavigation function in case if the point wasn't found in the specified
+	 * radius. Zero vector means the default extent in project settings will be used.
+	 */
+	UPROPERTY(EditAnywhere, Category="Parameter", meta=(EditCondition="bProjectPointOnNavigationIfFailed"))
+	FVector ProjectPointToNavigationExtent = FVector::ZeroVector;
+
 	// Found random point
 	UPROPERTY(EditAnywhere, Category="Output")
 	FVector OutRandomPoint;
