@@ -54,16 +54,16 @@ void AEscapeChroniclesHUD::BeginPlay()
 	});
 }
 
-void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
+void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteTag)
 {
-	if (!ensureAlways(RouteName.IsValid()) || !ensureAlways(RootWidget))
+	if (!ensureAlways(RouteTag.IsValid()) || !ensureAlways(RootWidget))
 	{
 		return;
 	}
 
 	UCommonActivatableWidgetStack* ContentStack = RootWidget->GetContentStack();
 	
-	const FHUDRoute& Route = *Routes.Find(RouteName);
+	const FHUDRoute& Route = *Routes.Find(RouteTag);
 
 	if (!ensureAlways(IsValid(Route.WidgetClass)) || !ensureAlways(IsValid(ContentStack)))
 	{

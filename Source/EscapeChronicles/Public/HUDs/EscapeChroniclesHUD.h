@@ -55,10 +55,10 @@ public:
 
 	/**
 	 * Navigates to the specified route.
-	 * @param Route GameplayTag identifying the desired route (must exist in Routes map).
+	 * @param RouteTag GameplayTag identifying the desired route (must exist in Routes map).
 	 * @note Will deactivate all currently active widgets in the root container.
 	 */
-	void GoTo(const FGameplayTag& Route);
+	void GoTo(const FGameplayTag& RouteTag);
 
 	// Returns to the root state of the HUD 
 	void GoToRoot() const;

@@ -20,6 +20,7 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 private:
+	// Route the player's HUD will go to when the ability is activated
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag RouteTag;
 };
