@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "StateTreeConditionBase.h"
-#include "Tasks/StateTreeAITask.h"
 #include "ArrayContainsSuspiciousCharactersStateTreeCondition.generated.h"
 
 USTRUCT()
