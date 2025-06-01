@@ -21,6 +21,11 @@ struct FEmptyStateTreeTask : public FStateTreeTaskCommonBase
 {
 	GENERATED_BODY()
 
+	FEmptyStateTreeTask()
+	{
+		bShouldCallTick = false;
+	}
+
 	using FInstanceDataType = FEmptyStateTreeTaskInstanceData;
 
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
