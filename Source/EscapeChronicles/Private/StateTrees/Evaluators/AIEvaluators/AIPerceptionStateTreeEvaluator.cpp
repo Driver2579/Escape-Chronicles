@@ -47,8 +47,4 @@ void FAIPerceptionStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, 
 		InstanceData.SeenActors = MoveTemp(SeenActors);
 		Context.BroadcastDelegate(InstanceData.OnSeenActorsChangedDispatcher);
 	}
-	else
-	{
-		InstanceData.SeenActors = MoveTemp(SeenActors);
-	}
 }
