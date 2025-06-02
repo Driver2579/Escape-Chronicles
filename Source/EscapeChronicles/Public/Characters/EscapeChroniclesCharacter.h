@@ -55,12 +55,12 @@ public:
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
-	
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
 	UFUNCTION(BlueprintCallable)
-	bool GetIsTurning() const { return bIsTurning; }
+	bool IsTurning() const { return bTurning; }
 
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
@@ -95,7 +95,7 @@ public:
 
 	// Should be called for crouch input completion
 	void UnCrouch();
-	
+
 	// Should be called for any input trigger that wants to override the ground speed mode (e.g., walk, jog, run)
 	void OverrideGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverride);
 
@@ -104,8 +104,6 @@ public:
 	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
-
-	virtual void OnRep_PlayerState() override;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -125,7 +123,7 @@ protected:
 	// If true, the actor will remain vertical despite any rotation applied to the actor
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bShouldRemainVertical = true;
-	
+
 	/**
 	 * If true, the actor will continue orienting towards the last intended orientation (from input) even after movement
 	 * intent input has ceased.
@@ -135,23 +133,24 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
-
+	
+	// When ActorAndViewDelta is less than this value, the mesh stops rotating
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStopTurning = 10;
-	
+
+	// ActorAndViewDelta interpolation rate to 0 when the mesh is rotated
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
+	
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
 	 * “FaintingGameplayTag”
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainting")
-	TSoftClassPtr<class UGameplayEffect> FaintingEffectClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainting")
-	int32 FaintingEffectLevel;
+	TSoftClassPtr<class UGameplayEffect> FaintedGameplayEffectClass;
 	
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
@@ -198,7 +197,7 @@ private:
 	// The main skeletal mesh associated with this Character (optional sub-object). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> MeshComponent;
-	
+
 #if WITH_EDITORONLY_DATA
 	// Component shown in the editor only to indicate character facing
 	UPROPERTY(VisibleAnywhere, Category="Components")
@@ -224,7 +223,7 @@ private:
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
-	
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -235,9 +234,11 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
-	bool bIsTurning = false;
+	// Difference between the angle of rotation of mesh and actor
 	FRotator ActorAndViewDelta;
-	
+	bool bTurning = false;
+
+	// Mesh rotation on BeginPlay
 	FRotator InitialMeshRotation;
 	
 	/**
@@ -258,14 +259,15 @@ private:
 	// Makes it a ragdoll if health is 0 or less
 	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
 
+	bool bFainting = false;
+	
 	// Sets whether it is a ragdoll
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_UpdateFaintingState();
+	void UpdateFaintingState();
 	
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;
 	
-	TSharedPtr<FStreamableHandle> LoadFaintingEffectClassHandle;
-	FActiveGameplayEffectHandle FaintingEffectSpecHandle;
-	void OnFaintingEffectClassLoaded();
+	TSharedPtr<FStreamableHandle> LoadFaintingGameplayEffectClassHandle;
+	FActiveGameplayEffectHandle FaintingGameplayEffectHandle;
+	void OnFaintingGameplayEffectClassLoaded();
 };

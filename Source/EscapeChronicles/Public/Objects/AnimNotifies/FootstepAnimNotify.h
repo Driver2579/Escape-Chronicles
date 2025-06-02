@@ -16,22 +16,27 @@ public:
 		const FAnimNotifyEventReference& EventReference) override;
 
 private:
-	//  Socket name to play sound location to
+	// Name of the socket at whose location the sound will be played
 	UPROPERTY(EditAnywhere)
 	FName FootSocketName;
 
-	// The depth to which the trace is lowered
+	// How far down will the trace go to check for the presence of ground
 	UPROPERTY(EditAnywhere)
 	int32 LineTraceDepth;
-	
+
+	// Sound that is played when there is no suitable value in SoundsByMaterial
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<USoundBase> DefaultSound;
+
+	// Map materials that have their own sounds
 	UPROPERTY(EditAnywhere)
 	TMap<TObjectPtr<UPhysicalMaterial>, TObjectPtr<USoundBase>> SoundsByMaterial;
 	
-	// Socket or bone name to attach sound to
+	// Volume which is taken to all sounds from the footsteps
 	UPROPERTY(EditAnywhere)
 	float VolumeMultiplier = 1.0f;
 
-	// Socket or bone name to attach sound to
+	// Pitch which is taken to all sounds from the footsteps
 	UPROPERTY(EditAnywhere)
 	float PitchMultiplier = 1.0f;
 };

@@ -12,5 +12,10 @@ void UAutoCommitGameplayAbilityComponent::ActivateAbility(const FGameplayAbility
 	check(IsValid(GetOwner()));
 #endif
 
-	GetOwner()->CommitAbility(Handle, ActorInfo, ActivationInfo);
+	if (!GetOwner()->CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		bAbilityCanceled = true;
+
+		GetOwner()->CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
+	}
 }

@@ -11,7 +11,17 @@ class ESCAPECHRONICLES_API UAutoCommitGameplayAbilityComponent : public UGamepla
 {
 	GENERATED_BODY()
 
+public:
+	bool IsAbilityCanceled() const {return bAbilityCanceled; }
+	
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+private:
+	UPROPERTY(EditDefaultsOnly)
+	bool bReplicateCancelAbility = true;
+	
+	// Whether ability has been canceled
+	bool bAbilityCanceled = false;
 };

@@ -9,22 +9,25 @@
 
 struct FStreamableHandle;
 
-// Defines the configuration for a single punch animation and its associated collider
+// Defines the configuration for a single punch animation and its associated collision
 USTRUCT(BlueprintType)
 struct FPunchConfiguration
 {
 	GENERATED_BODY()
-	
+
+	// Playable animation for the realization of this punch
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UAnimMontage> AnimMontage;
 
+	// DamageCollision search tag
 	UPROPERTY(EditDefaultsOnly)
-	FName DamagingColliderTag;
-	
-	TWeakObjectPtr<UShapeComponent> DamagingCollider;
+	FName DamageCollisionTag;
+
+	// Collision overlaps which will be considered a punch
+	TWeakObjectPtr<UPrimitiveComponent> DamageCollision;
 };
 
-// Ability class for executing a punch with animation, damage effects, and audio feedback
+// Ability class for executing a punch with animation, damage effects, and gameplay cue feedback
 UCLASS()
 class ESCAPECHRONICLES_API UPunchGameplayAbility : public UEscapeChroniclesGameplayAbility
 {
@@ -38,25 +41,25 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 	
 private:
-	// Gameplay event tag used to signal the start of the damage window during the animation
+	// Gameplay tag that is used to signal the start of the damage window during the animation
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag StartDamageFrameEventTag;
 
-	// Gameplay event tag used to signal the end of the damage window during the animation
+	// Gameplay tag that is used to signal the end of the damage window during the animation
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag EndDamageFrameEventTag;
 
-	// A queue of punch configurations with montages and colliders
+	// A queue of punch configurations with montages and collisions. Each new punch will have an index of 1 more.
 	UPROPERTY(EditDefaultsOnly)
 	TArray<FPunchConfiguration> MontagesQueue;
 
 	// Gameplay effect to apply on a successful punch (dealing damage)
 	UPROPERTY(EditDefaultsOnly)
-	TSoftClassPtr<UGameplayEffect> SuccessfulPunchEffectClass;
+	TSoftClassPtr<UGameplayEffect> SuccessfulPunchGameplayEffectClass;
 
 	// Gameplay effect to apply on an unsuccessful punch (blocked)
 	UPROPERTY(EditDefaultsOnly)
-	TSoftClassPtr<UGameplayEffect> UnsuccessfulPunchEffectClass;
+	TSoftClassPtr<UGameplayEffect> UnsuccessfulPunchGameplayEffectClass;
 
 	// Gameplay cue to apply on a successful punch (dealing damage)
 	UPROPERTY(EditDefaultsOnly)
@@ -66,19 +69,19 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayCueTag UnsuccessfulPunchGameplayCueTag;
 	
-	// Tag that marks actors or states that block punches
+	// Tag that marks actors that block punches
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag BlockingPunchesTag; 
 
 	// Initializes the collider used to detect punch hits
-	void SetupDamagingCollider();
+	bool SetupDamageCollider();
 
 	// Begins listening for gameplay events
-	void BeginWaitGameplayEvents();
+	void RegisterPunchGameplayEvents();
 
 	// Async load assets
-	void LoadAndPlayAnimMontage();
-	void LoadGameplayEffects();
+	bool LoadAndPlayAnimMontage();
+	bool LoadGameplayEffects();
 
 	// Handling asset events
 	void OnAnimMontageLoaded();
@@ -94,7 +97,7 @@ private:
 	void ApplyDesiredGameplayEffect() const;
 
 	// Unloads a previously loaded asset using its handle
-	static void UnloadByHandle(TSharedPtr<FStreamableHandle>& Handle);
+	static void UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle);
 
 	// Delegate handles for gameplay event tags (used to remove safely)
 	FDelegateHandle OnStartDamageFrameEventTagDelegateHandle;
@@ -105,16 +108,16 @@ private:
 	TSharedPtr<FStreamableHandle> LoadSuccessfulPunchEffectHandle;
 	TSharedPtr<FStreamableHandle> LoadUnsuccessfulPunchEffectHandle;
 
-	// Ability system component references for instigator and target
+	// Ability system component reference for target
 	TWeakObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent;
 
-	// Cache to be applied after punch resolution
+	// Cache to be applied after punch hit
 	TSoftClassPtr<UGameplayEffect> DesiredToApplyGameplayEffectClass;
-	TWeakObjectPtr<UShapeComponent> DesiredDamagingCollider;
+	TWeakObjectPtr<UPrimitiveComponent> DesiredDamageCollider;
 
 	// Index of the current punch configuration being executed
 	int32 CurrentConfigurationIndex = 0;
 
-	// Flag indicating whether the punch connected successfully
-	bool IsPunchHappened = false;
+	// A flag indicating whether the punch was successful
+	bool bPunchHappened = false;
 };

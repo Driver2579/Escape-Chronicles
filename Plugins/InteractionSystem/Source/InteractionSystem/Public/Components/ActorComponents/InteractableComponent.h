@@ -23,6 +23,9 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
+	bool GetCanInteract() const { return bCanInteract; }
+	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
+	
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 
@@ -31,9 +34,6 @@ public:
 	
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
-
-	UPROPERTY(EditAnywhere)
-	bool bCanInteraction;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -45,6 +45,10 @@ private:
 	// A delegate called when interacting with an actor
 	FInteractDelegate InteractDelegate;
 
+	// Whether interaction is possible
+	UPROPERTY(EditAnywhere)
+	bool bCanInteract;
+	
 	// Tag to find meshes to hint when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")
 	FName HintMeshTag = TEXT("HintMesh");
