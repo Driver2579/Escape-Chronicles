@@ -147,9 +147,9 @@ protected:
 	
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
-	 * “FaintingGameplayTag”
+	 * “FaintedGameplayTag”
 	 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainting")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainted")
 	TSoftClassPtr<class UGameplayEffect> FaintedGameplayEffectClass;
 	
 	// Entry point for input production. Authors an input for the next simulation frame.
@@ -259,15 +259,15 @@ private:
 	// Makes it a ragdoll if health is 0 or less
 	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
 
-	bool bFainting = false;
+	bool bFainted = false;
 	
 	// Sets whether it is a ragdoll
-	void UpdateFaintingState();
+	void UpdateFaintedState();
 	
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;
 	
-	TSharedPtr<FStreamableHandle> LoadFaintingGameplayEffectClassHandle;
-	FActiveGameplayEffectHandle FaintingGameplayEffectHandle;
-	void OnFaintingGameplayEffectClassLoaded();
+	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
+	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
+	void OnFaintedGameplayEffectClassLoaded();
 };
