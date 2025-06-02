@@ -32,7 +32,7 @@ public:
 		{
 			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < InventorySlots.Num());
 
-			const UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
+			UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
 
 			ItemSlotWidget->SetItemInstance(InventorySlots[Index].Instance);
 		}

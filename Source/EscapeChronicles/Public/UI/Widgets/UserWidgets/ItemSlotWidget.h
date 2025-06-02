@@ -17,30 +17,31 @@ class ESCAPECHRONICLES_API UItemSlotWidget : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetItemInstance(const UInventoryItemInstance* ItemInstance) const
-	{
-		if (ItemInstance == nullptr || !ensureAlways(IsValid(ItemInstance)))
-		{
-			ItemInstanceIcon->SetBrushFromTexture(EmptySlotTexture);
+	void SetItemInstance(UInventoryItemInstance* ItemInstance);
 
-			return;
-		}
-		
-		const UIconInventoryItemFragment* IconFragment =
-			ItemInstance->GetFragmentByClass<UIconInventoryItemFragment>();
-		
-		ensureAlways(IsValid(IconFragment)) ?
-			ItemInstanceIcon->SetBrushFromTexture(IconFragment->GetIcon()):
-			ItemInstanceIcon->SetBrushFromTexture(InvalidItemInstanceIconTexture);
-	}
+protected:
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	
+	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent,
+		UDragDropOperation*& OutOperation) override;
+
+	virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
+		UDragDropOperation* InOperation) override;
+
 private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> ItemInstanceIcon;
-
+	
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UTexture2D> EmptySlotTexture;
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UTexture2D> InvalidItemInstanceIconTexture;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UImage> DragVisualWidget;
+	
+	TWeakObjectPtr<UInventoryItemInstance> CachedItemInstance;
 };
