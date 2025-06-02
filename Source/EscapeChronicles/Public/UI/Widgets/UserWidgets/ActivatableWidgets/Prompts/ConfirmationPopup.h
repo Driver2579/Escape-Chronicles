@@ -9,7 +9,7 @@
 
 class UTextButtonBaseWidget;
 
-// Standard confirmation dialog widget for user decision flows.
+// Standard confirmation dialog widget for user decision flows
 UCLASS()
 class ESCAPECHRONICLES_API UConfirmationPopup : public UPromptWidget
 {
@@ -17,9 +17,10 @@ class ESCAPECHRONICLES_API UConfirmationPopup : public UPromptWidget
 	
 public:
 	// Delegate to receive a response from the user 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FResultDelegate, bool bConfirmed)
-	
-	FResultDelegate& OnResult() { return ResultDelegate; }
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnResultDelegate, bool bConfirmed)
+
+	// Called when the user clicks ConfirmButton or CancelButton
+	FOnResultDelegate OnResult;
 	
 	void SetDisplayedText(const FText& InTitleText) const;
 	
@@ -27,7 +28,6 @@ protected:
 	virtual void NativeOnInitialized() override;
 	
 private:
-	FResultDelegate ResultDelegate;
 
 	// Displayed text when the widget is displayed
 	UPROPERTY(meta=(BindWidget))  

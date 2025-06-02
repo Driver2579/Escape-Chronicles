@@ -71,14 +71,15 @@ void UPlayerOwnershipComponent::RegisterPlayer(const AEscapeChroniclesPlayerStat
 			continue;
 		}
 
-		const FUniquePlayerID* OwningPlayer = PlayerOwnershipComponent->GetOwningPlayer();
 		const FPlayerOwnershipComponentGroup Group = PlayerOwnershipComponent->GetGroup();
 
 		// Go to the next component if this one doesn't have a group
-		if (!ensureAlways(Group.GroupSettings))
+		if (!Group.IsValid())
 		{
 			continue;
 		}
+
+		const FUniquePlayerID* OwningPlayer = PlayerOwnershipComponent->GetOwningPlayer();
 
 		// Check if the component already has an OwningPlayer and if it's the given player
 		if (OwningPlayer && *OwningPlayer == UniquePlayerID)
