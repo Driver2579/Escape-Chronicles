@@ -18,7 +18,7 @@ void AEscapeChroniclesHUD::BeginPlay()
 	
 	APlayerController* PlayerController = GetOwningPlayerController();
 	
-	if (!ensureAlways(RootWidgetClass && IsValid(PlayerController)))
+	if (!ensureAlways(IsValid(RootWidgetClass)) || !ensureAlways(IsValid(PlayerController)))
 	{
 		return;
 	}
@@ -48,24 +48,24 @@ void AEscapeChroniclesHUD::BeginPlay()
 		return;
 	}
 
-	RootContent->OnActivated().AddLambda([this]
+	RootContent->OnActivated().AddWeakLambda(this, [this]
 	{
 		SetInputMode(RootInputMode, bRootCursorVisible);
 	});
 }
 
-void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
+void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteTag)
 {
-	if (!ensureAlways(RouteName.IsValid() && RootWidget))
+	if (!ensureAlways(RouteTag.IsValid()) || !ensureAlways(RootWidget))
 	{
 		return;
 	}
 
 	UCommonActivatableWidgetStack* ContentStack = RootWidget->GetContentStack();
 	
-	const FHUDRoute& Route = *Routes.Find(RouteName);
+	const FHUDRoute& Route = *Routes.Find(RouteTag);
 
-	if (!ensureAlways(IsValid(Route.WidgetClass) && IsValid(ContentStack)))
+	if (!ensureAlways(IsValid(Route.WidgetClass)) || !ensureAlways(IsValid(ContentStack)))
 	{
 		return;
 	}
@@ -78,7 +78,7 @@ void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteName)
 
 void AEscapeChroniclesHUD::GoToRoot() const
 {
-	if (!IsValid(RootWidget))
+	if (!RootWidget)
 	{
 		return;
 	}
@@ -104,8 +104,16 @@ void AEscapeChroniclesHUD::SetInputMode(const ERouteInputMode NewInputMode, cons
 
 	switch (NewInputMode)
 	{
-		case ERouteInputMode::Game:			PlayerController->SetInputMode(FInputModeGameOnly());	break;
-		case ERouteInputMode::Ui:			PlayerController->SetInputMode(FInputModeUIOnly());		break;
-		case ERouteInputMode::GameAndUi:	PlayerController->SetInputMode(FInputModeGameAndUI());	break;
+		case ERouteInputMode::Game:
+			PlayerController->SetInputMode(FInputModeGameOnly());
+			break;
+		
+		case ERouteInputMode::UI:
+			PlayerController->SetInputMode(FInputModeUIOnly());
+			break;
+		
+		case ERouteInputMode::GameAndUI:
+			PlayerController->SetInputMode(FInputModeGameAndUI());
+			break;
 	}
 }
