@@ -58,7 +58,7 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 	
 	ItemActor->FinishSpawning(OwnerActorTransform);
 
-	// === Add throw impulse
+	// === Add throw impulse ===
 	
 	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetStaticMeshComponent();
 

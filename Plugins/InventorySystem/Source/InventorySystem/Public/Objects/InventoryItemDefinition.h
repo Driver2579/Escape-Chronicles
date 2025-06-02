@@ -3,9 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InventoryItemFragments/InventoryItemFragment.h"
 #include "InventoryItemDefinition.generated.h"
-
-class UInventoryItemFragment;
 
 // Describes inventory items by creating UInventoryItemFragment for them
 UCLASS(Blueprintable, Const, Abstract)
@@ -16,6 +15,16 @@ class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 public:
 	const FText& GetName() { return DisplayName; }
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
+
+#if WITH_EDITOR
+	virtual void PostCDOCompiled(const FPostCDOCompiledContext& Context) override
+	{
+		for (UInventoryItemFragment* Fragment : Fragments)
+		{
+			ensureAlwaysMsgf(Fragment->HasValidProperties(this), TEXT("The Fragment has invalid properties"));
+		}
+	}
+#endif
 	
 private:
 	UPROPERTY(EditDefaultsOnly)

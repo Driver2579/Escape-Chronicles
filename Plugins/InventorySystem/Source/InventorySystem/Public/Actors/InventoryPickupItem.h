@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/ActorChannel.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/StoringItemInstances.h"
 #include "Objects/InventoryItemInstance.h"
 
 #include "InventoryPickupItem.generated.h"
@@ -13,7 +13,7 @@ class UInventoryManagerComponent;
 
 // Can be picked up in inventory
 UCLASS()
-class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
+class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
 {
 	GENERATED_BODY()
 
@@ -34,10 +34,10 @@ public:
 	}
 
 	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
-
+	
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags)
-		override;
 
 protected:
 	virtual void OnConstruction(const FTransform& Transform) override;

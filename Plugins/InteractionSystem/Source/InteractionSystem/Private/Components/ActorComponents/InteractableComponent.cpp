@@ -31,7 +31,7 @@ void UInteractableComponent::InitializeHintMeshes()
 		{
 			continue;
 		}
-		
+
 		if (MeshComponent->GetGenerateOverlapEvents())
 		{
 			HasMeshWithGenerateOverlapEvents = true;

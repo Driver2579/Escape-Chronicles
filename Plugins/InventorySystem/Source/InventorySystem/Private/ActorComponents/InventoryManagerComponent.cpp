@@ -51,6 +51,11 @@ void UInventoryManagerComponent::BeginPlay()
 	// === Initialization ===
 	
 	TypedInventorySlotsLists.Initialize(SlotsNumberByTypes);
+
+	for (UInventoryManagerFragment* Fragment : Fragments)
+	{
+		Fragment->OnManagerInitialized(this);
+	}
 }
 
 UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
@@ -69,9 +74,9 @@ UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 
 void UInventoryManagerComponent::ForEachInventoryItemInstance(
 	const TFunctionRef<void(UInventoryItemInstance*)>& Action) const
 {
-	for (const auto& TypedArray : TypedInventorySlotsLists.GetArrays())
+	for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
 	{
-		for (const auto& Slot : TypedArray.Array.GetSlots())
+		for (const FInventorySlot& Slot : TypedArray.Array.GetSlots())
 		{
 			UInventoryItemInstance* Instance = Slot.Instance;
 			if (IsValid(Instance))
@@ -198,6 +203,37 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	
 	OnInventoryContentChanged.Broadcast();
 	return true;
+}
+
+bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
+	UInventoryItemInstance* ItemInstance) const
+{
+	for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
+	{
+		for (int32 Index = 0; Index <= TypedArray.Array.GetSlots().Num(); Index++)
+		{
+			if (ItemInstance == TypedArray.Array[Index].Instance)
+			{
+				OutSlotsType = TypedArray.Type;
+				OutSlotIndex = Index;
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemInstance)
+{
+	FGameplayTag SlotsType;
+	int32 SlotIndex;
+	
+	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
+	{
+		DeleteItem(SlotIndex, SlotsType);
+	}
 }
 
 void UInventoryManagerComponent::AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback)

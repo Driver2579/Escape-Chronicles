@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
+class UInteractPopupWidget;
 class UInteractionManagerComponent;
 
 /**
@@ -35,6 +36,9 @@ public:
 	
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
+
+	UPROPERTY(EditAnywhere)
+	bool bCanInteraction;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -59,7 +63,7 @@ private:
 	TObjectPtr<UMaterialInterface> OverlayMaterialHint;
 
 	// Widget that is visible when the interaction hint visibility is true
-	TWeakObjectPtr<class UInteractPopupWidget> HintWidget;
+	TWeakObjectPtr<UInteractPopupWidget> HintWidget;
 	
 	// Meshes to hint when the interaction hint visibility is true
 	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;

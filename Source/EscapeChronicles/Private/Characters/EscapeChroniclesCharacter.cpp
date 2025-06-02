@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "ActorComponents/InventoryManagerComponent.h"
+#include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "Components/CapsuleComponent.h"
@@ -14,6 +15,7 @@
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
+#include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
@@ -62,7 +64,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoomComponent = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoomComponent->SetupAttachment(RootComponent);
+	CameraBoomComponent->SetupAttachment(MeshComponent);
 
 	// The camera follows at this distance behind the character
 	CameraBoomComponent->TargetArmLength = 400.0f;
@@ -101,7 +103,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	
 	InteractionManagerComponent->SetupAttachment(RootComponent);
 
-	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionZone"));
+	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("Interaction Zone"));
 	InteractionZone->SetupAttachment(InteractionManagerComponent);
 
 	// === Inventory ===
@@ -138,6 +140,13 @@ void AEscapeChroniclesCharacter::PostLoad()
 #endif
 }
 
+void AEscapeChroniclesCharacter::OnPostLoadObject()
+{
+	ISaveable::OnPostLoadObject();
+	
+	NetMulticast_UpdateFaintingState();
+}
+
 void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -151,6 +160,38 @@ void AEscapeChroniclesCharacter::BeginPlay()
 	CharacterMoverComponent->OnMovementModeChanged.AddDynamic(this, &ThisClass::OnMovementModeChanged);
 	CharacterMoverComponent->OnStanceChanged.AddDynamic(this, &ThisClass::OnStanceChanged);
 	CharacterMoverComponent->OnGroundSpeedModeChanged.AddUObject(this, &ThisClass::OnGroundSpeedModeChanged);
+
+	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
+	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
+}
+
+void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// TODO: Maybe come up with a better option in the future to make the turn animations work
+	ActorAndViewDelta = GetActorRotation() - GetBaseAimRotation();
+	ActorAndViewDelta.Normalize();
+	
+	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
+	
+	// Check if we have to rotate the actor
+	if (!bIsTurning && AbsoluteYawDelta <= AngleToStartTurning)
+	{
+		return;
+	}
+
+	// === Rotate actor ===
+	
+	FRotator ActorRotation = GetActorRotation();
+
+	ActorRotation.Yaw = FMath::FInterpTo(ActorRotation.Yaw, ActorRotation.Yaw - ActorAndViewDelta.Yaw, DeltaSeconds,
+		TurningInterpSpeed);
+	
+	SetActorRotation(ActorRotation);
+
+	// Check or end the current turn
+	bIsTurning = AbsoluteYawDelta > AngleToStopTurning;
 }
 
 void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState)
@@ -169,6 +210,18 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
+
+	// === Subscribe to changes in the health attribute ===
+	
+	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
+
+	if (!ensureAlways(IsValid(VitalAttributeSet)))
+	{
+		return;
+	}
+
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
+		.AddUObject(this, &AEscapeChroniclesCharacter::OnHealthChanged);
 }
 
 FVector AEscapeChroniclesCharacter::GetNavAgentLocation() const
@@ -492,6 +545,13 @@ void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode Gro
 	}
 }
 
+void AEscapeChroniclesCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	NetMulticast_UpdateFaintingState();
+}
+
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
 	const FName& NewMovementModeName)
 {
@@ -638,5 +698,91 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const 
 	{
 		AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Mode_Running,
 			1);
+	}
+}
+
+void AEscapeChroniclesCharacter::OnHealthChanged(const FOnAttributeChangeData& AttributeChangeData)
+{
+	NetMulticast_UpdateFaintingState();
+}
+
+void AEscapeChroniclesCharacter::NetMulticast_UpdateFaintingState_Implementation()
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+	
+	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
+
+	if (!IsValid(VitalAttributeSet))
+	{
+		return;
+	}
+
+	const bool bIsFainting = VitalAttributeSet->GetHealth() <= 0;
+	
+	MeshComponent->SetSimulatePhysics(bIsFainting);
+	MeshComponent->bBlendPhysics = bIsFainting;
+	
+	if (bIsFainting)
+	{
+		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
+		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
+		
+		MeshComponent->WakeAllRigidBodies();
+		
+		CharacterMoverComponent->DisableMovement();
+
+		if (!FaintingEffectSpecHandle.IsValid())
+		{
+			LoadFaintingEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+				FaintingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+					&AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded));
+		}
+
+		OnFaintingStateChanged.Broadcast(true);
+	}
+	else
+	{
+		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
+		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
+		
+		MeshComponent->PutAllRigidBodiesToSleep();
+
+		CharacterMoverComponent->SetDefaultMovementMode();
+		
+		if (FaintingEffectSpecHandle.IsValid())
+		{
+			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintingEffectSpecHandle);
+		}
+
+		OnFaintingStateChanged.Broadcast(false);
+	}
+}
+
+void AEscapeChroniclesCharacter::OnFaintingEffectClassLoaded()
+{
+	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+	
+	const FGameplayEffectSpecHandle EffectSpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
+		FaintingEffectClass.Get(), FaintingEffectLevel, FGameplayEffectContextHandle());
+
+	FaintingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
+		*EffectSpecHandle.Data.Get());
+
+	// TODO: I don't think this check should be here, but it is needed in some cases. We'll need to look into it in more
+	// detail.
+	if (LoadFaintingEffectClassHandle.IsValid())
+	{
+		LoadFaintingEffectClassHandle->CancelHandle();
+		LoadFaintingEffectClassHandle.Reset();	
 	}
 }

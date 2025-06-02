@@ -18,6 +18,7 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 
 public:
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
+	
 	bool IsInitialized() const { return bInitialized; }
 
 	template<typename T>
@@ -31,6 +32,13 @@ public:
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
+
+	/**
+	 * Breaks the object.
+	 * @see for exactly how the item will break is used by Outer. The item can't break without it!
+	 * @warning Outer must implement IStoringItemInstances!
+	 */
+	void Break();
 	
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -41,6 +49,10 @@ public:
 	
 private:
 	// Determines what the item can do (Can be thrown away, is a tool, key, etc.)
+	DECLARE_DELEGATE_OneParam(FOnShouldBeBroken, UInventoryItemInstance*);
+	
+	FOnShouldBeBroken OnShouldBeRemoved;
+	
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> Definition;
 	
@@ -52,7 +64,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!IsValid(GetDefinition()))
 	{
 		return nullptr;
 	}
@@ -60,7 +72,7 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return nullptr;
 	}
@@ -85,7 +97,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 
 	OutFragments.Empty();
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!IsValid(GetDefinition()))
 	{
 		return;
 	}
@@ -93,7 +105,7 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 	const UInventoryItemDefinition* DefinitionDefaultObject =
 		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return;
 	}

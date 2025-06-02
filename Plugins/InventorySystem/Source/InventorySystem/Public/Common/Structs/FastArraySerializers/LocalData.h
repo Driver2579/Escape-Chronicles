@@ -3,14 +3,11 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
-#include "Containers/Union.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "LocalData.generated.h"
 
-using FUnionLocalDataType = TUnion<bool, int32, float, FString>;
-
 // Represents a single key-value pair in the local data container
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLocalDataItem : public FFastArraySerializerItem
 {
 	GENERATED_USTRUCT_BODY()
@@ -22,19 +19,10 @@ struct FLocalDataItem : public FFastArraySerializerItem
 		Name = InName;
 	}
 	
-	FLocalDataItem(const FGameplayTag InName, const FUnionLocalDataType& InValue)
+	FLocalDataItem(const FGameplayTag InName, const float InValue)
 	{
 		Name = InName;
 		Value = InValue;
-	}
-	
-	bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
-	{
-		Ar << Name;
-		Ar << Value;
-		
-		bOutSuccess = true;
-		return true;
 	}
 
 	bool operator==(const FLocalDataItem& Other) const
@@ -43,26 +31,19 @@ struct FLocalDataItem : public FFastArraySerializerItem
 	}
 
 	// Unique key for this data item
+	UPROPERTY(EditAnywhere)
 	FGameplayTag Name;
 
-	// Union container holding the value 
-	FUnionLocalDataType Value;
-};
-
-template<>
-struct TStructOpsTypeTraits<FLocalDataItem> : TStructOpsTypeTraitsBase2<FLocalDataItem>
-{
-	enum 
-	{
-		WithNetSerializer = true,
-	};
+	// Union container holding the value
+	UPROPERTY(EditAnywhere)
+	float Value;
 };
 
 /**
  * Networked container for FLocalDataItem elements with efficient delta serialization.
  * Provides storage and access to various data types using Gameplay Tags.
  */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLocalData : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
@@ -93,10 +74,9 @@ struct FLocalData : public FFastArraySerializer
 		}
 	}
 
-	template<typename T>
-	void SetData(const FGameplayTag InName, const T InValue) 
+	void SetData(const FGameplayTag InName, const float InValue) 
 	{
-		SetData({ InName, FUnionLocalDataType(InValue) });
+		SetData({ InName, InValue });
 	}
 
 	void RemoveData(const FGameplayTag InName)
@@ -125,7 +105,7 @@ struct FLocalData : public FFastArraySerializer
 
 private:
 	// Internal array storing all data items 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	TArray<FLocalDataItem> Array;
 };
 
