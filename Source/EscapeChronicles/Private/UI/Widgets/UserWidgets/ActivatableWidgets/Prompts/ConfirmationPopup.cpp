@@ -29,14 +29,14 @@ void UConfirmationPopup::SetDisplayedText(const FText& InTitleText) const
 
 void UConfirmationPopup::OnConfirmButtonClicked()
 {
-	ResultDelegate.Broadcast(true);
+	OnResult.Broadcast(true);
 
 	DeactivateWidget();
 }
 
 void UConfirmationPopup::OnCancelButtonClicked()
 {
-	ResultDelegate.Broadcast(false);
+	OnResult.Broadcast(false);
 	
 	DeactivateWidget();
 }

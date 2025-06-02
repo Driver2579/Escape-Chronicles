@@ -14,8 +14,8 @@ UENUM(BlueprintType)
 enum class ERouteInputMode : uint8
 {
 	Game,       // Input handled by game only (no UI interaction)
-	Ui,         // Input handled by UI only (game paused or ignored)
-	GameAndUi   // Hybrid mode (e.g. for menus that don't ignored the game)
+	UI,         // Input handled by UI only (game paused or ignored)
+	GameAndUI   // Hybrid mode (e.g. for menus that don't ignored the game)
 };
 
 // Defines a HUD route configuration
@@ -55,10 +55,10 @@ public:
 
 	/**
 	 * Navigates to the specified route.
-	 * @param RouteName GameplayTag identifying the desired route (must exist in Routes map).
+	 * @param RouteTag GameplayTag identifying the desired route (must exist in Routes map).
 	 * @note Will deactivate all currently active widgets in the root container.
 	 */
-	void GoTo(const FGameplayTag& RouteName);
+	void GoTo(const FGameplayTag& RouteTag);
 
 	// Returns to the root state of the HUD 
 	void GoToRoot() const;
@@ -85,16 +85,16 @@ private:
 	
 	/**
 	 * Route definitions mapping GameplayTags to widget configurations.
-	 * @tparam FGameplayTag Route.
-	 * @tparam TSubclassOf<UCommonActivatableWidget>> The widget that will open.
+	 * @tparam FGameplayTag The gameplay tag used as a key to identify the route.
+	 * @tparam FHUDRoute The configuration that will be used to open the widget.
 	 */
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, FHUDRoute> Routes;
 
 	/**
-	 * Updates the player's input mode and cursor visibility
-	 * @param NewInputMode Desired input mode
-	 * @param bNewCursorVisible Should cursor be visible
+	 * Updates the player's input mode and cursor visibility.
+	 * @param NewInputMode Desired input mode.
+	 * @param bNewCursorVisible Whether the cursor should be visible.
 	 */
 	void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 };
