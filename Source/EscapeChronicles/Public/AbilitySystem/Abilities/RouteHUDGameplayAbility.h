@@ -6,7 +6,7 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "RouteHUDGameplayAbility.generated.h"
 
-// Opens and closes the inventory menu
+// Opens and closes the selected route
 UCLASS()
 class ESCAPECHRONICLES_API URouteHUDGameplayAbility : public UEscapeChroniclesGameplayAbility
 {

@@ -47,8 +47,8 @@ void UPauseMenuWidget::OnExitButtonClicked()
 	}
 
 	ConfirmationExitWidget->SetDisplayedText(ExitConfirmationWidgetText);
-	ConfirmationExitWidget->OnResult.AddWeakLambda(this,
-	[this](bool bConfirmed)
+	
+	ConfirmationExitWidget->OnResult.AddWeakLambda(this, [this](bool bConfirmed)
 	{
 		if (!bConfirmed)
 		{

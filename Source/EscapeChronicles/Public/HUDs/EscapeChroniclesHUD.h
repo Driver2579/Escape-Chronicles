@@ -85,8 +85,8 @@ private:
 	
 	/**
 	 * Route definitions mapping GameplayTags to widget configurations.
-	 * @tparam FGameplayTag Route.
-	 * @tparam TSubclassOf<UCommonActivatableWidget>> The widget that will open.
+	 * @tparam FGameplayTag The gameplay tag used as a key to identify the route.
+	 * @tparam FHUDRoute The configuration that will be used to open the widget.
 	 */
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, FHUDRoute> Routes;
