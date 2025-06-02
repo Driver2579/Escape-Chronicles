@@ -139,12 +139,15 @@ void UBedtimeScheduleEvent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime
 		return;
 	}
 
+	// Check if the time for players to check in has passed
+	bTimeForPlayersToCheckInPassed = NewDateTime.ToTotalMinutes() - EventStartDateTime.ToTotalMinutes() >
+		TimeForPlayersToCheckIn.ToTotalMinutes();
+
 	/**
 	 * We can start an alert only in case the event is active and not paused, and if enough time has passed since the
 	 * event start to start an alert.
 	 */
-	const bool bCanStartAlert = !IsPaused() && IsActive() &&
-		NewDateTime.ToTotalMinutes() - EventStartDateTime.ToTotalMinutes() > TimeForPlayersToCheckIn.ToTotalMinutes();
+	const bool bCanStartAlert = !IsPaused() && IsActive() && bTimeForPlayersToCheckInPassed;
 
 	if (!bCanStartAlert)
 	{
@@ -236,8 +239,12 @@ void UBedtimeScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason
 	// We don't need to listen for the owning player initialization when the event ends, so unsubscribe from them
 	UnregisterOnOwningPlayerInitializedDelegates();
 
+	// Clear the variable
+	bTimeForPlayersToCheckInPassed = false;
+
 	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
 
+	// Unsubscribe from time updates
 	if (IsValid(GameState))
 	{
 		GameState->OnCurrentGameDateTimeUpdated.Remove(OnCurrentGameDateTimeUpdatedDelegateHandle);
