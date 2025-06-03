@@ -5,6 +5,7 @@
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
+#include "HUDs/EscapeChroniclesHUD.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Subsystems/SaveGameSubsystem.h"
 
@@ -13,6 +14,7 @@ AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
+	HUDClass = AEscapeChroniclesHUD::StaticClass();
 }
 
 void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
