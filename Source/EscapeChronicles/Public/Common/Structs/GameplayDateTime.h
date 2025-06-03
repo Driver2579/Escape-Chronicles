@@ -52,14 +52,14 @@ struct FGameplayTime
 		return *this;
 	}
 
-	void AddMinutes(const uint32 InMinutes)
+	void AddMinutes(const uint16 InMinutes)
 	{
 		FromTotalMinutes(ToTotalMinutes() + InMinutes);
 	}
 
-	void SubtractMinutes(const uint32 InMinutes)
+	void SubtractMinutes(const uint16 InMinutes)
 	{
-		FromTotalMinutes(FMath::Min<uint32>(0, ToTotalMinutes() - InMinutes));
+		FromTotalMinutes(FMath::Max<uint16>(0, ToTotalMinutes() - InMinutes));
 	}
 
 	// Prefix increment
@@ -71,12 +71,12 @@ struct FGameplayTime
 	}
 
 	// Postfix increment
-	FGameplayTime&& operator++(int)
+	FGameplayTime operator++(int)
 	{
-		FGameplayTime OldGameplayTime = *this;
+		const FGameplayTime OldGameplayTime = *this;
 		++*this;
 
-		return MoveTemp(OldGameplayTime);
+		return OldGameplayTime;
 	}
 
 	// Prefix decrement
@@ -88,12 +88,12 @@ struct FGameplayTime
 	}
 
 	// Postfix decrement
-	FGameplayTime&& operator--(int)
+	FGameplayTime operator--(int)
 	{
-		FGameplayTime OldGameplayTime = *this;
+		const FGameplayTime OldGameplayTime = *this;
 		--*this;
 
-		return MoveTemp(OldGameplayTime);
+		return OldGameplayTime;
 	}
 
 	bool operator==(const FGameplayTime& Other) const
@@ -116,7 +116,7 @@ struct FGameplayTime
 		return Hour * MaxMinutePlusOne + Minute;
 	}
 
-	static constexpr uint8 MaxMinute = 59; 
+	static constexpr uint8 MaxMinute = 59;
 	static constexpr uint8 MaxHour = 23;
 
 	static constexpr uint8 MaxMinutePlusOne = MaxMinute + 1;
@@ -142,20 +142,20 @@ struct FGameplayDateTime
 
 	FGameplayDateTime() = default;
 
-	FGameplayDateTime(const uint32 InDay, const FGameplayTime InTime)
+	FGameplayDateTime(const uint64 InDay, const FGameplayTime InTime)
 		: Day(InDay)
 		, Time(InTime)
 	{
 	}
 
-	FGameplayDateTime(const uint32 InDay, const uint8 InHour, const uint8 InMinute)
+	FGameplayDateTime(const uint64 InDay, const uint8 InHour, const uint8 InMinute)
 		: Day(InDay)
 		, Time(InHour, InMinute)
 	{
 	}
 
 	UPROPERTY(EditAnywhere, SaveGame)
-	uint32 Day = 0;
+	uint64 Day = 0;
 
 	UPROPERTY(EditAnywhere, SaveGame)
 	FGameplayTime Time;
@@ -177,14 +177,14 @@ struct FGameplayDateTime
 		return *this;
 	}
 
-	void AddMinutes(const uint32 InMinutes)
+	void AddMinutes(const uint64 InMinutes)
 	{
 		FromTotalMinutes(ToTotalMinutes() + InMinutes);
 	}
 
-	void SubtractMinutes(const uint32 InMinutes)
+	void SubtractMinutes(const uint64 InMinutes)
 	{
-		FromTotalMinutes(FMath::Min<uint32>(0, ToTotalMinutes() - InMinutes));
+		FromTotalMinutes(FMath::Max<uint64>(0, ToTotalMinutes() - InMinutes));
 	}
 
 	// Prefix increment
@@ -198,7 +198,7 @@ struct FGameplayDateTime
 	// Postfix increment
 	FGameplayDateTime operator++(int)
 	{
-		FGameplayDateTime OldGameplayTime = *this;
+		const FGameplayDateTime OldGameplayTime = *this;
 		++*this;
 
 		return OldGameplayTime;
@@ -215,7 +215,7 @@ struct FGameplayDateTime
 	// Postfix decrement
 	FGameplayDateTime operator--(int)
 	{
-		FGameplayDateTime OldGameplayTime = *this;
+		const FGameplayDateTime OldGameplayTime = *this;
 		--*this;
 
 		return OldGameplayTime;
