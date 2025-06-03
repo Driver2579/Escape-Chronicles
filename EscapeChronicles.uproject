@@ -11,7 +11,9 @@
 			"AdditionalDependencies": [
 				"Engine",
 				"Mover",
-				"AIModule"
+				"AIModule",
+				"CommonUI",
+				"UMG"
 			]
 		}
 	],
@@ -33,6 +35,10 @@
 		},
 		{
 			"Name": "MoverExamples",
+			"Enabled": true
+		},
+		{
+			"Name": "CommonUI",
 			"Enabled": true
 		},
 		{
