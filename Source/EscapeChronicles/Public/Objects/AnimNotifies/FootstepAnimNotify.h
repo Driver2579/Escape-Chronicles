@@ -28,7 +28,12 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<USoundBase> DefaultSound;
 
-	// Map materials that have their own sounds
+	/**
+	 * Map of surface material types to corresponding impact sounds. Used to play different sounds depending on the
+	 * physical material an object interacts with.
+	 * @tparam KeyType Physical material (e.g., dirt, metal, wood)
+	 * @tparam ValueType  Sound to play upon interaction with that material
+	 */
 	UPROPERTY(EditAnywhere)
 	TMap<TObjectPtr<UPhysicalMaterial>, TObjectPtr<USoundBase>> SoundsByMaterial;
 	

@@ -29,30 +29,30 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
-	if (!SetupDamageCollider() || !LoadAndPlayAnimMontage() || !LoadGameplayEffects())
+	if (!SetupDamageCollision() || !LoadAndPlayAnimMontage() || !LoadGameplayEffects())
 	{
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 	}
 }
 
-bool UPunchGameplayAbility::SetupDamageCollider()
+bool UPunchGameplayAbility::SetupDamageCollision()
 {
 	TWeakObjectPtr<UPrimitiveComponent>& DamageCollision = MontagesQueue[CurrentConfigurationIndex].DamageCollision;
 
-	// Search for a collider with the specified tag and assign it
+	// Search for a collision with the specified tag and assign it
 	if (!DamageCollision.IsValid())
 	{
 		DamageCollision = CurrentActorInfo->AvatarActor->FindComponentByTag<UPrimitiveComponent>(
 			MontagesQueue[CurrentConfigurationIndex].DamageCollisionTag);
 	}
 
-	// If the collider was not specified and found the ability must be canceled
+	// If the collision was not specified and found the ability must be canceled
 	if (!ensureAlways(DamageCollision.IsValid()))
 	{
 		return false;
 	}
 	
-	DesiredDamageCollider = DamageCollision;
+	DesiredDamageCollision = DamageCollision;
 
 	RegisterPunchGameplayEvents();
 
@@ -68,7 +68,7 @@ void UPunchGameplayAbility::RegisterPunchGameplayEvents()
 		FGameplayEventTagMulticastDelegate::FDelegate::CreateWeakLambda(this,
 			[this](FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
 		{
-			DesiredDamageCollider->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+			DesiredDamageCollision->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
 		});
 	
 	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
@@ -82,8 +82,8 @@ void UPunchGameplayAbility::RegisterPunchGameplayEvents()
 		FGameplayEventTagMulticastDelegate::FDelegate::CreateWeakLambda(this,
 			[this](FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
 		{
-			DesiredDamageCollider->OnComponentBeginOverlap.RemoveDynamic(this,
-				&UPunchGameplayAbility::OnHitBoxBeginOverlap);
+			DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this,
+				&ThisClass::OnHitBoxBeginOverlap);
 		});
 	
 	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
@@ -201,7 +201,7 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
-	DesiredDamageCollider->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+	DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
 	bPunchHappened = true;
 
 	// We can hit an object without ASC, so it will only cause visual effects

@@ -30,6 +30,8 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 public:
 	AEscapeChroniclesCharacter();
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
@@ -64,9 +66,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
-	
+
 	virtual void PostLoad() override;
-	virtual void OnPostLoadObject() override;
 
 	virtual FVector GetNavAgentLocation() const override;
 
@@ -104,13 +105,15 @@ public:
 	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
-	
+
+	virtual void OnPostLoadObject() override;
+
 protected:
 	virtual void BeginPlay() override;
 
-	virtual void Tick(float DeltaSeconds) override;
-	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
+
+	virtual void OnRep_PlayerState() override;
 
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
@@ -136,7 +139,7 @@ protected:
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
-	
+
 	// When ActorAndViewDelta is less than this value, the mesh stops rotating
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStopTurning = 10;
@@ -144,14 +147,18 @@ protected:
 	// ActorAndViewDelta interpolation rate to 0 when the mesh is rotated
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
-	
+
+	// ActorAndViewDelta interpolation rate to 0 when the mesh is rotated
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	FGameplayTagContainer BlockTurningTags;
+
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
 	 * “FaintedGameplayTag”
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainted")
 	TSoftClassPtr<class UGameplayEffect> FaintedGameplayEffectClass;
-	
+
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
@@ -236,11 +243,12 @@ private:
 
 	// Difference between the angle of rotation of mesh and actor
 	FRotator ActorAndViewDelta;
+	// Whether is the mesh turning now
 	bool bTurning = false;
 
 	// Mesh rotation on BeginPlay
 	FRotator InitialMeshRotation;
-	
+
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
 	 * values that should be gotten when OnStanceChanged is called.
@@ -255,19 +263,18 @@ private:
 	 */
 	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
 		const EGroundSpeedMode NewGroundSpeedMode) const;
-	
+
 	// Makes it a ragdoll if health is 0 or less
 	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
 
-	bool bFainted = false;
-	
-	// Sets whether it is a ragdoll
+	// Sets the bFainted based on current health (when fainted the capsule collision and movement are disabled and mesh
+	// is ragdoll)
 	void UpdateFaintedState();
-	
+
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;
-	
+
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
-	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 	void OnFaintedGameplayEffectClassLoaded();
+	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 };

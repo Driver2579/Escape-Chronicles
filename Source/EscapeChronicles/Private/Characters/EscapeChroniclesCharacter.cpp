@@ -46,7 +46,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetGenerateOverlapEvents(false);
 	MeshComponent->SetCanEverAffectNavigation(false);
 	MeshComponent->SetUsingAbsoluteRotation(true);
-	
+
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
 
@@ -97,7 +97,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	SetReplicatingMovement(false);
 
 	// === Interaction ===
-	
+
 	InteractionManagerComponent = CreateDefaultSubobject<UInteractionManagerComponent>(
 		TEXT("Interaction Manager Component"));
 	
@@ -136,13 +136,6 @@ void AEscapeChroniclesCharacter::PostLoad()
 #endif
 }
 
-void AEscapeChroniclesCharacter::OnPostLoadObject()
-{
-	ISaveable::OnPostLoadObject();
-	
-	UpdateFaintedState();
-}
-
 void AEscapeChroniclesCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -167,20 +160,21 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (bFainted)
+	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (IsValid(AbilitySystemComponent) && AbilitySystemComponent->HasAnyMatchingGameplayTags(BlockTurningTags))
 	{
-		bTurning = false;
 		return;
 	}
-	
+
 	const FRotator MeshRotation = MeshComponent->GetComponentRotation() - InitialMeshRotation;
 	const FRotator ActorRotation = GetActorRotation();
-	
+
 	ActorAndViewDelta = MeshRotation - ActorRotation;
 	ActorAndViewDelta.Normalize();
 	
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
-	
+
 	// Check if we have to rotate the actor
 	if (!bTurning && AbsoluteYawDelta <= AngleToStartTurning && CharacterMoverComponent->GetVelocity().Length() == 0)
 	{
@@ -189,14 +183,14 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 
 	// Check or end the current turn
 	bTurning = AbsoluteYawDelta > AngleToStopTurning;
-	
+
 	// === Rotate actor ===
-	
+
 	FRotator NewMeshRotation = MeshRotation;
 
 	NewMeshRotation.Yaw = ActorRotation.Yaw + InitialMeshRotation.Yaw -
 		FMath::FInterpTo(-ActorAndViewDelta.Yaw, 0, DeltaSeconds, TurningInterpSpeed);
-	
+
 	MeshComponent->SetRelativeRotation(NewMeshRotation);
 }
 
@@ -218,16 +212,30 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
 
 	// === Subscribe to changes in the health attribute ===
-	
+
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
 	if (IsValid(VitalAttributeSet))
 	{
 		FOnGameplayAttributeValueChange& HealthChangeDelegate =
 			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute());
-		
+
 		HealthChangeDelegate.AddUObject(this, &ThisClass ::OnHealthChanged);
 	}
+
+	UpdateFaintedState();
+}
+
+void AEscapeChroniclesCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	UpdateFaintedState();
+}
+
+void AEscapeChroniclesCharacter::OnPostLoadObject()
+{
+	ISaveable::OnPostLoadObject();
 
 	UpdateFaintedState();
 }
@@ -724,18 +732,18 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		return;
 	}
 
-	bFainted = VitalAttributeSet->GetHealth() <= 0;
-	
+	const bool bFainted = VitalAttributeSet->GetHealth() <= 0;
+
 	MeshComponent->SetSimulatePhysics(bFainted);
 	MeshComponent->bBlendPhysics = bFainted;
-	
+
 	if (bFainted)
 	{
 		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
-		
+
 		MeshComponent->WakeAllRigidBodies();
-		
+
 		CharacterMoverComponent->DisableMovement();
 
 		if (!FaintedGameplayEffectHandle.IsValid())
@@ -749,11 +757,11 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 	{
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-		
+
 		MeshComponent->PutAllRigidBodiesToSleep();
 
 		CharacterMoverComponent->SetDefaultMovementMode();
-		
+
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintedGameplayEffectHandle);

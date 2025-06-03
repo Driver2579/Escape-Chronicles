@@ -73,8 +73,8 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag BlockingPunchesTag; 
 
-	// Initializes the collider used to detect punch hits
-	bool SetupDamageCollider();
+	// Initializes the collision used to detect punch hits
+	bool SetupDamageCollision();
 
 	// Begins listening for gameplay events
 	void RegisterPunchGameplayEvents();
@@ -88,7 +88,7 @@ private:
 	void OnAnimMontageBlendingOut(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnGameplayEffectLoaded(const TSoftClassPtr<UGameplayEffect> LoadedEffect);
 
-	// Called when the punch hitbox overlaps another actor's collider
+	// Called when the punch hitbox overlaps another actor's collision
 	UFUNCTION()
 	void OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -113,7 +113,7 @@ private:
 
 	// Cache to be applied after punch hit
 	TSoftClassPtr<UGameplayEffect> DesiredToApplyGameplayEffectClass;
-	TWeakObjectPtr<UPrimitiveComponent> DesiredDamageCollider;
+	TWeakObjectPtr<UPrimitiveComponent> DesiredDamageCollision;
 
 	// Index of the current punch configuration being executed
 	int32 CurrentConfigurationIndex = 0;

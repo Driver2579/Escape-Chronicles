@@ -16,9 +16,9 @@ void USendGameplayEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAni
 	if (IsValid(InstigatorAbilitySystemComponent))
 	{
 		FGameplayEventData GameplayEventData;
-		
+
 		GameplayEventData.Instigator = MeshComp->GetOwner();
-		
+
 		InstigatorAbilitySystemComponent->HandleGameplayEvent(GameplayEventTag, &GameplayEventData);
 	}
 }
