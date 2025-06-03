@@ -27,6 +27,8 @@ public:
 	// Should be called when the game is loaded
 	void LoadBedtimeScheduleEventFromSaveData(const FBedtimeScheduleEventSaveData& SaveData);
 
+	bool HasTimeForPlayersToCheckInPassed() const { return bTimeForPlayersToCheckInPassed; }
+
 protected:
 	virtual void OnEventStarted(const bool bStartPaused) override;
 
@@ -57,6 +59,9 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category="Alert")
 	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
+
+	// Whether the time for players to check in has passed
+	bool bTimeForPlayersToCheckInPassed = false;
 
 	// An event to start if the players don't check in within the time limit. Expected to be an alert event.
 	UPROPERTY(EditDefaultsOnly, Category="Alert")

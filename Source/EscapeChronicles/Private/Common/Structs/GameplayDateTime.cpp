@@ -65,7 +65,7 @@ bool FGameplayTime::operator>(const FGameplayTime& Other) const
 
 void FGameplayTime::FromTotalMinutes(uint16 TotalMinutes)
 {
-	TotalMinutes = FMath::Max<uint64>(0, TotalMinutes);
+	TotalMinutes = FMath::Max<uint16>(0, TotalMinutes);
 
 	Hour = TotalMinutes / MaxMinutePlusOne % MaxHourPlusOne;
 	Minute = TotalMinutes % MaxMinutePlusOne;
