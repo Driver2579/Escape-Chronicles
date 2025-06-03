@@ -205,8 +205,51 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	return true;
 }
 
-bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
-	UInventoryItemInstance* ItemInstance) const
+bool UInventoryManagerComponent::SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
+	const FGameplayTag& FromSlotsType, const FGameplayTag& ToSlotsType)
+{
+	check(GetOwner()->HasAuthority());
+
+	// Get indexes of slot arrays by their tags
+	const int32 FromSlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(FromSlotsType);
+	const int32 ToSlotsArrayIndex = TypedInventorySlotsLists.IndexOfByTag(ToSlotsType);
+	
+	// Arrays must exist
+	if (!ensureAlwaysMsgf(FromSlotsArrayIndex != INDEX_NONE && ToSlotsArrayIndex != INDEX_NONE,
+		TEXT("Array not found by tag")))
+	{
+		return false;
+	}
+	
+	// Get the slot arrays themselves
+	const FInventorySlotsArray& FromSlotsArray = TypedInventorySlotsLists[FromSlotsArrayIndex].Array;
+	const FInventorySlotsArray& ToSlotsArray = TypedInventorySlotsLists[ToSlotsArrayIndex].Array;
+	
+	// Check validity of indexes in slot arrays
+	if (!ensureAlwaysMsgf(FromSlotsArray.IsValidSlotIndex(FromSlotIndex), TEXT("Unavailable from slot index")) ||
+		!ensureAlwaysMsgf(ToSlotsArray.IsValidSlotIndex(ToSlotIndex), TEXT("Unavailable to slot index"))) 
+	{
+		return false;
+	}
+
+	// Save a temporary reference to the item from the original slot
+	UInventoryItemInstance* TempFromItemInstance = FromSlotsArray.GetSlots()[FromSlotIndex].Instance;
+
+	
+	// Move the item from the target slot to the source slot
+	TypedInventorySlotsLists.SetInstance(ToSlotsArray.GetSlots()[ToSlotIndex].Instance, FromSlotsArrayIndex,
+		FromSlotIndex);
+	
+	// Move the item from the source slot to the target slot
+	TypedInventorySlotsLists.SetInstance(TempFromItemInstance, ToSlotsArrayIndex,
+		ToSlotIndex);
+	
+	OnInventoryContentChanged.Broadcast();
+	return true;
+}
+
+bool UInventoryManagerComponent::GetItemInstanceLocation(UInventoryItemInstance* ItemInstance,
+	FGameplayTag& OutSlotsType, int32& OutSlotIndex) const
 {
 	for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
 	{
@@ -230,7 +273,7 @@ void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemI
 	FGameplayTag SlotsType;
 	int32 SlotIndex;
 	
-	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
+	if (ensureAlways(GetItemInstanceLocation(ItemInstance, SlotsType, SlotIndex)))
 	{
 		DeleteItem(SlotIndex, SlotsType);
 	}

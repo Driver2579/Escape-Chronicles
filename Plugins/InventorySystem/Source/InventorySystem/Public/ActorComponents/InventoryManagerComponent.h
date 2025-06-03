@@ -27,7 +27,7 @@ public:
 	T* GetFragmentByClass() const;
 
 	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
-	const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
+		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
 	
 	/**
 	 * Add item DUPLICATE to inventory
@@ -37,9 +37,6 @@ public:
 	 */
 	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = -1,
 		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
-
-	bool AddItem(const UInventoryItemDefinition* ItemInstance, int32 SlotIndex = -1,
-		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 	
 	/**
 	 * Delete an item from inventory
@@ -48,13 +45,24 @@ public:
 	 */
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
-
+	
+	/**
+	 * Swap two items between inventory slots
+	 * @param FromSlotIndex Index of the source slot
+	 * @param ToSlotIndex Index of the destination slot
+	 * @param FromSlotsType Tag identifying the source slot type
+	 * @param ToSlotsType Tag identifying the destination slot type
+	 */
+	bool SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
+		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType,
+		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful
 	 */
-	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
-	                                      UInventoryItemInstance* ItemInstance) const;
+	bool GetItemInstanceLocation(UInventoryItemInstance* ItemInstance, FGameplayTag& OutSlotsType, int32& OutSlotIndex)
+		const;
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
 	

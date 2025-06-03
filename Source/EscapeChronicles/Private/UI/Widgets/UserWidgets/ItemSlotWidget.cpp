@@ -2,7 +2,10 @@
 
 #include "UI/Widgets/UserWidgets/ItemSlotWidget.h"
 
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Characters/EscapeChroniclesCharacter.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerFragmentLooting.h"
 
 void UItemSlotWidget::SetItemInstance(UInventoryItemInstance* ItemInstance)
 {
@@ -103,15 +106,55 @@ void UItemSlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEven
 bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
 	UDragDropOperation* InOperation)
 {
+	const bool DefaultResult = Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+	
 	UInventoryItemInstance* DroppedItemInstance = Cast<UInventoryItemInstance>(InOperation->Payload);
 
 	if (!ensureAlways(IsValid(DroppedItemInstance)))
 	{
-		return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
+		return DefaultResult;
 	}
 	
-	
-	
+	AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 
+	if (!ensureAlways(IsValid(Character)))
+	{
+		return DefaultResult;
+	}
+	
+	UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
+
+	if (!ensureAlways(IsValid(InventoryManagerComponent)))
+	{
+		return DefaultResult;
+	}
+
+	UInventoryManagerFragmentLooting* LootingFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerFragmentLooting>();
+
+	if (!ensureAlways(IsValid(LootingFragment)))
+	{
+		return DefaultResult;
+	}
+
+	if (DroppedItemInstance->GetOuter() == InventoryManagerComponent)
+	{
+		FGameplayTag FromSlotsType;
+		int32 FromSlotIndex;
+
+		FGameplayTag ToSlotsType;
+		int32 ToSlotIndex;
+
+		bool basd = 
+			InventoryManagerComponent->GetItemInstanceLocation(DroppedItemInstance, FromSlotsType, FromSlotIndex) &&
+			InventoryManagerComponent->GetItemInstanceLocation(CachedItemInstance.Get(), ToSlotsType, ToSlotIndex);
+
+		
+
+		
+		
+		LootingFragment->Server_Swap(InventoryManagerComponent, FromSlotIndex, ToSlotIndex, FromSlotsType, ToSlotsType);
+	}
+	
 	return true;
 }

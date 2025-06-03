@@ -42,6 +42,6 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UImage> DragVisualWidget;
-	
+
 	TWeakObjectPtr<UInventoryItemInstance> CachedItemInstance;
 };

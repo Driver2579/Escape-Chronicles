@@ -45,7 +45,7 @@ protected:
 		
 		for (const FInventorySlot& InventorySlot : InventorySlots)
 		{
-			UItemSlotWidget* NewSlotWidget = CreateWidget<UItemSlotWidget>(GetWorld(), SlotClass);
+			UItemSlotWidget* NewSlotWidget = CreateWidget<UItemSlotWidget>(this, SlotClass);
 
 			SlotsContainer->AddChildToStackBox(NewSlotWidget);
 
