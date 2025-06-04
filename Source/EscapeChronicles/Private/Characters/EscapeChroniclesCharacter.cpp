@@ -696,7 +696,6 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const 
 	}
 }
 
-
 void AEscapeChroniclesCharacter::OnHealthChanged(const FOnAttributeChangeData& OnHealthChangeData)
 {
 	UpdateFaintedState();
@@ -732,6 +731,11 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 
 		CharacterMoverComponent->DisableMovement();
 
+		if (!ensureAlways(!FaintedGameplayEffectClass.IsNull()))
+		{
+			return;
+		}
+
 		if (!LoadFaintedGameplayEffectClassHandle.IsValid())
 		{
 			LoadFaintedGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
@@ -762,27 +766,22 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 
 void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded()
 {
-	if (FaintedGameplayEffectHandle.IsValid())
-	{
-		return;
-	}
-
-	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
-
-	if (!IsValid(AbilitySystemComponent))
-	{
-		return;
-	}
-
-#if DO_ENSURE
-	ensureAlways(FaintedGameplayEffectClass.IsValid());
+#if DO_CHECK
+	check(FaintedGameplayEffectClass.IsValid());
+	check(LoadFaintedGameplayEffectClassHandle.IsValid());
 #endif
 
-	const FGameplayEffectSpecHandle EffectSpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
-		FaintedGameplayEffectClass.Get(), 1, FGameplayEffectContextHandle());
+	// Avoid re-applying the gameplay effect
+	if (!FaintedGameplayEffectHandle.IsValid())
+	{
+		UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	FaintedGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
-		*EffectSpecHandle.Data.Get());
+		if (IsValid(AbilitySystemComponent))
+		{
+			FaintedGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+				FaintedGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, FGameplayEffectContextHandle());
+		}
+	}
 
 	LoadFaintedGameplayEffectClassHandle->ReleaseHandle();
 	LoadFaintedGameplayEffectClassHandle.Reset();
