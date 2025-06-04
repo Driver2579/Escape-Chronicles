@@ -31,17 +31,17 @@ private:
 	/**
 	 * Map of surface material types to corresponding impact sounds. Used to play different sounds depending on the
 	 * physical material an object interacts with.
-	 * @tparam KeyType Physical material (e.g., dirt, metal, wood)
-	 * @tparam ValueType  Sound to play upon interaction with that material
+	 * @tparam KeyType Physical material (e.g., dirt, metal, wood).
+	 * @tparam ValueType Sound to play upon interaction with that material.
 	 */
 	UPROPERTY(EditAnywhere)
 	TMap<TObjectPtr<UPhysicalMaterial>, TObjectPtr<USoundBase>> SoundsByMaterial;
 	
-	// Volume which is taken to all sounds from the footsteps
+	// Volume of the footstep sound
 	UPROPERTY(EditAnywhere)
 	float VolumeMultiplier = 1.0f;
 
-	// Pitch which is taken to all sounds from the footsteps
+	// Pitch of the footstep sound
 	UPROPERTY(EditAnywhere)
 	float PitchMultiplier = 1.0f;
 };

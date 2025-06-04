@@ -10,11 +10,11 @@ void UFootstepAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequence
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	// === Determining if the character is on the ground by trace downward ===
+	// === Determining if the character is on the ground by the trace downwards ===
 	
 	const FVector LineTraceStart = MeshComp->GetSocketLocation(FootSocketName);
-	FVector LineTraceEnd = LineTraceStart;
 	
+	FVector LineTraceEnd = LineTraceStart;
 	LineTraceEnd.Z -= LineTraceDepth;
 	
 	FCollisionQueryParams LineTraceParams;
@@ -25,7 +25,7 @@ void UFootstepAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequence
 	const bool bHit = MeshComp->GetWorld()->LineTraceSingleByChannel(HitResult, LineTraceStart, LineTraceEnd,
 		ECC_Visibility, LineTraceParams);
 
-	// === Play sound if the ground is underfoot ===
+	// === Play the sound if the ground is underfoot ===
 	
 	if (!bHit)
 	{

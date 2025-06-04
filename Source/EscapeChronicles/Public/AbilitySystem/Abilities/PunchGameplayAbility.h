@@ -19,11 +19,11 @@ struct FPunchConfiguration
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UAnimMontage> AnimMontage;
 
-	// DamageCollision search tag
+	// A component with this tag will be written to DamageCollision (Its overlaps generate punch)
 	UPROPERTY(EditDefaultsOnly)
 	FName DamageCollisionTag;
 
-	// Collision overlaps which will be considered a punch
+	// Overlap collision, which is used to determine when the punch happens
 	TWeakObjectPtr<UPrimitiveComponent> DamageCollision;
 };
 
@@ -71,7 +71,7 @@ private:
 	
 	// Tag that marks actors that block punches
 	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag BlockingPunchesTag; 
+	FGameplayTagContainer BlockingPunchesTags; 
 
 	// Initializes the collision used to detect punch hits
 	bool SetupDamageCollision();
@@ -83,7 +83,7 @@ private:
 	bool LoadAndPlayAnimMontage();
 	bool LoadGameplayEffects();
 
-	// Handling asset events
+	// Handles asset events
 	void OnAnimMontageLoaded();
 	void OnAnimMontageBlendingOut(UAnimMontage* AnimMontage, bool bInterrupted);
 	void OnGameplayEffectLoaded(const TSoftClassPtr<UGameplayEffect> LoadedEffect);
@@ -108,12 +108,13 @@ private:
 	TSharedPtr<FStreamableHandle> LoadSuccessfulPunchEffectHandle;
 	TSharedPtr<FStreamableHandle> LoadUnsuccessfulPunchEffectHandle;
 
-	// Ability system component reference for target
+	// Ability system component reference for the target
 	TWeakObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent;
 
-	// Cache to be applied after punch hit
-	TSoftClassPtr<UGameplayEffect> DesiredToApplyGameplayEffectClass;
+	// Cached collision component used to detect overlap with the punch target
 	TWeakObjectPtr<UPrimitiveComponent> DesiredDamageCollision;
+	// Cached gameplay effect to apply to the target after punch hit 
+	TSoftClassPtr<UGameplayEffect> DesiredGameplayEffectClassToApply;
 
 	// Index of the current punch configuration being executed
 	int32 CurrentConfigurationIndex = 0;

@@ -77,7 +77,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
-	if (IsValid(InteractableComponent) && InteractableComponent->GetCanInteract() == true)
+	if (IsValid(InteractableComponent) && InteractableComponent->CanInteract())
 	{
 		InteractableComponentsPool.Add(InteractableComponent);
 	}
@@ -222,7 +222,7 @@ void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractab
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	if (!IsValid(InteractableComponent) || InteractableComponent->GetCanInteract() == false)
+	if (!IsValid(InteractableComponent) || InteractableComponent->CanInteract())
 	{
 		return false;
 	}

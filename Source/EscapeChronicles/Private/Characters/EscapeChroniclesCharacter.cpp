@@ -217,18 +217,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	if (IsValid(VitalAttributeSet))
 	{
-		FOnGameplayAttributeValueChange& HealthChangeDelegate =
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute());
-
-		HealthChangeDelegate.AddUObject(this, &ThisClass ::OnHealthChanged);
+		VitalAttributeSet->OnHealthChanged.AddUObject(this, &ThisClass::OnHealthChanged);
 	}
-
-	UpdateFaintedState();
-}
-
-void AEscapeChroniclesCharacter::OnRep_PlayerState()
-{
-	Super::OnRep_PlayerState();
 
 	UpdateFaintedState();
 }
@@ -561,7 +551,6 @@ void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode Gro
 	}
 }
 
-
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
 	const FName& NewMovementModeName)
 {
@@ -711,7 +700,9 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem(const 
 	}
 }
 
-void AEscapeChroniclesCharacter::OnHealthChanged(const FOnAttributeChangeData& AttributeChangeData)
+
+void AEscapeChroniclesCharacter::OnHealthChanged(AActor* EffectInstigator, AActor* EffectCauser,
+	const FGameplayEffectSpec* EffectSpec, float EffectMagnitude, float OldValue, float NewValue)
 {
 	UpdateFaintedState();
 }
@@ -749,8 +740,8 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		if (!FaintedGameplayEffectHandle.IsValid())
 		{
 			LoadFaintedGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-				FaintedGameplayEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-					&ThisClass::OnFaintedGameplayEffectClassLoaded));
+				FaintedGameplayEffectClass.ToSoftObjectPath(),
+				FStreamableDelegate::CreateUObject(this, &ThisClass::OnFaintedGameplayEffectClassLoaded));
 		}
 	}
 	else
@@ -765,7 +756,6 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintedGameplayEffectHandle);
-
 			FaintedGameplayEffectHandle.Invalidate();
 		}
 	}
@@ -792,7 +782,7 @@ void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded()
 
 	if (LoadFaintedGameplayEffectClassHandle.IsValid())
 	{
-		LoadFaintedGameplayEffectClassHandle->CancelHandle();
-		LoadFaintedGameplayEffectClassHandle.Reset();	
+		LoadFaintedGameplayEffectClassHandle->ReleaseHandle();
+		LoadFaintedGameplayEffectClassHandle.Reset();
 	}
 }

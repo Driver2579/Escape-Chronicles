@@ -10,6 +10,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+struct FGameplayEffectSpec;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -30,8 +31,6 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 public:
 	AEscapeChroniclesCharacter();
 
-	virtual void Tick(float DeltaSeconds) override;
-
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
@@ -51,12 +50,14 @@ public:
 
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
-	
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
+
+	virtual void Tick(float DeltaSeconds) override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
@@ -113,8 +114,6 @@ protected:
 
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
-	virtual void OnRep_PlayerState() override;
-
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
 	bool bUseBaseRelativeMovement = true;
@@ -144,11 +143,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStopTurning = 10;
 
-	// ActorAndViewDelta interpolation rate to 0 when the mesh is rotated
+	// ActorAndViewDelta interpolation speed when rotating mesh
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
 
-	// ActorAndViewDelta interpolation rate to 0 when the mesh is rotated
+	// Tags that block mesh rotation
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	FGameplayTagContainer BlockTurningTags;
 
@@ -241,7 +240,7 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
-	// Difference between the angle of rotation of mesh and actor
+	// Difference between the rotation angle of the mesh and the rotation angle of the actor
 	FRotator ActorAndViewDelta;
 	// Whether is the mesh turning now
 	bool bTurning = false;
@@ -265,8 +264,13 @@ private:
 		const EGroundSpeedMode NewGroundSpeedMode) const;
 
 	// Makes it a ragdoll if health is 0 or less
-	void OnHealthChanged(const struct FOnAttributeChangeData& AttributeChangeData);
+	void OnHealthChanged(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* EffectSpec,
+		float EffectMagnitude, float OldValue, float NewValue);
 
+	/**
+	 * Sets the bFainted based on current health (when fainted, the collision of the capsule and the movement are
+	 * disabled, and the mesh becomes a ragdoll)
+	 */
 	// Sets the bFainted based on current health (when fainted the capsule collision and movement are disabled and mesh
 	// is ragdoll)
 	void UpdateFaintedState();
@@ -275,6 +279,8 @@ private:
 	FName DefaultCapsuleCollisionProfileName;
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
+	
 	void OnFaintedGameplayEffectClassLoaded();
+	
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 };

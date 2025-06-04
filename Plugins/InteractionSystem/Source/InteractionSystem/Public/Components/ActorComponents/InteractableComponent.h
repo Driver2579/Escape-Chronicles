@@ -23,7 +23,7 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
-	bool GetCanInteract() const { return bCanInteract; }
+	bool CanInteract() const { return bCanInteract; }
 	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
 	
 	// Calls the interaction delegate (InteractDelegate)

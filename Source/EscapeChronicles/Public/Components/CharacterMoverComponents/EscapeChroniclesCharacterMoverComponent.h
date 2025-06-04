@@ -48,7 +48,7 @@ public:
 	FOnGroundSpeedModeChangedDelegate OnGroundSpeedModeChanged;
 
 	const static FName NullModeName;
-	
+
 protected:
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;
