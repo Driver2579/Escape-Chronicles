@@ -2,7 +2,6 @@
 
 #include "AbilitySystem/AttributeSets/SharedRelationshipAttributeSet.h"
 
-#include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
 void USharedRelationshipAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -29,45 +28,6 @@ void USharedRelationshipAttributeSet::ClampAttribute(const FGameplayAttribute& A
 	}
 }
 
-bool USharedRelationshipAttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
-{
-	if (!Super::PreGameplayEffectExecute(Data))
-	{
-		return false;
-	}
-
-	// === Remember the attributes' values before the gameplay effect is applied ===
-
-	SuspicionBeforeChangeByGameplayEffect = GetSuspicion();
-	MaxSuspicionBeforeChangeByGameplayEffect = GetMaxSuspicion();
-
-	return true;
-}
-
-void USharedRelationshipAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
-{
-	Super::PostGameplayEffectExecute(Data);
-
-	const FGameplayEffectContextHandle& EffectContext = Data.EffectSpec.GetEffectContext();
-
-	AActor* Instigator = EffectContext.GetOriginalInstigator();
-	AActor* Causer = EffectContext.GetEffectCauser();
-
-	// === Broadcast an event of the attributes that have been changed ===
-
-	if (SuspicionBeforeChangeByGameplayEffect != GetSuspicion())
-	{
-		OnSuspicionChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			SuspicionBeforeChangeByGameplayEffect, GetSuspicion());
-	}
-
-	if (MaxSuspicionBeforeChangeByGameplayEffect != GetMaxSuspicion())
-	{
-		OnMaxSuspicionChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			MaxSuspicionBeforeChangeByGameplayEffect, GetMaxSuspicion());
-	}
-}
-
 void USharedRelationshipAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, const float OldValue,
 	const float NewValue)
 {
@@ -89,15 +49,9 @@ void USharedRelationshipAttributeSet::PostAttributeChange(const FGameplayAttribu
 void USharedRelationshipAttributeSet::OnRep_Suspicion(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, Suspicion, OldValue);
-
-	OnSuspicionChanged.Broadcast(nullptr, nullptr, nullptr, GetSuspicion() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetSuspicion());
 }
 
 void USharedRelationshipAttributeSet::OnRep_MaxSuspicion(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, MaxSuspicion, OldValue);
-
-	OnMaxSuspicionChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxSuspicion() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetMaxSuspicion());
 }
