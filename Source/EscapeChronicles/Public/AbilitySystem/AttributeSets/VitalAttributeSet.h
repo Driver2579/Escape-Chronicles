@@ -24,24 +24,8 @@ public:
 	ATTRIBUTE_GETTERS(ThisClass, Cleanliness);
 	ATTRIBUTE_GETTERS(ThisClass, MaxCleanliness);
 
-	mutable FAttributeChangedDelegate OnHealthChanged;
-	mutable FAttributeChangedDelegate OnMaxHealthChanged;
-
-	mutable FAttributeChangedDelegate OnOutOfHealth;
-
-	mutable FAttributeChangedDelegate OnEnergyChanged;
-	mutable FAttributeChangedDelegate OnMaxEnergyChanged;
-
-	mutable FAttributeChangedDelegate OnOutOfEnergy;
-
-	mutable FAttributeChangedDelegate OnCleanlinessChanged;
-	mutable FAttributeChangedDelegate OnMaxCleanlinessChanged;
-
 protected:
 	virtual void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const override;
-
-	virtual bool PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data) override;
-	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
@@ -65,13 +49,13 @@ private:
 	FGameplayAttributeData MaxCleanliness = 100;
 
 	UFUNCTION()
-	void OnRep_Health(const FGameplayAttributeData& OldValue);
+	void OnRep_Health(const FGameplayAttributeData& OldValue) const;
 
 	UFUNCTION()
 	void OnRep_MaxHealth(const FGameplayAttributeData& OldValue) const;
 
 	UFUNCTION()
-	void OnRep_Energy(const FGameplayAttributeData& OldValue);
+	void OnRep_Energy(const FGameplayAttributeData& OldValue) const;
 
 	UFUNCTION()
 	void OnRep_MaxEnergy(const FGameplayAttributeData& OldValue) const;
@@ -81,19 +65,4 @@ private:
 
 	UFUNCTION()
 	void OnRep_MaxCleanliness(const FGameplayAttributeData& OldValue) const;
-
-	// Used to track when the health reaches 0
-	bool bOutOfHealth = false;
-
-	// Used to track when the energy reaches 0
-	bool bOutOfEnergy = false;
-
-	float HealthBeforeChangeByGameplayEffect = 0;
-	float MaxHealthBeforeChangeByGameplayEffect = 0;
-
-	float EnergyBeforeChangeByGameplayEffect = 0;
-	float MaxEnergyBeforeChangeByGameplayEffect = 0;
-
-	float CleanlinessBeforeChangeByGameplayEffect = 0;
-	float MaxCleanlinessBeforeChangeByGameplayEffect = 0;
 };
