@@ -55,20 +55,6 @@ class ESCAPECHRONICLES_API UEscapeChroniclesAttributeSet : public UAttributeSet
 	GENERATED_BODY()
 
 public:
-	/**
-	 * Delegate used to broadcast attribute events. Pointers may be null on clients, or if attribute changes were caused not
-	 * by gameplay effects. Can be broadcast multiple times (with valid pointers in PostGameplayEffectExecute and null
-	 * pointers in PostAttributeChange).
-	 * @param EffectInstigator The original instigating actor for this event
-	 * @param EffectCauser The physical actor that caused the change
-	 * @param EffectSpec The full effect spec for this change
-	 * @param EffectMagnitude The raw magnitude, this is before clamping
-	 * @param OldValue The value of the attribute before it was changed
-	 * @param NewValue The value after it was changed
-	*/
-	DECLARE_MULTICAST_DELEGATE_SixParams(FAttributeChangedDelegate, AActor* EffectInstigator, AActor* EffectCauser,
-		const FGameplayEffectSpec* EffectSpec, float EffectMagnitude, float OldValue, float NewValue);
-
 	UEscapeChroniclesAbilitySystemComponent* GetOwningEscapeChroniclesAbilitySystemComponent() const
 	{
 		return CastChecked<UEscapeChroniclesAbilitySystemComponent>(GetOwningAbilitySystemComponent(),
