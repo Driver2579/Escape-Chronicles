@@ -238,7 +238,7 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 	{
 		UCrowdManager* CrowdManager = UCrowdManager::GetCurrent(this);
 
-		if (ensureAlways(IsValid(CrowdManager)))
+		if (IsValid(CrowdManager))
 		{
 			CrowdManager->RegisterAgent(this);
 		}
