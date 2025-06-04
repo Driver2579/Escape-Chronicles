@@ -10,7 +10,6 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
-struct FGameplayEffectSpec;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -18,6 +17,9 @@ class UCapsuleComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UNavMoverComponent;
+
+struct FGameplayEffectSpec;
+struct FOnAttributeChangeData;
 
 enum class EStanceMode : uint8;
 enum class EGroundSpeedMode : uint8;
@@ -106,8 +108,6 @@ public:
 	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
-
-	virtual void OnPostLoadObject() override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -242,7 +242,8 @@ private:
 
 	// Difference between the rotation angle of the mesh and the rotation angle of the actor
 	FRotator ActorAndViewDelta;
-	// Whether is the mesh turning now
+
+	// Whether the mesh is turning now
 	bool bTurning = false;
 
 	// Mesh rotation on BeginPlay
@@ -264,23 +265,20 @@ private:
 		const EGroundSpeedMode NewGroundSpeedMode) const;
 
 	// Makes it a ragdoll if health is 0 or less
-	void OnHealthChanged(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* EffectSpec,
-		float EffectMagnitude, float OldValue, float NewValue);
+	void OnHealthChanged(const FOnAttributeChangeData& OnHealthChangeData);
 
 	/**
 	 * Sets the bFainted based on current health (when fainted, the collision of the capsule and the movement are
 	 * disabled, and the mesh becomes a ragdoll)
 	 */
-	// Sets the bFainted based on current health (when fainted the capsule collision and movement are disabled and mesh
-	// is ragdoll)
 	void UpdateFaintedState();
 
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
-	
+
 	void OnFaintedGameplayEffectClassLoaded();
-	
+
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 };

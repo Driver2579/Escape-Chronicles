@@ -2,7 +2,6 @@
 
 #include "AbilitySystem/Abilities/EmptyGameplayAbility.h"
 
-
 void UEmptyGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
@@ -11,13 +10,13 @@ void UEmptyGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+		CancelAbility(Handle, ActorInfo, ActivationInfo, bReplicateCancelAbility);
 
 		return;
 	}
 
 	if (bAutoEndAbility)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, false);
 	}
 }

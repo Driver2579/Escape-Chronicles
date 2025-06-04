@@ -19,4 +19,10 @@ protected:
 private:
 	UPROPERTY(EditDefaultsOnly)
 	bool bAutoEndAbility = true;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bReplicateCancelAbility = true;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bReplicateEndAbility = true;
 };

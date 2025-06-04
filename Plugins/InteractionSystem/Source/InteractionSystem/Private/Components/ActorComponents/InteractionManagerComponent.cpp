@@ -222,7 +222,7 @@ void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractab
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	if (!IsValid(InteractableComponent) || InteractableComponent->CanInteract())
+	if (!IsValid(InteractableComponent) || !InteractableComponent->CanInteract())
 	{
 		return false;
 	}

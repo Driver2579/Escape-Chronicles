@@ -18,7 +18,6 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	check(CurrentActorInfo);
 	check(CurrentActorInfo->AvatarActor.IsValid());
 	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
-	check(MontagesQueue.IsValidIndex(CurrentConfigurationIndex));
 #endif
 
 	const bool bSuccess = CommitAbility(Handle, ActorInfo, ActivationInfo) && LoadAndPlayAnimMontage() &&
@@ -37,7 +36,7 @@ bool UPunchGameplayAbility::SetupDamageCollision()
 	// Search for a collision with the specified tag and assign it
 	if (!DamageCollision.IsValid())
 	{
-		// TODO: Make it possible to make several collision for one animation
+		// TODO: Rework to support several collisions instead of getting just one
 		DamageCollision = CurrentActorInfo->AvatarActor->FindComponentByTag<UPrimitiveComponent>(
 			MontagesQueue[CurrentConfigurationIndex].DamageCollisionTag);
 	}
@@ -118,12 +117,12 @@ bool UPunchGameplayAbility::LoadGameplayEffects()
 	LoadSuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		SuccessfulPunchGameplayEffectClass.ToSoftObjectPath(),
 		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded,
-				SuccessfulPunchGameplayEffectClass));
+			SuccessfulPunchGameplayEffectClass));
 
 	LoadUnsuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		UnsuccessfulPunchGameplayEffectClass.ToSoftObjectPath(),
 		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded,
-				UnsuccessfulPunchGameplayEffectClass));
+			UnsuccessfulPunchGameplayEffectClass));
 
 	return true;
 }
@@ -178,13 +177,13 @@ void UPunchGameplayAbility::OnGameplayEffectLoaded(const TSoftClassPtr<UGameplay
 		return;
 	}
 
-	const bool IsDesiredEffectLoaded = ensureAlways(DesiredGameplayEffectClassToApply.IsValid()) &&
+	const bool bDesiredEffectLoaded = ensureAlways(DesiredGameplayEffectClassToApply.IsValid()) &&
 		DesiredGameplayEffectClassToApply == LoadedEffect;
 	
 	// Apply effect if punch occurred but resource was not loaded by that time
-	if (IsDesiredEffectLoaded)
+	if (bDesiredEffectLoaded)
 	{
-		ApplyDesiredGameplayEffect();
+		ApplyDesiredGameplayEffectToTargetChecked();
 	}
 }
 
@@ -205,17 +204,19 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 
 	UAbilitySystemComponent* InstigatorAbilitySystemComponent = CurrentActorInfo->AbilitySystemComponent.Get();
 
-	// The hit may not only be on the character (for example, a wall), so TargetAbilitySystemComponent may be nullptr
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
 	DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
 	bPunchHappened = true;
 
-	// We can hit an object without ASC, so it will only cause visual effects
+	/**
+	 * The hit may not only be on the character (for example, a wall), so TargetAbilitySystemComponent may be nullptr.
+	 * In that case we only execute visual effects
+	 */
 	if (!TargetAbilitySystemComponent.IsValid())
 	{
 		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
-		
+
 		return;
 	}
 
@@ -235,27 +236,22 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	
 	if (DesiredGameplayEffectClassToApply.IsValid())
 	{
-		ApplyDesiredGameplayEffect();
+		ApplyDesiredGameplayEffectToTargetChecked();
 	}
 }
 
-void UPunchGameplayAbility::ApplyDesiredGameplayEffect() const
+void UPunchGameplayAbility::ApplyDesiredGameplayEffectToTargetChecked() const
 {
 #if DO_CHECK
-	check(CurrentActorInfo)
+	check(CurrentActorInfo);
 	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
+	check(TargetAbilitySystemComponent.IsValid());
+	check(DesiredGameplayEffectClassToApply.IsValid());
 #endif
 
-	if (!TargetAbilitySystemComponent.IsValid())
-	{
-		return;
-	}
-
-	const FGameplayEffectSpecHandle EffectSpecHandle = CurrentActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-		DesiredGameplayEffectClassToApply.Get(), GetAbilityLevel(), FGameplayEffectContextHandle());
-
-	CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*EffectSpecHandle.Data.Get(),
-		TargetAbilitySystemComponent.Get());
+	CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectToTarget(
+		DesiredGameplayEffectClassToApply->GetDefaultObject<UGameplayEffect>(),
+		TargetAbilitySystemComponent.Get(), GetAbilityLevel());
 }
 
 void UPunchGameplayAbility::UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle)

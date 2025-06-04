@@ -19,7 +19,7 @@ struct FPunchConfiguration
 	UPROPERTY(EditDefaultsOnly)
 	TSoftObjectPtr<UAnimMontage> AnimMontage;
 
-	// A component with this tag will be written to DamageCollision (Its overlaps generate punch)
+	// A component with this tag will be written to DamageCollision (its overlaps generate punch)
 	UPROPERTY(EditDefaultsOnly)
 	FName DamageCollisionTag;
 
@@ -68,8 +68,8 @@ private:
 	// Gameplay cue to apply on an unsuccessful punch (blocked)
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayCueTag UnsuccessfulPunchGameplayCueTag;
-	
-	// Tag that marks actors that block punches
+
+	// Actors with these tags will block punches
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTagContainer BlockingPunchesTags; 
 
@@ -94,7 +94,7 @@ private:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	// Applies the desired gameplay effect depending on whether the punch was successful
-	void ApplyDesiredGameplayEffect() const;
+	void ApplyDesiredGameplayEffectToTargetChecked() const;
 
 	// Unloads a previously loaded asset using its handle
 	static void UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle);
@@ -113,6 +113,7 @@ private:
 
 	// Cached collision component used to detect overlap with the punch target
 	TWeakObjectPtr<UPrimitiveComponent> DesiredDamageCollision;
+
 	// Cached gameplay effect to apply to the target after punch hit 
 	TSoftClassPtr<UGameplayEffect> DesiredGameplayEffectClassToApply;
 
