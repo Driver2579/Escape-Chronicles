@@ -13,6 +13,7 @@ public class EscapeChronicles : ModuleRules
 			"Core",
 			"CoreUObject",
 			"Engine",
+			"PhysicsCore",
 			"InputCore",
 			"EnhancedInput",
 			"Mover",

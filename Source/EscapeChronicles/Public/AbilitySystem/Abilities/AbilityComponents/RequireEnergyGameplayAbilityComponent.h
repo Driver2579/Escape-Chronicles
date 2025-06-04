@@ -27,8 +27,7 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
 private:
-	void OnOutOfEnergy(AActor* EffectInstigator, AActor* EffectCauser, const FGameplayEffectSpec* EffectSpec,
-		float EffectMagnitude, float OldValue, float NewValue) const;
+	void OnEnergyAttributeValueChange(const FOnAttributeChangeData& OnAttributeChangeData) const;
 
-	FDelegateHandle OnOutOfEnergyDelegateHandle;
+	FDelegateHandle OnEnergyAttributeValueChangeDelegateHandle;
 };

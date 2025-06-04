@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
@@ -18,6 +19,9 @@ class UCapsuleComponent;
 class USpringArmComponent;
 class UCameraComponent;
 class UNavMoverComponent;
+
+struct FGameplayEffectSpec;
+struct FOnAttributeChangeData;
 
 enum class EStanceMode : uint8;
 enum class EGroundSpeedMode : uint8;
@@ -50,15 +54,23 @@ public:
 
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
-	
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
+
+	UFUNCTION(BlueprintCallable)
+	bool IsTurning() const { return bTurning; }
+
+	UFUNCTION(BlueprintCallable)
+	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
 
 	virtual void PostLoad() override;
 
@@ -150,6 +162,29 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStartTurning = 90;
+
+	// When ActorAndViewDelta is less than this value, the mesh stops rotating
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float AngleToStopTurning = 10;
+
+	// ActorAndViewDelta interpolation speed when rotating mesh
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	float TurningInterpSpeed = 7;
+
+	// Tags that block mesh rotation
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
+	FGameplayTagContainer BlockTurningTags;
+
+	/**
+	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
+	 * “FaintedGameplayTag”
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Fainted")
+	TSoftClassPtr<class UGameplayEffect> FaintedGameplayEffectClass;
+
 	// Entry point for input production. Authors an input for the next simulation frame.
 	virtual void ProduceInput_Implementation(int32 SimTimeMs, FMoverInputCmdContext& InputCmdResult) override;
 
@@ -232,6 +267,15 @@ private:
 
 	bool bWantsToBeCrouched = false;
 
+	// Difference between the rotation angle of the mesh and the rotation angle of the actor
+	FRotator ActorAndViewDelta;
+
+	// Whether the mesh is turning now
+	bool bTurning = false;
+
+	// Mesh rotation on BeginPlay
+	FRotator InitialMeshRotation;
+
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
 	 * values that should be gotten when OnStanceChanged is called.
@@ -246,6 +290,24 @@ private:
 	 */
 	void SyncGroundSpeedModeTagsWithAbilitySystem(const EGroundSpeedMode OldGroundSpeedMode,
 		const EGroundSpeedMode NewGroundSpeedMode) const;
+
+	// Makes it a ragdoll if health is 0 or less
+	void OnHealthChanged(const FOnAttributeChangeData& OnHealthChangeData);
+
+	/**
+	 * Sets the bFainted based on current health (when fainted, the collision of the capsule and the movement are
+	 * disabled, and the mesh becomes a ragdoll)
+	 */
+	void UpdateFaintedState();
+
+	FName DefaultMeshCollisionProfileName;
+	FName DefaultCapsuleCollisionProfileName;
+
+	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
+
+	void OnFaintedGameplayEffectClassLoaded();
+
+	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 
 	/**
 	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the
