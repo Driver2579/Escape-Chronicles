@@ -28,7 +28,7 @@ struct FGameplayTime
 	 * Normalizes the time to the correct format.
 	 * @return Overflow days. For example, if the time is 25:00, it will be normalized to 01:00 and return 1.
 	 */
-	uint32 Normalize();
+	uint8 Normalize();
 
 	/**
 	 * Adds the given time to this time WITHOUT normalizing it.

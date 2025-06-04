@@ -4,10 +4,10 @@
 
 // === FGameplayTime ===
 
-uint32 FGameplayTime::Normalize()
+uint8 FGameplayTime::Normalize()
 {
-	uint32 OverflowDays = 0;
-    
+	uint8 OverflowDays = 0;
+
 	if (Minute > MaxMinute)
 	{
 		Hour += Minute / MaxMinutePlusOne;
@@ -81,7 +81,7 @@ FGameplayDateTime FGameplayDateTime::operator+(const FGameplayDateTime& Other) c
 	Result.Time += Other.Time;
 
 	// Normalize the time and add its overflow days to the day
-	const uint32 OverflowDays = Result.Time.Normalize();
+	const uint8 OverflowDays = Result.Time.Normalize();
 	Result.Day += OverflowDays;
 
 	return Result;
