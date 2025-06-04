@@ -110,6 +110,56 @@ bool APrisonerChamberZone::IsOwningCharacterInThisChamber(bool& bOutHasOwningCha
 	return false;
 }
 
+bool APrisonerChamberZone::IsOwningCharacterBedOccupied(bool& bOutHasBedWithSameOwningCharacter) const
+{
+	bOutHasBedWithSameOwningCharacter = false;
+
+	const FUniquePlayerID* OwningPlayerID = PlayerOwnershipComponent->GetOwningPlayer();
+
+	// Return false if this chamber doesn't have an owning player
+	if (!OwningPlayerID)
+	{
+		return false;
+	}
+
+	// TODO: Uncomment this when the bed is implemented
+	/*TSet<AActor*> OverlappingBeds;
+	GetOverlappingActors(OverlappingBeds, ABed::StaticClass());
+
+	for (AActor* OverlappingBed : OverlappingBeds)
+	{
+#if DO_CHECK
+		check(IsValid(OverlappingBed));
+		check(OverlappingBed->IsA<ABed>());
+#endif
+
+		ABed* Bed = CastChecked<ABed>(OverlappingBed);
+
+		const FUniquePlayerID* BedOwningPlayerID = Bed->GetPlayerOwnershipComponent()->GetOwningPlayer();
+
+		// Go to the next bed if this one doesn't have an owning player or if it isn't the one that owns this chamber
+		if (!BedOwningPlayerID || *BedOwningPlayerID != *OwningPlayerID)
+		{
+			continue;
+		}
+
+		// We found a bed that overlaps this chamber and has the same owning player
+		bOutHasBedWithSameOwningCharacter = true;
+
+		// If the bed is occupied, then return true
+		if (Bed->IsOccupied())
+		{
+			return true;
+		}
+	}*/
+
+	/**
+	 * Return false if we didn't find any bed that overlaps this chamber and has the same owning player, or if the bed
+	 * is empty.
+	 */
+	return false;
+}
+
 bool APrisonerChamberZone::IsCharacterInHisChamber(const AEscapeChroniclesCharacter* Character,
 	bool& bOutHasOwningChamber)
 {

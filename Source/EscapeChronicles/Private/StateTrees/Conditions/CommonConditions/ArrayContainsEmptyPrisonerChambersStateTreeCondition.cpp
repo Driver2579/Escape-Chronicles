@@ -24,8 +24,13 @@ bool FArrayContainsEmptyPrisonerChambersStateTreeCondition::TestCondition(FState
 		// Check if this chamber has an owning character that is currently in the game but isn't in this chamber
 		if (!PrisonerChamberZone->IsOwningCharacterInThisChamber(bHasOwningCharacter) && bHasOwningCharacter)
 		{
-			// If so, then return true. If bInvert is true, then false will be returned.
-			return !bInvert;
+			bool bHasBedWithSameOwningCharacter;
+
+			/**
+			 * If so, then return true if the chamber has no beds with the same owning character that are occupied and
+			 * invert the result if needed.
+			 */
+			return !PrisonerChamberZone->IsOwningCharacterBedOccupied(bHasBedWithSameOwningCharacter) ^ bInvert;
 		}
 	}
 

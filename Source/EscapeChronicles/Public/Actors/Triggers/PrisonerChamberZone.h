@@ -40,6 +40,17 @@ public:
 	bool IsOwningCharacterInThisChamber(bool& bOutHasOwningCharacter) const;
 
 	/**
+	 * Checks if there is a bed that overlaps this chamber and that has the same owner as this chamber, and if this bed
+	 * is currently occupied (somebody is sleeping in it).
+	 * @param bOutHasBedWithSameOwningCharacter Whether the chamber has any bed that overlaps it and has the same owning
+	 * character. Always false if this chamber doesn't have any owning character.
+	 * @return True if all described conditions are met.
+	 * @return False if this chamber doesn't have any owning character, or if there is no bed that overlaps this
+	 * chamber, or if the bed is currently empty (nobody is sleeping in it).
+	 */
+	bool IsOwningCharacterBedOccupied(bool& bOutHasBedWithSameOwningCharacter) const;
+
+	/**
 	 * Checks if the character is currently in his own chamber.
 	 * @param Character Character to check.
 	 * @param bOutHasOwningChamber Whether the character has any owning chamber.

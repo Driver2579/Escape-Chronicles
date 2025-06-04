@@ -18,7 +18,8 @@ struct FArrayContainsEmptyPrisonerChambersStateTreeConditionInstanceData
 
 /**
  * Condition checking if an array of actors contains any prisoner chambers that have owning characters that are
- * currently in the game but aren't in their chambers.
+ * currently in the game but aren't in their chambers, OR if that prisoner chamber has a bed that has the same owning
+ * character and this bed isn't empty (someone's sleeping in it).
  */
 USTRUCT(DisplayName="Array Contains Empty Prisoner Chambers")
 struct FArrayContainsEmptyPrisonerChambersStateTreeCondition : public FStateTreeConditionCommonBase
