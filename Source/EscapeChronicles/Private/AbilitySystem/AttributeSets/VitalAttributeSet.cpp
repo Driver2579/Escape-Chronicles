@@ -2,7 +2,6 @@
 
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 
-#include "GameplayEffectExtension.h"
 #include "Net/UnrealNetwork.h"
 
 void UVitalAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -55,93 +54,6 @@ void UVitalAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, flo
 	}
 }
 
-bool UVitalAttributeSet::PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data)
-{
-	if (!Super::PreGameplayEffectExecute(Data))
-	{
-		return false;
-	}
-
-	// === Remember the attributes' values before the gameplay effect is applied ===
-
-	HealthBeforeChangeByGameplayEffect = GetHealth();
-	MaxHealthBeforeChangeByGameplayEffect = GetMaxHealth();
-
-	EnergyBeforeChangeByGameplayEffect = GetEnergy();
-	MaxEnergyBeforeChangeByGameplayEffect = GetMaxEnergy();
-
-	CleanlinessBeforeChangeByGameplayEffect = GetCleanliness();
-	MaxCleanlinessBeforeChangeByGameplayEffect = GetMaxCleanliness();
-
-	return true;
-}
-
-void UVitalAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
-{
-	Super::PostGameplayEffectExecute(Data);
-
-	const FGameplayEffectContextHandle& EffectContext = Data.EffectSpec.GetEffectContext();
-
-	AActor* Instigator = EffectContext.GetOriginalInstigator();
-	AActor* Causer = EffectContext.GetEffectCauser();
-
-	// === Broadcast an event of the attributes that have been changed ===
-
-	if (HealthBeforeChangeByGameplayEffect != GetHealth())
-	{
-		OnHealthChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			HealthBeforeChangeByGameplayEffect, GetHealth());
-
-		// Check if we're out of health
-		if (!bOutOfHealth && GetHealth() <= 0)
-		{
-			OnOutOfHealth.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-				HealthBeforeChangeByGameplayEffect, GetHealth());
-
-			bOutOfHealth = true;
-		}
-	}
-
-	if (MaxHealthBeforeChangeByGameplayEffect != GetMaxHealth())
-	{
-		OnMaxHealthChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			MaxHealthBeforeChangeByGameplayEffect, GetMaxHealth());
-	}
-
-	if (EnergyBeforeChangeByGameplayEffect != GetEnergy())
-	{
-		OnEnergyChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			EnergyBeforeChangeByGameplayEffect, GetEnergy());
-
-		// Check if we're out of energy
-		if (!bOutOfEnergy && GetEnergy() <= 0)
-		{
-			OnOutOfEnergy.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-				EnergyBeforeChangeByGameplayEffect, GetEnergy());
-
-			bOutOfEnergy = true;
-		}
-	}
-
-	if (MaxEnergyBeforeChangeByGameplayEffect != GetMaxEnergy())
-	{
-		OnMaxEnergyChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			MaxEnergyBeforeChangeByGameplayEffect, GetMaxEnergy());
-	}
-
-	if (CleanlinessBeforeChangeByGameplayEffect != GetCleanliness())
-	{
-		OnCleanlinessChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			CleanlinessBeforeChangeByGameplayEffect, GetCleanliness());
-	}
-
-	if (MaxCleanlinessBeforeChangeByGameplayEffect != GetMaxCleanliness())
-	{
-		OnMaxCleanlinessChanged.Broadcast(Instigator, Causer, &Data.EffectSpec, Data.EvaluatedData.Magnitude,
-			MaxCleanlinessBeforeChangeByGameplayEffect, GetMaxCleanliness());
-	}
-}
-
 void UVitalAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, const float OldValue,
 	const float NewValue)
 {
@@ -176,70 +88,32 @@ void UVitalAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute
 	}
 }
 
-void UVitalAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue)
+void UVitalAttributeSet::OnRep_Health(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, Health, OldValue);
-
-	const float CurrentHealth = GetHealth();
-	const float EstimatedMagnitude = CurrentHealth - OldValue.GetCurrentValue();
-	
-	OnHealthChanged.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(), CurrentHealth);
-
-	if (!bOutOfHealth && CurrentHealth <= 0)
-	{
-		OnOutOfHealth.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(),
-			CurrentHealth);
-	}
-
-	bOutOfHealth = CurrentHealth <= 0;
 }
 
 void UVitalAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, MaxHealth, OldValue);
-
-	OnMaxHealthChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxHealth() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetMaxHealth());
 }
 
-void UVitalAttributeSet::OnRep_Energy(const FGameplayAttributeData& OldValue)
+void UVitalAttributeSet::OnRep_Energy(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, Energy, OldValue);
-
-	const float CurrentEnergy = GetEnergy();
-	const float EstimatedMagnitude = CurrentEnergy - OldValue.GetCurrentValue();
-	
-	OnEnergyChanged.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(), CurrentEnergy);
-
-	if (!bOutOfEnergy && CurrentEnergy <= 0)
-	{
-		OnOutOfEnergy.Broadcast(nullptr, nullptr, nullptr, EstimatedMagnitude, OldValue.GetCurrentValue(),
-			CurrentEnergy);
-	}
-
-	bOutOfEnergy = CurrentEnergy <= 0;
 }
 
 void UVitalAttributeSet::OnRep_MaxEnergy(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, MaxEnergy, OldValue);
-
-	OnMaxEnergyChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxEnergy() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetMaxEnergy());
 }
 
 void UVitalAttributeSet::OnRep_Cleanliness(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, Cleanliness, OldValue);
-	
-	OnMaxEnergyChanged.Broadcast(nullptr, nullptr, nullptr, GetCleanliness() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetCleanliness());
 }
 
 void UVitalAttributeSet::OnRep_MaxCleanliness(const FGameplayAttributeData& OldValue) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(ThisClass, MaxCleanliness, OldValue);
-
-	OnMaxCleanlinessChanged.Broadcast(nullptr, nullptr, nullptr, GetMaxCleanliness() - OldValue.GetCurrentValue(),
-		OldValue.GetCurrentValue(), GetMaxCleanliness());
 }

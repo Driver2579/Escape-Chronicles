@@ -18,14 +18,8 @@ public:
 	ATTRIBUTE_GETTERS(ThisClass, Suspicion);
 	ATTRIBUTE_GETTERS(ThisClass, MaxSuspicion);
 
-	mutable FAttributeChangedDelegate OnSuspicionChanged;
-	mutable FAttributeChangedDelegate OnMaxSuspicionChanged;
-
 protected:
 	virtual void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const override;
-
-	virtual bool PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data) override;
-	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
@@ -41,7 +35,4 @@ private:
 
 	UFUNCTION()
 	void OnRep_MaxSuspicion(const FGameplayAttributeData& OldValue) const;
-
-	float SuspicionBeforeChangeByGameplayEffect = 0;
-	float MaxSuspicionBeforeChangeByGameplayEffect = 0;
 };
