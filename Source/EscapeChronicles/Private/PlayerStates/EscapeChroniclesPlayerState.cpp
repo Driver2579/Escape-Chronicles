@@ -16,6 +16,8 @@ AEscapeChroniclesPlayerState::AEscapeChroniclesPlayerState()
 
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+	
+	SetNetUpdateFrequency(100);
 }
 
 void AEscapeChroniclesPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
