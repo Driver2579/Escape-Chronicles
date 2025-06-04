@@ -213,22 +213,21 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 		// InitAbilityActorInfo on server and client
 		AbilitySystemComponent->InitAbilityActorInfo(GetPlayerState(), this);
 
-	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
-	SyncCharacterMoverComponentTagsWithAbilitySystem();
+		// === Subscribe to changes in the health attribute ===
 
-	// === Subscribe to changes in the health attribute ===
+		const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
-	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
+		if (IsValid(VitalAttributeSet))
+		{
+			FOnGameplayAttributeValueChange& OnHealthAttributeValueChangeDelegate =
+				AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+					VitalAttributeSet->GetHealthAttribute());
 
-	if (IsValid(VitalAttributeSet))
-	{
-		FOnGameplayAttributeValueChange& OnHealthAttributeValueChangeDelegate =
-			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate( VitalAttributeSet->GetHealthAttribute());
+			OnHealthAttributeValueChangeDelegate.AddUObject(this, &ThisClass::OnHealthChanged);
+		}
 
-		OnHealthAttributeValueChangeDelegate.AddUObject(this, &ThisClass::OnHealthChanged);
+		UpdateFaintedState();
 	}
-
-	UpdateFaintedState();
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
@@ -791,7 +790,8 @@ void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded()
 		if (IsValid(AbilitySystemComponent))
 		{
 			FaintedGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
-				FaintedGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, FGameplayEffectContextHandle());
+				FaintedGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1,
+					FGameplayEffectContextHandle());
 		}
 	}
 
