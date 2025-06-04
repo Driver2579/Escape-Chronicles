@@ -214,7 +214,7 @@ private:
 #endif
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<class UInteractionManagerComponent> InteractionManagerComponent;
+	TObjectPtr<UInteractionManagerComponent> InteractionManagerComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Interaction", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> InteractionZone;

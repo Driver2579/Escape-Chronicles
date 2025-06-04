@@ -101,14 +101,14 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	InteractionManagerComponent = CreateDefaultSubobject<UInteractionManagerComponent>(
 		TEXT("Interaction Manager Component"));
-	
+
 	InteractionManagerComponent->SetupAttachment(RootComponent);
 
-	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionZone"));
+	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("Interaction Zone"));
 	InteractionZone->SetupAttachment(InteractionManagerComponent);
 
 	// === Inventory ===
-	
+
 	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("InventoryManagerComponent"));
 }
 
