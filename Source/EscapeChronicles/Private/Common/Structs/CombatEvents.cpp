@@ -2,4 +2,4 @@
 
 #include "Common/Structs/CombatEvents.h"
 
-FCombatEvents::FOnPunchHit FCombatEvents::OnPunchHit;
+FCombatEvents::FOnPunchHitDelegate FCombatEvents::OnPunchHit;

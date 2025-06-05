@@ -3,18 +3,19 @@
 #pragma once
 
 class UAbilitySystemComponent;
+
 struct FActiveGameplayEffectHandle;
 
 struct FCombatEvents
 {
 	/**
-	 * Broadcasted when a punch successfully hits a target.
+	 * Broadcast when a punch successfully hits a target.
 	 * @param Instigator The ability system component of the actor who performed the punch.
 	 * @param Target The ability system component of the actor who was hit by the punch.
 	 * @param TargetAppliedEffectHandle Handle to the gameplay effect applied to the target as a result of the punch.
 	 */
-	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPunchHit, UAbilitySystemComponent* Instigator,
+	DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnPunchHitDelegate, UAbilitySystemComponent* Instigator,
 		UAbilitySystemComponent* Target, FActiveGameplayEffectHandle TargetAppliedEffectHandle);
 
-	static FOnPunchHit OnPunchHit;
+	static FOnPunchHitDelegate OnPunchHit;
 };
