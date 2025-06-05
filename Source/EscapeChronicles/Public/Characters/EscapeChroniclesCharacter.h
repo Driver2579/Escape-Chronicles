@@ -60,10 +60,10 @@ public:
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
+	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+
 	virtual void Tick(float DeltaSeconds) override;
 
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
-	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	class UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 

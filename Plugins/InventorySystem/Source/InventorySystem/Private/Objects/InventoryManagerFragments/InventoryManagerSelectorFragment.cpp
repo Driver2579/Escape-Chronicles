@@ -6,49 +6,40 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
 
-void UInventoryManagerSelectorFragment::OnManagerInitialized(UInventoryManagerComponent* Inventory)
-{
-	Super::OnManagerInitialized(Inventory);
-
-	if (!ensureAlways(IsValid(Inventory)))
-	{
-		CurrentSlotIndex = INDEX_NONE;
-	}
-	else
-	{
-		CurrentSlotIndex = 0;
-	}
-}
-
 void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(ThisClass, CurrentSlotIndex);
 }
 
 void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementation(const int32 Offset)
 {
 	UInventoryManagerComponent* Inventory = GetInventoryManager();
-	
+
 	if (!ensureAlways(IsValid(Inventory)))
 	{
 		return;
 	}
-	
-	const FInventorySlotsTypedArray* SlotsTypedArray = Inventory->GetTypedInventorySlotsLists().GetArrays()
-		.FindByKey(SelectableSlotsType);
-	
-	if (!ensureAlways(SlotsTypedArray != nullptr))
+
+	const FInventorySlotsTypedArray* SlotsTypedArray =
+		Inventory->GetInventoryContent().GetItems().FindByKey(SelectableSlotsTypeTag);
+
+	if (!ensureAlways(SlotsTypedArray))
 	{
 		return;
 	}
 
-	const int32 SlotsNumber = SlotsTypedArray->Array.GetSlots().Num();
-	
+	const int32 SlotsNumber = SlotsTypedArray->Array.GetItems().Num();
+
+	// Offset the index taking into account the array size
 	CurrentSlotIndex = ((CurrentSlotIndex + Offset) % SlotsNumber + SlotsNumber) % SlotsNumber;
-	
+
+#if DO_ENSURE
+	ensureAlways(SlotsTypedArray->Array.IsValidSlotIndex(CurrentSlotIndex));
+#endif
+
 	if (bLogCurrentSlotIndex)
 	{
 		LogCurrentSlotIndex();

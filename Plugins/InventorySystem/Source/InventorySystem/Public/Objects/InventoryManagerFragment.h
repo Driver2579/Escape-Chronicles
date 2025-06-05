@@ -13,7 +13,7 @@ class INVENTORYSYSTEM_API UInventoryManagerFragment : public UObject
 	GENERATED_BODY()
 	
 public:
-	virtual void OnManagerInitialized(UInventoryManagerComponent* Inventory) {}
+	virtual void OnManagerInitialized() {}
 	
 	UInventoryManagerComponent* GetInventoryManager() const
 	{

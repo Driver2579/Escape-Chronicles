@@ -17,33 +17,39 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 	GENERATED_BODY()
 
 public:
-	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
+	/**
+	 * You must call this method once before the user can interact with it in any way (e.g. in BeginPlay or before the
+	 * item is displayed in the inventory)
+	 */
+	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
+
 	bool IsInitialized() const { return bInitialized; }
 
+	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
+
+	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
 	T* GetFragmentByClass() const;
 
+	// Overwrites OutFragments with all fragments of type T
 	template<typename T>
 	void GetFragmentsByClass(TArray<T*>& OutFragments) const;
 
-	// You must call this method once before the user can interact with it in any way (e.g. in BeginPlay or before the
-	// item is displayed in the inventory)
-	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
-
+	// Creates a new initialized item instance with the same Definition and LocalData
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
-	
+
 	virtual bool IsSupportedForNetworking() const override { return true; }
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// This is where the fragments of definitions save the data that is needed specifically for this item
-	UPROPERTY(EditAnywhere, Replicated)
-	FLocalData LocalData;
-	
 private:
 	// Determines what the item can do (Can be thrown away, is a tool, key, etc.)
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> Definition;
-	
+
+	// This is where the fragments of definitions save the data that is needed specifically for this item
+	UPROPERTY(EditAnywhere, Replicated)
+	FLocalData LocalData;
+
 	bool bInitialized = false;
 };
 
@@ -52,23 +58,22 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!ensureAlways(Definition))
 	{
 		return nullptr;
 	}
 	
-	const UInventoryItemDefinition* DefinitionDefaultObject =
-		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
+	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
 	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
 	{
 		return nullptr;
 	}
-		
+
 	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
 	{
 		T* CastedFragment = Cast<T>(Fragment);
-            
+
 		if (IsValid(CastedFragment))
 		{
 			return CastedFragment;
@@ -85,13 +90,12 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 
 	OutFragments.Empty();
 
-	if (!ensureAlways(IsValid(GetDefinition())))
+	if (!ensureAlways(Definition))
 	{
 		return;
 	}
 	
-	const UInventoryItemDefinition* DefinitionDefaultObject =
-		GetDefinition()->GetDefaultObject<UInventoryItemDefinition>();
+	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
 	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
 	{

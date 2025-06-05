@@ -4,7 +4,7 @@
 
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
-#include "Objects/InventoryItemFragments/InventoryItemFragment.h"
+#include "Objects/InventoryItemFragment.h"
 
 void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition)
 {
@@ -13,11 +13,11 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 		return;
 	}
 
-	if (InDefinition != nullptr && ensureAlways(IsValid(InDefinition)))
+	if (InDefinition && ensureAlways(IsValid(InDefinition)))
 	{
 		Definition = InDefinition;
 	}
-	else if (!ensureAlwaysMsgf(IsValid(Definition),
+	else if (!ensureAlwaysMsgf(Definition,
 		TEXT("Definition must be valid either by InDefinition or by default before initialization!")))
 	{
 		return;
@@ -29,7 +29,7 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 	{
 		return;
 	}
-		
+
 	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
 	{
 		Fragment->OnInstanceInitialized(this);

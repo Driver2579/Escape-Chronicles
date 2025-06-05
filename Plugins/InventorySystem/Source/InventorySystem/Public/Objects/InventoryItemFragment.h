@@ -12,7 +12,7 @@ UCLASS(Abstract, EditInlineNew)
 class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 {
 	GENERATED_BODY()
-	
+
 public:
 	virtual void OnInstanceInitialized(UInventoryItemInstance* Instance) {}
 };

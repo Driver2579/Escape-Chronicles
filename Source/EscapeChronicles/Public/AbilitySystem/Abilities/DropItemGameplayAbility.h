@@ -6,7 +6,7 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "DropItemGameplayAbility.generated.h"
 
-// Throws an item out of inventory using UInventoryManagerDropItemsFragment and UInventoryManagerSelectorFragment
+// Throws an item out of inventory (using UInventoryManagerDropItemsFragment and UInventoryManagerSelectorFragment)
 UCLASS()
 class ESCAPECHRONICLES_API UDropItemGameplayAbility : public UEscapeChroniclesGameplayAbility
 {

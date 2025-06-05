@@ -7,7 +7,7 @@
 
 class UInventoryItemFragment;
 
-// Describes inventory items by creating UInventoryItemFragment for them
+// Describes inventory item instances by creating UInventoryItemFragment for them
 UCLASS(Blueprintable, Const, Abstract)
 class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 {
@@ -15,12 +15,13 @@ class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 
 public:
 	const FText& GetName() { return DisplayName; }
+
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
-	
+
 private:
 	UPROPERTY(EditDefaultsOnly)
 	FText DisplayName;
-	
+
 	UPROPERTY(EditDefaultsOnly, Instanced)
 	TArray<TObjectPtr<UInventoryItemFragment>> Fragments;
 };

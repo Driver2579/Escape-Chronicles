@@ -9,6 +9,8 @@
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
+
+// Called when the contents of inventory slot change
 DECLARE_MULTICAST_DELEGATE(FOnInventoryContentChanged);
 
 // Adds a custom inventory to an actor
@@ -20,13 +22,14 @@ class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
 public:
 	UInventoryManagerComponent();
 	
-	const FInventorySlotsTypedArrayContainer& GetTypedInventorySlotsLists() { return TypedInventorySlotsLists; }
-	
+	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
+
+	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
 	T* GetFragmentByClass() const;
 
 	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
-	const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
+		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
 	
 	/**
 	 * Add item DUPLICATE to inventory
@@ -57,10 +60,10 @@ protected:
 	// Do an action on each item in the inventory
 	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
+	// Log information about the contents of the inventory
 	void LogInventoryContent() const;
 	
 private:
-	// Called when the contents of inventory slot change
 	FOnInventoryContentChanged OnInventoryContentChanged;
 	
 	/**
@@ -72,17 +75,20 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, int32> SlotsNumberByTypes;
 
+	// Fragments that extend the functionality of the inventory instance
 	UPROPERTY(EditDefaultsOnly, Instanced, Replicated)
 	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
-	
-	UPROPERTY(ReplicatedUsing=OnRep_TypedInventorySlotsLists)
-	FInventorySlotsTypedArrayContainer TypedInventorySlotsLists;
+
+	// Arranged by type inventory slots capable of storing item instances
+	UPROPERTY(ReplicatedUsing="OnRep_InventoryContent")
+	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()
-	void OnRep_TypedInventorySlotsLists();
+	void OnRep_InventoryContent();
 
+	// If true will log the contents of the inventory when calling OnInventoryContentChanged
 	UPROPERTY(EditDefaultsOnly)
-	bool bLogInventoryContentWhenChanges = false;
+	bool bLogInventoryContent = false;
 };
 
 template<typename T>

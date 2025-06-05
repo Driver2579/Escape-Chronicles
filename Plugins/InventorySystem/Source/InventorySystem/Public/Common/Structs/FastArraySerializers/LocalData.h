@@ -3,66 +3,45 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
-#include "Containers/Union.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "LocalData.generated.h"
 
-using FUnionLocalDataType = TUnion<bool, int32, float, FString>;
-
 // Represents a single key-value pair in the local data container
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLocalDataItem : public FFastArraySerializerItem
 {
 	GENERATED_USTRUCT_BODY()
 
 	FLocalDataItem() {}
 
-	FLocalDataItem(const FGameplayTag InName)
+	FLocalDataItem(const FGameplayTag InTag)
 	{
-		Name = InName;
+		Tag = InTag;
 	}
-	
-	FLocalDataItem(const FGameplayTag InName, const FUnionLocalDataType& InValue)
+
+	FLocalDataItem(const FGameplayTag& InTag, const float InValue)
 	{
-		Name = InName;
+		Tag = InTag;
 		Value = InValue;
-	}
-	
-	bool NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
-	{
-		Ar << Name;
-		Ar << Value;
-		
-		bOutSuccess = true;
-		return true;
 	}
 
 	bool operator==(const FLocalDataItem& Other) const
 	{
-		return Name == Other.Name;
+		return Tag == Other.Tag;
 	}
 
 	// Unique key for this data item
-	FGameplayTag Name;
+	FGameplayTag Tag;
 
-	// Union container holding the value 
-	FUnionLocalDataType Value;
-};
-
-template<>
-struct TStructOpsTypeTraits<FLocalDataItem> : TStructOpsTypeTraitsBase2<FLocalDataItem>
-{
-	enum 
-	{
-		WithNetSerializer = true,
-	};
+	// Value stored by tag
+	float Value;
 };
 
 /**
- * Networked container for FLocalDataItem elements with efficient delta serialization.
- * Provides storage and access to various data types using Gameplay Tags.
+ * Networked container for FLocalDataItem elements with efficient delta serialization. Provides storage and access to
+ * data using FLocalDataItem.
  */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FLocalData : public FFastArraySerializer
 {
 	GENERATED_USTRUCT_BODY()
@@ -71,21 +50,22 @@ struct FLocalData : public FFastArraySerializer
 	{
 		return Array;
 	}
-	
-	const FLocalDataItem* GetData(const FGameplayTag InName) const
+
+	const FLocalDataItem* GetData(const FGameplayTag InTag) const
 	{
-		return Array.FindByKey(InName);
+		return Array.FindByKey(InTag);
 	}
-	
+
 	void SetData(const FLocalDataItem& InData)
 	{
-		FLocalDataItem* Data = Array.FindByKey(InData.Name);
-		
+		FLocalDataItem* Data = Array.FindByKey(InData.Tag);
+
+		// Create new data
 		if (Data == nullptr)
 		{
-			const int32 Index = Array.Add(InData);
-			MarkItemDirty(Array[Index]);
+			MarkItemDirty(Array[Array.Add(InData)]);
 		}
+		// Rewrite the existing data
 		else if (Data->Value != InData.Value)
 		{
 			Data->Value = InData.Value;
@@ -93,34 +73,26 @@ struct FLocalData : public FFastArraySerializer
 		}
 	}
 
-	template<typename T>
-	void SetData(const FGameplayTag InName, const T InValue) 
+	// Try to avoid calling this method as deleting an element completely leads to replication of the whole array
+	void RemoveData(const FGameplayTag& InTag)
 	{
-		SetData({ InName, FUnionLocalDataType(InValue) });
-	}
+		const int32 Index = Array.IndexOfByKey(InTag);
 
-	void RemoveData(const FGameplayTag InName)
-	{
-		const int32 Index = Array.IndexOfByKey(InName);
-
-		if (Index == INDEX_NONE)
+		if (Index != INDEX_NONE)
 		{
-			return;
+			Array.RemoveAt(Index);
+			MarkArrayDirty();
 		}
-		
-		Array.RemoveAt(Index);
-		MarkArrayDirty();
 	}
-	
-	bool HasData(const FGameplayTag InName) const
+
+	bool HasData(const FGameplayTag& InTag) const
 	{
-		return GetData(InName) != nullptr;
+		return GetData(InTag) != nullptr;
 	}
-	
+
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
-		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(
-			Array, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(Array, DeltaParms, *this);
 	}
 
 private:
