@@ -31,9 +31,11 @@ struct FLocalDataItem : public FFastArraySerializerItem
 	}
 
 	// Unique key for this data item
+	UPROPERTY(EditAnywhere)
 	FGameplayTag Tag;
 
 	// Value stored by tag
+	UPROPERTY(EditAnywhere)
 	float Value;
 };
 
@@ -97,7 +99,7 @@ struct FLocalData : public FFastArraySerializer
 
 private:
 	// Internal array storing all data items 
-	UPROPERTY()
+	UPROPERTY(EditAnywhere)
 	TArray<FLocalDataItem> Array;
 };
 

@@ -58,14 +58,14 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
 
-	if (!ensureAlways(Definition))
+	if (!Definition)
 	{
 		return nullptr;
 	}
 	
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return nullptr;
 	}
@@ -90,14 +90,14 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 
 	OutFragments.Empty();
 
-	if (!ensureAlways(Definition))
+	if (!Definition)
 	{
 		return;
 	}
 	
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
+	if (!IsValid(DefinitionDefaultObject))
 	{
 		return;
 	}

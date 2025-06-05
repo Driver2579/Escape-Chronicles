@@ -25,7 +25,7 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 
 	// Process only on the server and not during editing in blueprint
-	if (!HasAuthority() || !HasActorBegunPlay() && !IsAsset())
+	if (!HasAuthority() || !GetWorld()->HasBegunPlay() && !IsAsset())
 	{
 		return;
 	}
@@ -56,7 +56,7 @@ void AInventoryPickupItem::BeginPlay()
 
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
-	if (!ensureAlways(ItemInstance))
+	if (!ItemInstance)
 	{
 		return false;
 	}
@@ -148,7 +148,7 @@ void AInventoryPickupItem::OnRep_ItemInstance()
 
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
 {
-	const bool bSuccess = !ensureAlways(IsValid(InventoryManagerComponent)) && !ensureAlways(ItemInstance) &&
+	const bool bSuccess = ensureAlways(IsValid(InventoryManagerComponent)) && ensureAlways(ItemInstance) &&
 		InventoryManagerComponent->AddItem(ItemInstance);
 
 	if (bSuccess)
