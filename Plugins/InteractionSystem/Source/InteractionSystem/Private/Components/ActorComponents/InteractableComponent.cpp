@@ -69,7 +69,7 @@ void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionM
 	InteractDelegate.Broadcast(InteractionManagerComponent);
 }
 
-void UInteractableComponent::AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate)
+void UInteractableComponent::AddInteractHandler(const FOnInteractDelegate::FDelegate& Delegate)
 {
 	InteractDelegate.Add(Delegate);
 }

@@ -11,7 +11,7 @@
 class UInventoryManagerFragment;
 
 // Called when the contents of inventory slot change
-DECLARE_MULTICAST_DELEGATE(FOnInventoryContentChanged);
+DECLARE_MULTICAST_DELEGATE(FOnInventoryContentChangedDelegate);
 
 // Adds a custom inventory to an actor
 UCLASS(Blueprintable, Const)
@@ -48,7 +48,7 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
 
-	void AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback);
+	void AddInventoryContentChangedHandler(const FOnInventoryContentChangedDelegate::FDelegate& Callback);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
@@ -64,7 +64,7 @@ protected:
 	void LogInventoryContent() const;
 	
 private:
-	FOnInventoryContentChanged OnInventoryContentChanged;
+	FOnInventoryContentChangedDelegate OnInventoryContentChanged;
 	
 	/**
 	* Settings for the number of slots in different types of inventory slots

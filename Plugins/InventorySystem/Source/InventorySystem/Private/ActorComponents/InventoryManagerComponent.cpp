@@ -21,7 +21,7 @@ void UInventoryManagerComponent::BeginPlay()
 	
 	if (bLogInventoryContent)
 	{
-		FOnInventoryContentChanged::FDelegate Delegate;
+		FOnInventoryContentChangedDelegate::FDelegate Delegate;
 		Delegate.BindLambda([this] { LogInventoryContent(); });
 
 		AddInventoryContentChangedHandler(Delegate);
@@ -206,7 +206,8 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	return true;
 }
 
-void UInventoryManagerComponent::AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback)
+void UInventoryManagerComponent::AddInventoryContentChangedHandler(
+	const FOnInventoryContentChangedDelegate::FDelegate& Callback)
 {
 	OnInventoryContentChanged.Add(Callback);
 }
