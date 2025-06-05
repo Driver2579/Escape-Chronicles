@@ -4,7 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
-#include "Components/SphereComponent.h"
+#include "Common/Structs/CombatEvents.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
 
@@ -249,9 +249,13 @@ void UPunchGameplayAbility::ApplyDesiredGameplayEffectToTargetChecked() const
 	check(DesiredGameplayEffectClassToApply.IsValid());
 #endif
 
-	CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectToTarget(
-		DesiredGameplayEffectClassToApply->GetDefaultObject<UGameplayEffect>(),
-		TargetAbilitySystemComponent.Get(), GetAbilityLevel());
+	const FActiveGameplayEffectHandle AppliedEffectHandle =
+		CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectToTarget(
+			DesiredGameplayEffectClassToApply->GetDefaultObject<UGameplayEffect>(),
+			TargetAbilitySystemComponent.Get(), GetAbilityLevel());
+
+	FCombatEvents::OnPunchHit.Broadcast(CurrentActorInfo->AbilitySystemComponent.Get(),
+		TargetAbilitySystemComponent.Get(), AppliedEffectHandle);
 }
 
 void UPunchGameplayAbility::UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle)

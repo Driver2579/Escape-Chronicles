@@ -39,7 +39,7 @@ protected:
 
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
-	
+
 private:
 	// Gameplay tag that is used to signal the start of the damage window during the animation
 	UPROPERTY(EditDefaultsOnly)
