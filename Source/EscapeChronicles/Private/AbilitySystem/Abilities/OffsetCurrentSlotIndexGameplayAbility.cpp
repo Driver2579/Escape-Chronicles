@@ -27,8 +27,9 @@ void UOffsetCurrentSlotIndexGameplayAbility::ActivateAbility(const FGameplayAbil
 		return;
 	}
 
-	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(ActorInfo->AvatarActor);
-
+	const AEscapeChroniclesCharacter* Character = CastChecked<AEscapeChroniclesCharacter>(ActorInfo->AvatarActor.Get(),
+		ECastCheckedType::NullAllowed);
+	
 	if (!IsValid(Character))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);

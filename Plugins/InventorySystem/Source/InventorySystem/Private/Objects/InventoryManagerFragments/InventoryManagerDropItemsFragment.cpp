@@ -14,26 +14,19 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 		return;
 	}
 
-	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(SlotIndex);
+	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(SlotIndex, SlotsType);
 
 	if (!IsValid(ItemInstance))
 	{
 		return;
 	}
-	
-	const AActor* OwnerActor = Inventory->GetOwner();
 
-	if (!IsValid(OwnerActor))
-	{
-		return;
-	}
-	
-	const FTransform OwnerActorTransform = OwnerActor->GetActorTransform();
+	const FTransform OwnerActorTransform = Inventory->GetOwner()->GetActorTransform();
 
 	// === Try to spawn actor ===
 	
 	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
-		OwnerActorTransform);
+		Inventory->GetOwner()->GetActorTransform());
 	
 	if (!ensureAlways(IsValid(ItemActor)))
 	{
@@ -44,23 +37,25 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 
 	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
 	{
+		ItemActor->Destroy();
+
 		return;
 	}
-	
+
 	ItemActor->SetItemInstance(ItemInstanceDuplicate);
-	
+
 	if (!Inventory->DeleteItem(SlotIndex, SlotsType))
 	{
 		ItemActor->Destroy();
 
 		return;
 	}
-	
+
 	ItemActor->FinishSpawning(OwnerActorTransform);
 
 	// === Add throw impulse ===
-	
-	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetStaticMeshComponent();
+
+	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetMesh();
 
 	if (ensureAlways(IsValid(ItemActorMeshComponent)))
 	{

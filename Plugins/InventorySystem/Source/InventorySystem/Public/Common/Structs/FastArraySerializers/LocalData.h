@@ -14,34 +14,34 @@ struct FLocalDataItem : public FFastArraySerializerItem
 
 	FLocalDataItem() {}
 
-	FLocalDataItem(const FGameplayTag InName)
+	FLocalDataItem(const FGameplayTag InTag)
 	{
-		Name = InName;
+		Tag = InTag;
 	}
-	
-	FLocalDataItem(const FGameplayTag InName, const float InValue)
+
+	FLocalDataItem(const FGameplayTag& InTag, const float InValue)
 	{
-		Name = InName;
+		Tag = InTag;
 		Value = InValue;
 	}
 
 	bool operator==(const FLocalDataItem& Other) const
 	{
-		return Name == Other.Name;
+		return Tag == Other.Tag;
 	}
 
 	// Unique key for this data item
 	UPROPERTY(EditAnywhere)
-	FGameplayTag Name;
+	FGameplayTag Tag;
 
-	// Union container holding the value
+	// Value stored by tag
 	UPROPERTY(EditAnywhere)
 	float Value;
 };
 
 /**
- * Networked container for FLocalDataItem elements with efficient delta serialization.
- * Provides storage and access to various data types using Gameplay Tags.
+ * Networked container for FLocalDataItem elements with efficient delta serialization. Provides storage and access to
+ * data using FLocalDataItem.
  */
 USTRUCT(BlueprintType)
 struct FLocalData : public FFastArraySerializer
@@ -52,21 +52,22 @@ struct FLocalData : public FFastArraySerializer
 	{
 		return Array;
 	}
-	
-	const FLocalDataItem* GetData(const FGameplayTag InName) const
+
+	const FLocalDataItem* GetData(const FGameplayTag InTag) const
 	{
-		return Array.FindByKey(InName);
+		return Array.FindByKey(InTag);
 	}
-	
+
 	void SetData(const FLocalDataItem& InData)
 	{
-		FLocalDataItem* Data = Array.FindByKey(InData.Name);
-		
+		FLocalDataItem* Data = Array.FindByKey(InData.Tag);
+
+		// Create new data
 		if (Data == nullptr)
 		{
-			const int32 Index = Array.Add(InData);
-			MarkItemDirty(Array[Index]);
+			MarkItemDirty(Array[Array.Add(InData)]);
 		}
+		// Rewrite the existing data
 		else if (Data->Value != InData.Value)
 		{
 			Data->Value = InData.Value;
@@ -74,33 +75,26 @@ struct FLocalData : public FFastArraySerializer
 		}
 	}
 
-	void SetData(const FGameplayTag InName, const float InValue) 
+	// Try to avoid calling this method as deleting an element completely leads to replication of the whole array
+	void RemoveData(const FGameplayTag& InTag)
 	{
-		SetData({ InName, InValue });
-	}
+		const int32 Index = Array.IndexOfByKey(InTag);
 
-	void RemoveData(const FGameplayTag InName)
-	{
-		const int32 Index = Array.IndexOfByKey(InName);
-
-		if (Index == INDEX_NONE)
+		if (Index != INDEX_NONE)
 		{
-			return;
+			Array.RemoveAt(Index);
+			MarkArrayDirty();
 		}
-		
-		Array.RemoveAt(Index);
-		MarkArrayDirty();
 	}
-	
-	bool HasData(const FGameplayTag InName) const
+
+	bool HasData(const FGameplayTag& InTag) const
 	{
-		return GetData(InName) != nullptr;
+		return GetData(InTag) != nullptr;
 	}
-	
+
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
 	{
-		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(
-			Array, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(Array, DeltaParms, *this);
 	}
 
 private:

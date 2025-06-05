@@ -6,7 +6,9 @@
 #include "InventoryItemFragments/InventoryItemFragment.h"
 #include "InventoryItemDefinition.generated.h"
 
-// Describes inventory items by creating UInventoryItemFragment for them
+class UInventoryItemFragment;
+
+// Describes inventory item instances by creating UInventoryItemFragment for them
 UCLASS(Blueprintable, Const, Abstract)
 class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 {
@@ -14,7 +16,9 @@ class INVENTORYSYSTEM_API UInventoryItemDefinition : public UObject
 
 public:
 	const FText& GetName() { return DisplayName; }
+
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
+
 
 #if WITH_EDITOR
 	virtual void PostCDOCompiled(const FPostCDOCompiledContext& Context) override
@@ -29,7 +33,7 @@ public:
 private:
 	UPROPERTY(EditDefaultsOnly)
 	FText DisplayName;
-	
+
 	UPROPERTY(EditDefaultsOnly, Instanced)
 	TArray<TObjectPtr<UInventoryItemFragment>> Fragments;
 };

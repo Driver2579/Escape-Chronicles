@@ -11,7 +11,7 @@ AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()
 {
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 
-	GetStaticMeshComponent()->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+	GetMesh()->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
 }
 
 void AEscapeChroniclesInventoryPickupItem::BeginPlay()
@@ -19,12 +19,12 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 	Super::BeginPlay();
 
 	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
-		&AEscapeChroniclesInventoryPickupItem::InteractHandler));
+		&ThisClass::InteractHandler));
 }
 
 void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
 {
-	if (!ensureAlways(IsValid(InteractableComponent)))
+	if (!ensureAlways(IsValid(InteractionManagerComponent)))
 	{
 		return;
 	}
@@ -37,12 +37,10 @@ void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerCo
 		return;
 	}
 	
-	UInventoryManagerComponent* InventoryManagerComponent =  Character->GetInventoryManagerComponent();
+	UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 
-	if (!ensureAlways(IsValid(InventoryManagerComponent)))
+	if (ensureAlways(IsValid(InventoryManagerComponent)))
 	{
-		return;
+		Pickup(InventoryManagerComponent);
 	}
-	
-	Pickup(InventoryManagerComponent);
 }

@@ -13,10 +13,7 @@
 				"Mover",
 				"AIModule",
 				"CommonUI",
-				"UMG",
-				"InventorySystem",
-				"AIModule",
-				"InteractionSystem"
+				"UMG"
 			]
 		}
 	],
@@ -42,10 +39,6 @@
 		},
 		{
 			"Name": "CommonUI",
-			"Enabled": true
-		},
-		{
-			"Name": "AudioModulation",
 			"Enabled": true
 		}
 	]

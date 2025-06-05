@@ -11,34 +11,30 @@
 AInventoryPickupItem::AInventoryPickupItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	
-	SetReplicates(true);
+
+	bReplicates = true;
 	bReplicateUsingRegisteredSubObjectList = true;
-	
-	StaticMeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
-	SetRootComponent(StaticMeshComponent);
-	StaticMeshComponent->SetSimulatePhysics(true);
+
+	MeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
+	MeshComponent->SetSimulatePhysics(true);
+
+	SetRootComponent(MeshComponent); 
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	if (!HasAuthority())
-	{
-		return;
-	}
-		
-	// Do not process during editing in blueprint
-	if (!GetWorld()->HasBegunPlay() && !IsAsset())
+	// Process only on the server and not during editing in blueprint
+	if (!HasAuthority() || !GetWorld()->HasBegunPlay() && !IsAsset())
 	{
 		return;
 	}
 
-	bItemInstanceIsValid = ApplyChangesFromItemInstance();
+	bValidItemInstance = ApplyChangesFromItemInstance();
 
-	// While bItemInstanceIsValidSet is invalid, set the default settings
-	if (!bItemInstanceIsValid)
+	// While bValidItemInstance is invalid, set the default settings
+	if (!bValidItemInstance)
 	{
 		SetDefaultSettings();
 	}
@@ -52,10 +48,8 @@ void AInventoryPickupItem::BeginPlay()
 	{
 		return;
 	}
-	
-	check(bItemInstanceIsValid);
 
-	if (!ItemInstance->IsInitialized())
+	if (ensureAlways(bValidItemInstance) && !ItemInstance->IsInitialized())
 	{
 		ItemInstance->Initialize();
 	}
@@ -65,11 +59,11 @@ void AInventoryPickupItem::BeginPlay()
 
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 {
-	if (!ensureAlways(IsValid(StaticMeshComponent)) || !IsValid(ItemInstance))
+	if (!ItemInstance)
 	{
 		return false;
 	}
-	
+
 	const UPickupInventoryItemFragment* PickupInventoryItemFragment =
 		ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 
@@ -85,18 +79,13 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 		return false;
 	}
 
-	StaticMeshComponent->SetStaticMesh(StaticMesh);
+	MeshComponent->SetStaticMesh(StaticMesh);
 
 	return true;
 }
 
 void AInventoryPickupItem::SetDefaultSettings() const
 {
-	if (!ensureAlways(IsValid(StaticMeshComponent)))
-	{
-		return;
-	}
-
 	const AInventoryPickupItem* DefaultObject = GetClass()->GetDefaultObject<AInventoryPickupItem>();
 
 	if (!ensureAlways(IsValid(DefaultObject)))
@@ -104,7 +93,7 @@ void AInventoryPickupItem::SetDefaultSettings() const
 		return;
 	}
 
-	const UStaticMeshComponent* DefaultObjectStaticMeshComponent = DefaultObject->GetStaticMeshComponent();
+	const UStaticMeshComponent* DefaultObjectStaticMeshComponent = DefaultObject->GetMesh();
 	
 	if (!ensureAlways(IsValid(DefaultObjectStaticMeshComponent)))
 	{
@@ -115,7 +104,7 @@ void AInventoryPickupItem::SetDefaultSettings() const
 
 	if (ensureAlways(IsValid(DefaultObjectStaticMesh)))
 	{
-		StaticMeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
+		MeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
 	}
 }
 
@@ -133,10 +122,15 @@ void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
 void AInventoryPickupItem::OnRep_ItemInstance()
 {
-	bItemInstanceIsValid = ApplyChangesFromItemInstance();
+	if (!ensureAlways(ItemInstance))
+	{
+		return;
+	}
+
+	bValidItemInstance = ApplyChangesFromItemInstance();
 
 	// While bItemInstanceIsValidSet is invalid, set the default settings
-	if (!bItemInstanceIsValid)
+	if (!bValidItemInstance)
 	{
 		SetDefaultSettings();
 	}
@@ -149,12 +143,10 @@ void AInventoryPickupItem::OnRep_ItemInstance()
 
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
 {
-	if (!ensureAlways(IsValid(InventoryManagerComponent) && IsValid(ItemInstance)))
-	{
-		return;
-	}
+	const bool bSuccess = ensureAlways(IsValid(InventoryManagerComponent)) && ensureAlways(ItemInstance) &&
+		InventoryManagerComponent->AddItem(ItemInstance);
 
-	if (InventoryManagerComponent->AddItem(ItemInstance))
+	if (bSuccess)
 	{
 		Destroy();
 	}

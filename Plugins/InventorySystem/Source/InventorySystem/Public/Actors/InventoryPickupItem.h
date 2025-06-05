@@ -11,7 +11,7 @@
 
 class UInventoryManagerComponent;
 
-// Can be picked up in inventory
+// Can be picked up into inventory
 UCLASS()
 class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
 {
@@ -20,20 +20,19 @@ class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringI
 public:
 	AInventoryPickupItem();
 
+	/**
+	 * Associates an actor with an instance of an item.
+	 * @see Must be called before BeginPlay.
+	 */
 	void SetItemInstance(UInventoryItemInstance* InItemInstance)
 	{
-		if (!ensureAlways(!HasActorBegunPlay()))
-		{
-			return;
-		}
-
-		if (ensureAlways(IsValid(InItemInstance)))
+		if (ensureAlways(!HasActorBegunPlay()) && ensureAlways(IsValid(InItemInstance)))
 		{
 			ItemInstance = InItemInstance;
 		}
 	}
 
-	UStaticMeshComponent* GetStaticMeshComponent() const { return StaticMeshComponent; }
+	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
 	
@@ -46,7 +45,7 @@ protected:
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
 	/**
-	 * Applies a change to this actor based on the current Instance
+	 * Applies a change to this actor based on the current item instance
 	 * @return True if all settings are applied correctly
 	 */
 	virtual bool ApplyChangesFromItemInstance() const;
@@ -55,15 +54,21 @@ protected:
 	virtual void SetDefaultSettings() const;
 
 private:
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UStaticMeshComponent> StaticMeshComponent;
-
+	// An item instance this actor is associated with
 	UPROPERTY(EditInstanceOnly, Instanced, ReplicatedUsing="OnRep_ItemInstance")
 	TObjectPtr<UInventoryItemInstance> ItemInstance;
+
+	// The mesh of this component will be replaced with the one associated with the item instance
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UFUNCTION()
 	void OnRep_ItemInstance();
 
+	/**
+	 * Indicates whether an ItemInstance is valid for creating an AInventoryPickupItem. Updated in OnConstruction. Must
+	 * be true before the BeginPlay is called.
+	 */
 	UPROPERTY()
-	bool bItemInstanceIsValid;
+	bool bValidItemInstance;
 };
