@@ -6,7 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
-#include "Objects/InventoryItemFragments/InventoryItemFragment.h"
+#include "Objects/InventoryItemFragment.h"
 #include "DoorKeyInventoryItemFragment.generated.h"
 
 // This fragment makes the item a key to the door

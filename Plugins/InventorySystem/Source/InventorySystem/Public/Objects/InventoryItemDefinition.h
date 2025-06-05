@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InventoryItemFragments/InventoryItemFragment.h"
+#include "InventoryItemFragment.h"
 #include "InventoryItemDefinition.generated.h"
 
 class UInventoryItemFragment;

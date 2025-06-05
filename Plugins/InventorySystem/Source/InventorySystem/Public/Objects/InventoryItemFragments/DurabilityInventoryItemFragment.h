@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Objects/InventoryItemFragments/InventoryItemFragment.h"
+#include "Objects/InventoryItemFragment.h"
 #include "DurabilityInventoryItemFragment.generated.h"
 
 /**

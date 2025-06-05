@@ -62,7 +62,7 @@ public:
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
-	
+
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
@@ -113,22 +113,9 @@ public:
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
-	/**
-	 * Called when the character changes their fainting state.
-	 * @param bIsFainting true if the character is fainting and false if conscious.
-	 */
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnFaintingStateChanged, bool bIsFainting);
-
-	void AddFaintingStateChangedHandler(const FOnFaintingStateChanged::FDelegate& Delegate)
-	{
-		OnFaintingStateChanged.Add(Delegate);
-	}
-	
 protected:
 	virtual void BeginPlay() override;
 
-	virtual void Tick(float DeltaSeconds) override;
-	
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
 
 	// Whether we author our movement inputs relative to whatever base we're standing on, or leave them in world space

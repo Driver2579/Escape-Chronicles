@@ -6,11 +6,11 @@
 
 void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* Instance, int32 Amount) const
 {
-	const float CurrentDurability = Instance->LocalData.GetData(DurabilityDataTag)->Value;
+	const float CurrentDurability = Instance->GetLocalData_Mutable().GetData(DurabilityDataTag)->Value;
 
 	const float NewDurability = CurrentDurability - Amount;
 	
-	Instance->LocalData.SetData(DurabilityDataTag, NewDurability);
+	Instance->GetLocalData_Mutable().SetData(DurabilityDataTag, NewDurability);
 
 	// Break item
 	if (NewDurability <= 0)
@@ -23,5 +23,5 @@ void UDurabilityInventoryItemFragment::OnInstanceInitialized(UInventoryItemInsta
 {
 	Super::OnInstanceInitialized(Instance);
 
-	Instance->LocalData.SetData(DurabilityDataTag, InitialDurability);
+	Instance->GetLocalData_Mutable().SetData(DurabilityDataTag, InitialDurability);
 }

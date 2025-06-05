@@ -57,7 +57,7 @@ public:
 	 * @return true if the search was successful
 	 */
 	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
-	                                      UInventoryItemInstance* ItemInstance) const;
+		UInventoryItemInstance* ItemInstance) const;
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
 	
@@ -72,9 +72,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void ReadyForReplication() override;
-
-	// Do an action on each item in the inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
 	// Log information about the contents of the inventory
 	void LogInventoryContent() const;

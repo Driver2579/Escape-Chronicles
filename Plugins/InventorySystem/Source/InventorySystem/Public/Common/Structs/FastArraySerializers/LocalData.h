@@ -75,6 +75,11 @@ struct FLocalData : public FFastArraySerializer
 		}
 	}
 
+	void SetData(const FGameplayTag& InTag, const float InValue)
+	{
+		SetData(FLocalDataItem(InTag, InValue));
+	}
+
 	// Try to avoid calling this method as deleting an element completely leads to replication of the whole array
 	void RemoveData(const FGameplayTag& InTag)
 	{

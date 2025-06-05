@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Objects/InventoryManagerFragments/InventoryManagerFragment.h"
+#include "Objects/InventoryManagerFragment.h"
 #include "InventoryManagerFragmentContentGenerator.generated.h"
 
 /**
@@ -15,7 +15,7 @@ class INVENTORYSYSTEM_API UInventoryManagerFragmentContentGenerator : public UIn
 	GENERATED_BODY()
 
 public:
-	virtual void OnManagerInitialized(UInventoryManagerComponent* Inventory) override;
+	virtual void OnManagerInitialized() override;
 	
 private:
 	UPROPERTY(EditDefaultsOnly)

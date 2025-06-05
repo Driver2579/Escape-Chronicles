@@ -27,6 +27,8 @@ public:
 
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
 
+	FLocalData& GetLocalData_Mutable() { return LocalData; }
+
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
 	T* GetFragmentByClass() const;

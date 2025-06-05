@@ -6,12 +6,17 @@
 #include "Common/Structs/TableRowBases/InventoryManagerGeneratingContentData.h"
 #include "Engine/AssetManager.h"
 
-void UInventoryManagerFragmentContentGenerator::OnManagerInitialized(UInventoryManagerComponent* Inventory)
+void UInventoryManagerFragmentContentGenerator::OnManagerInitialized()
 {
-	Super::OnManagerInitialized(Inventory);
+	Super::OnManagerInitialized();
 
-	UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(DataTable.ToSoftObjectPath(),
-		FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataTableLoaded, Inventory));
+	UInventoryManagerComponent* Inventory = GetInventoryManager();
+
+	if (ensureAlways(IsValid(Inventory)))
+	{
+		UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(DataTable.ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &ThisClass::OnDataTableLoaded, Inventory));
+	}
 }
 
 void UInventoryManagerFragmentContentGenerator::OnDataTableLoaded(UInventoryManagerComponent* Inventory)
@@ -36,7 +41,7 @@ void UInventoryManagerFragmentContentGenerator::OnDataTableLoaded(UInventoryMana
 
 			for (FLocalDataItem Data : Row->LocalDataOverride.GetAllData())
 			{
-				ItemInstance->LocalData.SetData(Data);
+				ItemInstance->GetLocalData_Mutable().SetData(Data);
 			}
 			
 			Inventory->AddItem(ItemInstance);

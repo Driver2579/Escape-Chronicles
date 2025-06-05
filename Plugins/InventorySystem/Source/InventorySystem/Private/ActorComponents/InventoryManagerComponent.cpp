@@ -209,13 +209,13 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
 	UInventoryItemInstance* ItemInstance) const
 {
-	for (const FInventorySlotsTypedArray& TypedArray : TypedInventorySlotsLists.GetArrays())
+	for (const FInventorySlotsTypedArray& TypedArray : InventoryContent.GetItems())
 	{
-		for (int32 Index = 0; Index <= TypedArray.Array.GetSlots().Num(); Index++)
+		for (int32 Index = 0; Index <= TypedArray.Array.GetItems().Num(); Index++)
 		{
 			if (ItemInstance == TypedArray.Array[Index].Instance)
 			{
-				OutSlotsType = TypedArray.Type;
+				OutSlotsType = TypedArray.TypeTag;
 				OutSlotIndex = Index;
 
 				return true;
