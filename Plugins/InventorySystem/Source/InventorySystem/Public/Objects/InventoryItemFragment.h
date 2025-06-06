@@ -15,7 +15,7 @@ class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 	GENERATED_BODY()
 
 public:
-	virtual bool HasValidProperties(UInventoryItemDefinition* ItemDefinition) {	return true; }
+	virtual bool IsValidConfiguration(UInventoryItemDefinition* ItemDefinition) { return true; }
 	
 	virtual void OnInstanceInitialized(UInventoryItemInstance* Instance) {}
 };

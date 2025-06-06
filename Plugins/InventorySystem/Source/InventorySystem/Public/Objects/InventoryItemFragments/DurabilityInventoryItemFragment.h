@@ -7,9 +7,7 @@
 #include "Objects/InventoryItemFragment.h"
 #include "DurabilityInventoryItemFragment.generated.h"
 
-/**
- * 
- */
+// TODO: docs
 UCLASS()
 class INVENTORYSYSTEM_API UDurabilityInventoryItemFragment : public UInventoryItemFragment
 {

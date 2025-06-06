@@ -19,7 +19,7 @@ public:
 	const FGameplayTagContainer& GetCompatibleAccessTags() const { return CompatibleAccessTags; }
 	bool IsUseDurability() const { return bUseDurability; }
 
-	virtual bool HasValidProperties(UInventoryItemDefinition* ItemDefinition) override
+	virtual bool IsValidConfiguration(UInventoryItemDefinition* ItemDefinition) override
 	{
 		if (!bUseDurability)
 		{

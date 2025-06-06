@@ -6,9 +6,7 @@
 #include "Objects/InventoryManagerFragment.h"
 #include "InventoryManagerFragmentContentGenerator.generated.h"
 
-/**
- * 
- */
+// TODO: do docs
 UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerFragmentContentGenerator : public UInventoryManagerFragment
 {
