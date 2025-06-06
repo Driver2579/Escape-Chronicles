@@ -900,15 +900,6 @@ void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerO
 	ensureAlways(PlayerState->HasAuthority());
 #endif
 
-	const FActorSaveData* PlayerStateSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
-		APlayerState::StaticClass());
-
-	// Load the PlayerState if its save data is valid
-	if (PlayerStateSaveData)
-	{
-		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
-	}
-
 	APawn* PlayerPawn = PlayerState->GetPawn();
 
 	// Try to load the Pawn if it's valid and implements Saveable interface
@@ -922,6 +913,15 @@ void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerO
 		{
 			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
 		}
+	}
+
+	const FActorSaveData* PlayerStateSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+		APlayerState::StaticClass());
+
+	// Load the PlayerState if its save data is valid
+	if (PlayerStateSaveData)
+	{
+		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
 	}
 
 	AController* Controller = PlayerState->GetOwningController();
