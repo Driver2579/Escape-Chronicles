@@ -32,7 +32,10 @@ void FCombatStateTreeEvaluator::OnPunchHit(UAbilitySystemComponent* Instigator, 
 	 * Clear the list of instances that sent the last payload to send the new event in the next tick, but keep the
 	 * allocated space for them because it will be reused in the next tick.
 	 */
-	InstancesThatSentLastPunchHitPayload.Reset();
+	if (!InstancesThatSentLastPunchHitPayload.IsEmpty())
+	{
+		InstancesThatSentLastPunchHitPayload.Reset();
+	}
 }
 
 void FCombatStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const

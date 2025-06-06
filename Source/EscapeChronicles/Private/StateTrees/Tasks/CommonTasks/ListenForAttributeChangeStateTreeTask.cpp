@@ -1,20 +1,18 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "StateTree/Evaluators/CommonEvaluators/AttributeChangeStateTreeEvaluator.h"
+#include "StateTree/Tasks/CommonTasks/ListenForAttributeChangeStateTreeTask.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "StateTreeExecutionContext.h"
 
-void FAttributeChangeStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& Context) const
+EStateTreeRunStatus FListenForAttributeChangeStateTreeTask::EnterState(FStateTreeExecutionContext& Context,
+	const FStateTreeTransitionResult& Transition) const
 {
 	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
 
-#if DO_CHECK
-	check(InstanceData.Actor);
-#endif
-
 #if DO_ENSURE
+	ensureAlways(InstanceData.Actor);
 	ensureAlways(InstanceData.Attribute.IsValid());
 #endif
 
@@ -24,11 +22,11 @@ void FAttributeChangeStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& C
 
 	if (!ensureAlways(InstanceData.AbilitySystemComponent.IsValid()))
 	{
-		return;
+		return EStateTreeRunStatus::Failed;
 	}
 
-#if DO_ENSURE
-	ensureAlwaysMsgf(InstanceData.AbilitySystemComponent->HasAttributeSetForAttribute(InstanceData.Attribute),
+#if DO_CHECK
+	checkf(InstanceData.AbilitySystemComponent->HasAttributeSetForAttribute(InstanceData.Attribute),
 		TEXT("An ability system component of the given actor %s doesn't have an attribute %s!"),
 		*InstanceData.Actor->GetName(), *InstanceData.Attribute.GetName());
 #endif
@@ -36,15 +34,18 @@ void FAttributeChangeStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& C
 	// Initialize the values of the attribute
 	InstanceData.BaseValue = InstanceData.AbilitySystemComponent->GetNumericAttributeBase(InstanceData.Attribute);
 	InstanceData.CurrentValue = InstanceData.AbilitySystemComponent->GetNumericAttribute(InstanceData.Attribute);
+
+	return EStateTreeRunStatus::Running;
 }
 
-void FAttributeChangeStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
+EStateTreeRunStatus FListenForAttributeChangeStateTreeTask::Tick(FStateTreeExecutionContext& Context,
+	const float DeltaTime) const
 {
 	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
 
-	if (!InstanceData.AbilitySystemComponent.IsValid())
+	if (!ensureAlways(InstanceData.AbilitySystemComponent.IsValid()))
 	{
-		return;
+		return EStateTreeRunStatus::Failed;
 	}
 
 	// Get the current values of the attribute
@@ -64,4 +65,21 @@ void FAttributeChangeStateTreeEvaluator::Tick(FStateTreeExecutionContext& Contex
 		InstanceData.CurrentValue = CurrentValue;
 		Context.BroadcastDelegate(InstanceData.OnAttributeCurrentValueChangedDispatcher);
 	}
+
+	return EStateTreeRunStatus::Running;
 }
+
+#if WITH_EDITOR
+FText FListenForAttributeChangeStateTreeTask::GetDescription(const FGuid& ID, FStateTreeDataView InstanceDataView,
+	const IStateTreeBindingLookup& BindingLookup, EStateTreeNodeFormatting Formatting) const
+{
+	const FInstanceDataType* InstanceData = InstanceDataView.GetPtr<FInstanceDataType>();
+
+#if DO_CHECK
+	check(InstanceData);
+#endif
+
+	return FText::FromString(
+		FString::Printf(TEXT("Listen For Attribute %s Change"), *InstanceData->Attribute.GetName()));
+}
+#endif

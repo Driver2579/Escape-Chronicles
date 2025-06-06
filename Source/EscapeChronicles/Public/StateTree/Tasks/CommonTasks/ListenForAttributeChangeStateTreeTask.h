@@ -3,17 +3,17 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StateTreeEvaluatorBase.h"
+#include "StateTreeTaskBase.h"
 #include "AttributeSet.h"
-#include "AttributeChangeStateTreeEvaluator.generated.h"
+#include "ListenForAttributeChangeStateTreeTask.generated.h"
 
 USTRUCT()
-struct FAttributeChangeStateTreeEvaluatorInstanceData
+struct FListenForAttributeChangeStateTreeTaskInstanceData
 {
 	GENERATED_BODY()
 
 	// Actor to listen for attribute changes on
-	UPROPERTY(EditDefaultsOnly, Category="Input")
+	UPROPERTY(EditDefaultsOnly, Category="Context")
 	TObjectPtr<AActor> Actor;
 
 	// Attribute to listen for changes on
@@ -40,17 +40,24 @@ struct FAttributeChangeStateTreeEvaluatorInstanceData
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 };
 
-// An evaluator that listens for the selected attribute being changed on the selected actor
-USTRUCT(meta=(DisplayName="Attribute Change"))
-struct FAttributeChangeStateTreeEvaluator : public FStateTreeEvaluatorCommonBase
+// A task that runs forever and listens for the selected attribute being changed on the selected actor
+USTRUCT(meta=(DisplayName="Listen For Attribute Change"))
+struct FListenForAttributeChangeStateTreeTask : public FStateTreeTaskCommonBase
 {
 	GENERATED_BODY()
 
-	using FInstanceDataType = FAttributeChangeStateTreeEvaluatorInstanceData;
+	using FInstanceDataType = FListenForAttributeChangeStateTreeTaskInstanceData;
 
 	virtual const UStruct* GetInstanceDataType() const override { return FInstanceDataType::StaticStruct(); }
 
-	virtual void TreeStart(FStateTreeExecutionContext& Context) const override;
+	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
+		const FStateTreeTransitionResult& Transition) const override;
 
-	virtual void Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
+	virtual EStateTreeRunStatus Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const override;
+
+#if WITH_EDITOR
+	virtual FText GetDescription(const FGuid& ID, FStateTreeDataView InstanceDataView,
+		const IStateTreeBindingLookup& BindingLookup,
+		EStateTreeNodeFormatting Formatting = EStateTreeNodeFormatting::Text) const override;
+#endif
 };
