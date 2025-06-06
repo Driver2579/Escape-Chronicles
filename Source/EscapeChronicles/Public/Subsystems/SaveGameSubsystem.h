@@ -82,8 +82,11 @@ public:
 	// Called right before the game is about to be saved
 	FSimpleMulticastDelegate OnSaveGameCalled;
 
-	// Called right before the game is about to be loaded
+	// Called right before the game is about to be loaded and before the save game object is loaded from the file
 	FSimpleMulticastDelegate OnLoadGameCalled;
+
+	// Called after loading the game object from the file, but before loading any actors, subsystems, etc. from it
+	FSimpleMulticastDelegate OnSaveGameObjectLoaded;
 
 	// Called after the game was successfully saved
 	FSimpleMulticastDelegate OnGameSaved;
