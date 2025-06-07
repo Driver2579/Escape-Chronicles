@@ -5,6 +5,6 @@
 namespace InventorySystemGameplayTags
 {
 	// SlotTypes
-	UE_DEFINE_GAMEPLAY_TAG_COMMENT(InventoryTag_MainSlotType, "Inventory.SlotType.Main", "Main slot type");
-	
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Inventory_SlotType_Main, "Inventory.SlotType.Main",
+		"Main slot type. This type must be contained in any UInventoryManagerComponent!");
 }

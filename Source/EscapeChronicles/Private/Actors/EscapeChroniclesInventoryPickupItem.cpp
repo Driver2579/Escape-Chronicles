@@ -19,16 +19,15 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 	Super::BeginPlay();
 
 	InteractableComponent->AddInteractHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
-		&ThisClass::InteractHandler));
+		&ThisClass::OnInteract));
 }
 
-void AEscapeChroniclesInventoryPickupItem::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
+void AEscapeChroniclesInventoryPickupItem::OnInteract(UInteractionManagerComponent* InteractionManagerComponent)
 {
-	if (!ensureAlways(IsValid(InteractionManagerComponent)))
-	{
-		return;
-	}
-	
+#if DO_CHECK
+	check(IsValid(InteractionManagerComponent))
+#endif
+
 	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 

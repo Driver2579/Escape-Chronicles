@@ -10,11 +10,11 @@
 USTRUCT(BlueprintType)
 struct FLocalDataItem : public FFastArraySerializerItem
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
-	FLocalDataItem() {}
+	FLocalDataItem() = default;
 
-	FLocalDataItem(const FGameplayTag InTag)
+	FLocalDataItem(const FGameplayTag& InTag)
 	{
 		Tag = InTag;
 	}
@@ -46,14 +46,14 @@ struct FLocalDataItem : public FFastArraySerializerItem
 USTRUCT(BlueprintType)
 struct FLocalData : public FFastArraySerializer
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	const TArray<FLocalDataItem>& GetAllData() const
 	{
 		return Array;
 	}
 
-	const FLocalDataItem* GetData(const FGameplayTag InTag) const
+	const FLocalDataItem* GetData(const FGameplayTag& InTag) const
 	{
 		return Array.FindByKey(InTag);
 	}
@@ -92,7 +92,7 @@ struct FLocalData : public FFastArraySerializer
 		return GetData(InTag) != nullptr;
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
 	{
 		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(Array, DeltaParms, *this);
 	}

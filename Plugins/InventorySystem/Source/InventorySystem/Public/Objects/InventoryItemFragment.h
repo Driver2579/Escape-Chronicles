@@ -7,12 +7,12 @@
 
 class UInventoryItemInstance;
 
-// Base class for creating fragments of an item that can describe various logic for it
+// Base class for item's fragments that can describe various logic for it
 UCLASS(Abstract, EditInlineNew)
 class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	virtual void OnInstanceInitialized(UInventoryItemInstance* Instance) {}
+	virtual void OnItemInstanceInitialized(UInventoryItemInstance* Instance) {}
 };

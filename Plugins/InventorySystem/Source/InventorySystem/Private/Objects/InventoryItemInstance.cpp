@@ -6,6 +6,14 @@
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragment.h"
 
+void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, Definition);
+	DOREPLIFETIME(ThisClass, LocalData);
+}
+
 void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition)
 {
 	if (!ensureAlwaysMsgf(!bInitialized, TEXT("The instance must only be initialized once!")))
@@ -13,26 +21,22 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 		return;
 	}
 
-	if (InDefinition && ensureAlways(IsValid(InDefinition)))
+	if (InDefinition != nullptr)
 	{
 		Definition = InDefinition;
 	}
-	else if (!ensureAlwaysMsgf(Definition,
-		TEXT("Definition must be valid either by InDefinition or by default before initialization!")))
-	{
-		return;
-	}
+
+#if DO_CHECK
+	check(Definition);
+#endif
+
+	// === Notify fragments of the newly created item instance ===
 
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!ensureAlways(IsValid(DefinitionDefaultObject)))
-	{
-		return;
-	}
-
 	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
 	{
-		Fragment->OnInstanceInitialized(this);
+		Fragment->OnItemInstanceInitialized(this);
 	}
 
 	bInitialized = true;
@@ -47,12 +51,12 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 
 	UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(Outer);
 
-	if (!IsValid(NewItemInstance))
-	{
-		return nullptr;
-	}
+#if DO_CHECK
+	check(NewItemInstance);
+#endif
 
-	for (FLocalDataItem Data : LocalData.GetAllData())
+	// Copy LocalData
+	for (const FLocalDataItem& Data : LocalData.GetAllData())
 	{
 		NewItemInstance->LocalData.SetData(Data);
 	}
@@ -60,12 +64,4 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	NewItemInstance->Initialize(GetDefinition());
 
 	return NewItemInstance;
-}
-
-void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, Definition);
-	DOREPLIFETIME(ThisClass, LocalData);
 }

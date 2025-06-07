@@ -6,6 +6,21 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
 
+void UInventoryManagerSelectorFragment::OnManagerInitialized()
+{
+	Super::OnManagerInitialized();
+
+#if !NO_LOGGING
+	if (bLogCurrentSlotIndex)
+	{
+		OnOffsetCurrentSlotIndex.AddLambda([this](int32 Index)
+		{
+			LogCurrentSlotIndex();
+		});	
+	}
+#endif
+}
+
 void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
@@ -44,17 +59,18 @@ void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementa
 	{
 		LogCurrentSlotIndex();
 	}
+
+	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
 
 void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex()
 {
-	if (bLogCurrentSlotIndex)
-	{
-		LogCurrentSlotIndex();
-	}
+	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
 
+#if !NO_LOGGING
 void UInventoryManagerSelectorFragment::LogCurrentSlotIndex() const
 {
-	UE_LOG(LogInventorySystem, Log, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);
+	UE_LOG(LogInventorySystem, Display, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);
 }
+#endif

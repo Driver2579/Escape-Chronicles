@@ -11,49 +11,7 @@ UInventoryManagerComponent::UInventoryManagerComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 
 	bReplicateUsingRegisteredSubObjectList = true;
-
 	SetIsReplicatedByDefault(true);
-}
-
-void UInventoryManagerComponent::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	if (bLogInventoryContent)
-	{
-		FOnInventoryContentChangedDelegate::FDelegate Delegate;
-		Delegate.BindLambda([this] { LogInventoryContent(); });
-
-		AddInventoryContentChangedHandler(Delegate);
-	}
-
-	if (!GetOwner()->HasAuthority())
-	{
-		return;
-	}
-
-	// === Preparing for construction ===
-	
-	if (!ensureAlwaysMsgf(SlotsNumberByTypes.Find(InventorySystemGameplayTags::InventoryTag_MainSlotType),
-		TEXT("SlotsNumberByTypes must contain InventorySystemGameplayTags::InventoryTag_MainSlotType!")))
-	{
-		// Add at least 1 slot to try to avoid most of the bugs
-		SlotsNumberByTypes.Add(InventorySystemGameplayTags::InventoryTag_MainSlotType, 1);
-	}
-
-	for (auto SlotsNumberByType : SlotsNumberByTypes)
-	{
-		if (!ensureAlwaysMsgf(SlotsNumberByType.Value > 0, TEXT("SlotsNumberByType %s must not be negative!"),
-			*SlotsNumberByType.Key.ToString()))
-		{
-			// Remove invalid data to try to avoid some bugs
-			SlotsNumberByTypes.Remove(SlotsNumberByType.Key);
-		}
-	}
-
-	// === Construct inventory ===
-
-	InventoryContent.Construct(SlotsNumberByTypes);
 }
 
 void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -73,7 +31,7 @@ void UInventoryManagerComponent::ReadyForReplication()
 		return;
 	}
 	
-	ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
+	ForEachInventoryItemInstance([this](UInventoryItemInstance* ItemInstance)
 	{
 		AddReplicatedSubObject(ItemInstance);
 	});
@@ -84,10 +42,59 @@ void UInventoryManagerComponent::ReadyForReplication()
 	}
 }
 
-UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
-	const FGameplayTag SlotsType) const
+void UInventoryManagerComponent::BeginPlay()
 {
-	const int32 ArrayIndex = InventoryContent.IndexOfByTag(SlotsType);
+	Super::BeginPlay();
+
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+#if !NO_LOGGING
+	if (bLogInventoryContent)
+	{
+		OnContentChanged.AddLambda([this]
+		{
+			LogInventoryContent();
+		});
+	}
+#endif
+
+	// === Preparing for construction ===
+
+	const bool bIsMainSlotDefined  =
+			!ensureAlwaysMsgf(SlotsNumberByTypes.Contains(InventorySystemGameplayTags::Inventory_SlotType_Main),
+				TEXT("SlotsNumberByTypes must contain InventorySystemGameplayTags::Inventory_SlotType_Main!"));
+
+	if (bIsMainSlotDefined)
+	{
+		// Add at least 1 slot to try to avoid most of the bugs
+		SlotsNumberByTypes.Add(InventorySystemGameplayTags::Inventory_SlotType_Main, 1);
+	}
+
+	for (const auto& SlotsNumberByType : SlotsNumberByTypes)
+	{
+		const bool bIsSlotNumberValid  =
+			!ensureAlwaysMsgf(SlotsNumberByType.Value > 0, TEXT("SlotsNumberByType %s must not be negative!"),
+				*SlotsNumberByType.Key.ToString());
+
+		if (bIsSlotNumberValid)
+		{
+			// Remove invalid data to try to avoid some bugs
+			SlotsNumberByTypes.Remove(SlotsNumberByType.Key);
+		}
+	}
+
+	// === Construct inventory ===
+
+	InventoryContent.Construct(SlotsNumberByTypes);
+}
+
+UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
+	const FGameplayTag& SlotTypeTag) const
+{
+	const int32 ArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
 
 	if (ArrayIndex == INDEX_NONE)
 	{
@@ -115,16 +122,24 @@ void UInventoryManagerComponent::ForEachInventoryItemInstance(
 }
 
 bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex,
-	const FGameplayTag SlotsType)
+	const FGameplayTag& SlotTypeTag)
 {
-	if (!ensureAlways(GetOwner()->HasAuthority()) || !ensureAlways(IsValid(ItemInstance)))
+#if DO_CHECK
+	check(IsValid(ItemInstance))
+#endif
+	// Inventory modifications should only happen on server
+	if (!ensureAlways(GetOwner()->HasAuthority()))
 	{
 		return false;
 	}
 
-	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotsType);
+	// Find which inventory array corresponds to the requested slot type
+	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
 
-	if (!ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE, TEXT("Array not found by tag")))
+	const bool bIsSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
+		TEXT("Failed to find a slots array by tag %s"), *SlotTypeTag.ToString());
+
+	if (bIsSlotsTypeValid)
 	{
 		return false;
 	}
@@ -132,58 +147,70 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 	const FInventorySlotsArray& SlotsArray = InventoryContent[SlotsArrayIndex].Array;
 
 	// Automatic search for empty slot
-	if (SlotIndex == -1 || !ensureAlways(SlotsArray.GetItems().IsValidIndex(SlotIndex)))
+	if (SlotIndex == INDEX_NONE || !ensureAlways(SlotsArray.GetItems().IsValidIndex(SlotIndex)))
 	{
 		SlotIndex = SlotsArray.GetEmptySlotIndex();
 	}
 
-	if (SlotIndex == -1 || !ensureAlwaysMsgf(SlotsArray.IsSlotEmpty(SlotIndex), TEXT("Slot is not empty")))
+	if (SlotIndex == INDEX_NONE || !ensureAlways(SlotsArray.IsSlotEmpty(SlotIndex)))
 	{
 		return false;
 	}
 
 	/**
-	 * TODO: There are suspicions of memory leaks if you install the Outer component due to bug UE-127172 (In Lyra,
-	 * this is circumvented by setting the Outer component owner. You can also create a subsystem that will control the
-	 * life cycle of the object, which is more difficult but better from an architectural point of view). There may not
-	 * be any problems, then leave it as is, but it should be checked
+	 * TODO: Potential memory leak if you assign the component as the Outer due to UE bug UE-127172. Lyra circumvents
+	 * this by setting the component's owner as the Outer instead. Consider implementing a subsystem to manage the item
+	 * instance lifecycle explicitly.  This would be more robust from an architectural standpoint but is also more
+	 * complex. There may be no issue in practice, but this should be verified.
 	 */
 	UInventoryItemInstance* ItemInstanceDuplicate = ItemInstance->Duplicate(this);
 
-	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
-	{
-		return false;
-	}
-	
+#if DO_CHECK
+	check(IsValid(ItemInstanceDuplicate))
+#endif
+
 	InventoryContent.SetInstance(ItemInstanceDuplicate, SlotsArrayIndex, SlotIndex);
-	
-	if (IsUsingRegisteredSubObjectList() && IsReadyForReplication() && ItemInstanceDuplicate)
+
+	/**
+	 * Start replication item instance if bReplicateUsingRegisteredSubObjectList is enabled, but postpone replication
+	 * if the component is not ready for replication yet.
+	*/
+	if (IsUsingRegisteredSubObjectList() && IsReadyForReplication())
 	{
 		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
-	OnInventoryContentChanged.Broadcast();
+	OnContentChanged.Broadcast();
+
 	return true;
 }
 
-bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGameplayTag SlotsType)
+bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGameplayTag& SlotTypeTag)
 {
+	// Inventory modifications should only happen on server
 	if (!ensureAlways(GetOwner()->HasAuthority()))
 	{
 		return false;
 	}
 
-	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotsType);
+	// Find which inventory array corresponds to the requested slot type
+	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
 
-	if (!ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE, TEXT("Array not found by tag")))
+	const bool bIsSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
+		TEXT("Failed to find a slots array by tag %s"), *SlotTypeTag.ToString());
+
+	if (bIsSlotsTypeValid)
 	{
 		return false;
 	}
 
 	const FInventorySlotsArray& SlotsArray = InventoryContent[SlotsArrayIndex].Array;
 
-	if (!ensureAlwaysMsgf(SlotsArray.GetItems().IsValidIndex(SlotIndex), TEXT("Unavailable slot index"))
-		|| SlotsArray.IsSlotEmpty(SlotIndex))
+#if DO_CHECK
+	checkf(SlotsArray.GetItems().IsValidIndex(SlotIndex), TEXT("Unavailable slot index"))
+#endif
+
+	if (SlotsArray.IsSlotEmpty(SlotIndex))
 	{
 		return false;
 	}
@@ -195,32 +222,26 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 		return false;
 	}
 
+	// Stop replication item instance if bReplicateUsingRegisteredSubObjectList is enabled
 	if (IsUsingRegisteredSubObjectList())
 	{
 		RemoveReplicatedSubObject(ItemInstance);
 	}
 
+	// Clear the slot by setting its instance to null
 	InventoryContent.SetInstance(nullptr, SlotsArrayIndex, SlotIndex);
 
-	OnInventoryContentChanged.Broadcast();
+	OnContentChanged.Broadcast();
+
 	return true;
 }
 
-void UInventoryManagerComponent::AddInventoryContentChangedHandler(
-	const FOnInventoryContentChangedDelegate::FDelegate& Callback)
+void UInventoryManagerComponent::OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const
 {
-	OnInventoryContentChanged.Add(Callback);
+	OnContentChanged.Broadcast();
 }
 
-// ReSharper disable once CppMemberFunctionMayBeConst
-void UInventoryManagerComponent::OnRep_InventoryContent()
-{
-	if (bLogInventoryContent)
-	{
-		OnInventoryContentChanged.Broadcast();
-	}
-}
-
+#if !NO_LOGGING
 void UInventoryManagerComponent::LogInventoryContent() const
 {
 	const FString Separator = TEXT("========================================\n");
@@ -257,5 +278,6 @@ void UInventoryManagerComponent::LogInventoryContent() const
 		Output += Separator;
 	}
 
-	UE_LOG(LogInventorySystem, Log, TEXT("%s"), *Output);
+	UE_LOG(LogInventorySystem, Display, TEXT("%s"), *Output);
 }
+#endif

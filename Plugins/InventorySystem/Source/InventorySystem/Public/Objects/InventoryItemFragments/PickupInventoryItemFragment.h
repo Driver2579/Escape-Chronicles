@@ -6,14 +6,14 @@
 #include "Objects/InventoryItemFragment.h"
 #include "PickupInventoryItemFragment.generated.h"
 
-// Adds a representation of the object on the scene
+// Adds a visual representation of the object on the scene
 UCLASS()
 class INVENTORYSYSTEM_API UPickupInventoryItemFragment : public UInventoryItemFragment
 {
 	GENERATED_BODY()
 
 public:
-	UStaticMesh* GetStaticMesh() const { return StaticMesh; }
+	UStaticMesh* GetMesh() const { return StaticMesh; }
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

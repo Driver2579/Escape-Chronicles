@@ -10,7 +10,7 @@
 USTRUCT()
 struct FInventorySlot : public FFastArraySerializerItem
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY()
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
@@ -20,13 +20,11 @@ struct FInventorySlot : public FFastArraySerializerItem
 USTRUCT()
 struct FInventorySlotsArray : public FFastArraySerializer
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	// Creates the specified number of empty slots and replicates them
 	void Construct(const int32 InSlotsNumber)
 	{
-		Slots.Empty();
-
 		Slots.Init(FInventorySlot(), InSlotsNumber);
 
 		MarkArrayDirty();
@@ -44,6 +42,10 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		MarkItemDirty(Slots[Index]);
 	}
 
+	/**
+	 * Finds first available empty slot in inventory
+	 * @return Index of first empty slot, or INDEX_NONE if all slots are occupied
+	 */
 	int32 GetEmptySlotIndex() const
 	{
 		for (int32 Index = 0; Index < Slots.Num(); ++Index)
@@ -54,7 +56,7 @@ struct FInventorySlotsArray : public FFastArraySerializer
 			}
 		}
 
-		return -1;
+		return INDEX_NONE;
 	}
 
 	bool IsValidSlotIndex(const int32 Index) const
@@ -67,7 +69,7 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		return !IsValid(Slots[Index].Instance);
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
 	{
 		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParms, *this);
 	}

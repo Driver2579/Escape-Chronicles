@@ -17,13 +17,16 @@ class INVENTORYSYSTEM_API UInventoryItemInstance : public UObject
 	GENERATED_BODY()
 
 public:
+	virtual bool IsSupportedForNetworking() const override { return true; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	bool IsInitialized() const { return bInitialized; }
+
 	/**
 	 * You must call this method once before the user can interact with it in any way (e.g. in BeginPlay or before the
 	 * item is displayed in the inventory)
 	 */
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
-
-	bool IsInitialized() const { return bInitialized; }
 
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
 
@@ -38,11 +41,8 @@ public:
 	// Creates a new initialized item instance with the same Definition and LocalData
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
 
-	virtual bool IsSupportedForNetworking() const override { return true; }
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
 private:
-	// Determines what the item can do (Can be thrown away, is a tool, key, etc.)
+	// Determines what the item can do (сan be thrown away, is a tool, key, etc.)
 	UPROPERTY(EditAnywhere, Replicated)
 	TSubclassOf<UInventoryItemDefinition> Definition;
 
@@ -62,13 +62,8 @@ T* UInventoryItemInstance::GetFragmentByClass() const
 	{
 		return nullptr;
 	}
-	
-	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!IsValid(DefinitionDefaultObject))
-	{
-		return nullptr;
-	}
+	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
 	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
 	{
@@ -94,14 +89,9 @@ void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const
 	{
 		return;
 	}
-	
+
 	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
 
-	if (!IsValid(DefinitionDefaultObject))
-	{
-		return;
-	}
-		
 	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
 	{
 		T* CastedFragment = Cast<T>(Fragment);
