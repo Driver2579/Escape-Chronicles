@@ -6,7 +6,7 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "InstanceStats.generated.h"
 
-// Represents a single key-value pair in the instance stat container
+// Represents a single instance stat as a key-value pair in the instance stats container
 USTRUCT(BlueprintType)
 struct FInstanceStatsItem : public FFastArraySerializerItem
 {
