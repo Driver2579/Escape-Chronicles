@@ -26,7 +26,7 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 	}
 
 #if DO_CHECK
-	check(Definition);
+	check(IsValid(Definition));
 #endif
 
 	// === Notify fragments of the newly created item instance ===
@@ -54,8 +54,8 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	check(IsValid(NewItemInstance));
 #endif
 
-	// Copy LocalData
-	for (const FLocalDataItem& Data : InstanceStats.GetAllData())
+	// Copy FInstanceStats
+	for (const FInstanceStatsItem& Data : InstanceStats.GetAllStats())
 	{
 		NewItemInstance->InstanceStats.SetData(Data);
 	}

@@ -44,7 +44,10 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	// Apply item changes only on server after the world has begun play (it's the first object that begins play)
+	/**
+	 * Apply item changes only on server after the world has begun play (it's the first object that begins play), or
+	 * for assets
+	 */
 	if (HasAuthority() && GetWorld()->HasBegunPlay() || IsAsset())
 	{
 		TryApplyChangesFromItemInstance();
@@ -74,7 +77,7 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 
 	// === Set the required mesh ===
 
-	// Gets UPickupInventoryItemFragment to get a suitable mesh
+	// Gets the UPickupInventoryItemFragment to get a suitable mesh
 	const UPickupInventoryItemFragment* PickupInventoryItemFragment =
 		ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 

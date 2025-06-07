@@ -194,10 +194,10 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	// Find which inventory array corresponds to the requested slot type
 	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
 
-	const bool bIsSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
+	const bool bSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
 		TEXT("Failed to find a slots array by tag %s"), *SlotTypeTag.ToString());
 
-	if (bIsSlotsTypeValid)
+	if (bSlotsTypeValid)
 	{
 		return false;
 	}

@@ -14,7 +14,7 @@ class UInventoryItemFragment;
  * Represents a runtime instance of an inventory item that can be replicated across the network.
  *
  * This class encapsulates both the definition (shared/static data via UInventoryItemDefinition) and instance-specific
- * state (via LocalData), making it suitable for representing actual items possessed by players or AI during gameplay.
+ * state (via InstanceStats), making it suitable for representing actual items possessed by players or AI during gameplay.
  *
  * Supports fragment-based modular data extensions and provides methods to initialize, duplicate, and query those
  * fragments. Must be explicitly initialized before use.
@@ -48,7 +48,7 @@ public:
 	void GetFragmentsByClass(TArray<T*>& OutFragments) const;
 
 	/**
-	 * Creates a copy of this item instance, including its local data and definition (initialized on its basis). The
+	 * Creates a copy of this item instance, including its stats and definition (initialized on its basis). The
 	 * new instance must be assigned an appropriate outer (e.g., inventory component).
 	 */
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;

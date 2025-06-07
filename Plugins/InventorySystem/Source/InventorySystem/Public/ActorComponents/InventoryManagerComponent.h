@@ -13,9 +13,8 @@ class UInventoryManagerFragment;
  * Core inventory management component that handles:
  * - Multi-slot inventory system with typed containers
  * - Item instance storage and operations (add/remove/find)
- * - Replicated inventory state with change notifications
+ * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
- * - Notifies about changes
  */
 UCLASS(Blueprintable, Const)
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
@@ -81,8 +80,8 @@ private:
 	/**
 	* Settings for the number of slots in different types of inventory slots (doesn't work dynamically, value must be
 	* set before BeginPlay).
-	* @param FGameplayTag Type of the slots.
-	* @param int32 Number of slots.
+	* @tparam KeyType Type of the slots.
+	* @tparam ValueType Number of slots.
 	*/
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, int32> SlotsNumberByTypes;
@@ -98,7 +97,7 @@ private:
 	UFUNCTION()
 	void OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const;
 
-#if WITH_EDITORONLY_DATA && !NO_LOGGING
+#if WITH_EDITORONLY_DATA
 	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContent = false;

@@ -18,15 +18,14 @@ public:
 	UInteractableComponent();
 
 	const FName& GetHintMeshTag() const { return HintMeshTag; }
-
 	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
-	
+
 	bool CanInteract() const { return bCanInteract; }
 	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
-	
+
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
-	
+
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
 

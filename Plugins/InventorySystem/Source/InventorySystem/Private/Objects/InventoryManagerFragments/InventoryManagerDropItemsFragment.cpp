@@ -23,8 +23,6 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 		return;
 	}
 
-	// === Try to spawn an actor ===
-
 	// Spawn an item into the world to make it able to pick up later
 	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
 		Inventory->GetOwner()->GetActorTransform());

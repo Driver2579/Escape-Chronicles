@@ -49,7 +49,7 @@ private:
 	UFUNCTION()
 	void OnRep_SelectedSlotIndex();
 
-#if WITH_EDITORONLY_DATA && !NO_LOGGING
+#if WITH_EDITORONLY_DATA
 	// Whether to log the CurrentSlotIndex when it changes
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogCurrentSlotIndex = false;

@@ -6,77 +6,77 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "InstanceStats.generated.h"
 
-// Represents a single key-value pair in the local data container
+// Represents a single key-value pair in the instance stat container
 USTRUCT(BlueprintType)
-struct FLocalDataItem : public FFastArraySerializerItem
+struct FInstanceStatsItem : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
-	FLocalDataItem() = default;
+	FInstanceStatsItem() = default;
 
-	FLocalDataItem(const FGameplayTag& InTag)
+	FInstanceStatsItem(const FGameplayTag& InTag)
 	{
 		Tag = InTag;
 	}
 
-	FLocalDataItem(const FGameplayTag& InTag, const float InValue)
+	FInstanceStatsItem(const FGameplayTag& InTag, const float InValue)
 	{
 		Tag = InTag;
 		Value = InValue;
 	}
 
-	bool operator==(const FLocalDataItem& Other) const
+	bool operator==(const FInstanceStatsItem& Other) const
 	{
 		return Tag == Other.Tag;
 	}
 
-	// Unique key for this data item
+	// Unique key for this stat item
 	UPROPERTY(EditAnywhere)
 	FGameplayTag Tag;
 
 	// Value stored by tag
 	UPROPERTY(EditAnywhere)
-	float Value;
+	float Value = 0;
 };
 
 /**
- * Networked container for FLocalDataItem elements with efficient delta serialization. Provides storage and access to
- * data using FLocalDataItem.
+ * Networked container for FInstanceStatsItem elements with efficient delta serialization. Provides storage and access
+ * to stat using FInstanceStatsItem.
  */
 USTRUCT(BlueprintType)
 struct FInstanceStats : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
-	const TArray<FLocalDataItem>& GetAllData() const
+	const TArray<FInstanceStatsItem>& GetAllStats() const
 	{
 		return Array;
 	}
 
-	const FLocalDataItem* GetData(const FGameplayTag& InTag) const
+	const FInstanceStatsItem* GetStat(const FGameplayTag& InTag) const
 	{
 		return Array.FindByKey(InTag);
 	}
 
-	void SetData(const FLocalDataItem& InData)
+	void SetStat(const FInstanceStatsItem& InStat)
 	{
-		FLocalDataItem* Data = Array.FindByKey(InData.Tag);
+		FInstanceStatsItem* Stat = Array.FindByKey(InStat.Tag);
 
-		// Create new data
-		if (Data == nullptr)
+		// Create new stat
+		if (Stat == nullptr)
 		{
-			MarkItemDirty(Array[Array.Add(InData)]);
+			MarkItemDirty(Array[Array.Add(InStat)]);
 		}
-		// Rewrite the existing data
-		else if (Data->Value != InData.Value)
+		// Rewrite the existing stat
+		else if (Stat->Value != InStat.Value)
 		{
-			Data->Value = InData.Value;
-			MarkItemDirty(*Data);
+			Stat->Value = InStat.Value;
+			MarkItemDirty(*Stat);
 		}
 	}
 
 	// Try to avoid calling this method as deleting an element completely leads to replication of the whole array
-	void RemoveData(const FGameplayTag& InTag)
+	void RemoveStat(const FGameplayTag& InTag)
 	{
 		const int32 Index = Array.IndexOfByKey(InTag);
 
@@ -87,20 +87,20 @@ struct FInstanceStats : public FFastArraySerializer
 		}
 	}
 
-	bool HasData(const FGameplayTag& InTag) const
+	bool HasStat(const FGameplayTag& InTag) const
 	{
-		return GetData(InTag) != nullptr;
+		return GetStat(InTag) != nullptr;
 	}
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		return FastArrayDeltaSerialize<FLocalDataItem, FInstanceStats>(Array, DeltaParams, *this);
+		return FastArrayDeltaSerialize<FInstanceStatsItem, FInstanceStats>(Array, DeltaParams, *this);
 	}
 
 private:
-	// Internal array storing all data items 
+	// Internal array storing all stat items 
 	UPROPERTY(EditAnywhere)
-	TArray<FLocalDataItem> Array;
+	TArray<FInstanceStatsItem> Array;
 };
 
 template<>
