@@ -23,12 +23,13 @@ public class EscapeChronicles : ModuleRules
 			"InteractionSystem",
 			"GameplayTasks",
 			"UMG",
-			"CommonUI"
+			"CommonUI",
+			"GeometryFramework"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			
+			"GeometryScriptingCore"
 		});
 	}
 }
