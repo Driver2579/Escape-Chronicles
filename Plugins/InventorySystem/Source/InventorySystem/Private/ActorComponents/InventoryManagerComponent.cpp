@@ -22,6 +22,55 @@ void UInventoryManagerComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProp
 	DOREPLIFETIME(ThisClass, Fragments);
 }
 
+void UInventoryManagerComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
+	if (bLogInventoryContent)
+	{
+		OnContentChanged.AddLambda([this]
+		{
+			LogInventoryContent();
+		});
+	}
+#endif
+
+	// === Preparing for construction ===
+
+	const bool bMainSlotDefined  =
+		!ensureAlwaysMsgf(SlotsNumberByTypes.Contains(InventorySystemGameplayTags::Inventory_Slot_Type_Main),
+			TEXT("SlotsNumberByTypes must contain InventorySystemGameplayTags::Inventory_Slot_Type_Main!"));
+
+	if (bMainSlotDefined)
+	{
+		// Add at least 1 slot to try to avoid most of the bugs
+		SlotsNumberByTypes.Add(InventorySystemGameplayTags::Inventory_Slot_Type_Main, 1);
+	}
+
+	for (const auto& SlotsNumberByType : SlotsNumberByTypes)
+	{
+		const bool bSlotNumberValid =
+			!ensureAlwaysMsgf(SlotsNumberByType.Value > 0, TEXT("SlotsNumberByType %s must be positive!"),
+				*SlotsNumberByType.Key.ToString());
+
+		if (bSlotNumberValid)
+		{
+			// Remove invalid data to try to avoid some bugs
+			SlotsNumberByTypes.Remove(SlotsNumberByType.Key);
+		}
+	}
+
+	// === Construct inventory ===
+
+	InventoryContent.Construct(SlotsNumberByTypes);
+}
+
 void UInventoryManagerComponent::ReadyForReplication()
 {
 	Super::ReadyForReplication();
@@ -40,55 +89,6 @@ void UInventoryManagerComponent::ReadyForReplication()
 	{
 		AddReplicatedSubObject(Fragment);
 	}
-}
-
-void UInventoryManagerComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (!GetOwner()->HasAuthority())
-	{
-		return;
-	}
-
-#if !NO_LOGGING
-	if (bLogInventoryContent)
-	{
-		OnContentChanged.AddLambda([this]
-		{
-			LogInventoryContent();
-		});
-	}
-#endif
-
-	// === Preparing for construction ===
-
-	const bool bIsMainSlotDefined  =
-			!ensureAlwaysMsgf(SlotsNumberByTypes.Contains(InventorySystemGameplayTags::Inventory_SlotType_Main),
-				TEXT("SlotsNumberByTypes must contain InventorySystemGameplayTags::Inventory_SlotType_Main!"));
-
-	if (bIsMainSlotDefined)
-	{
-		// Add at least 1 slot to try to avoid most of the bugs
-		SlotsNumberByTypes.Add(InventorySystemGameplayTags::Inventory_SlotType_Main, 1);
-	}
-
-	for (const auto& SlotsNumberByType : SlotsNumberByTypes)
-	{
-		const bool bIsSlotNumberValid  =
-			!ensureAlwaysMsgf(SlotsNumberByType.Value > 0, TEXT("SlotsNumberByType %s must not be negative!"),
-				*SlotsNumberByType.Key.ToString());
-
-		if (bIsSlotNumberValid)
-		{
-			// Remove invalid data to try to avoid some bugs
-			SlotsNumberByTypes.Remove(SlotsNumberByType.Key);
-		}
-	}
-
-	// === Construct inventory ===
-
-	InventoryContent.Construct(SlotsNumberByTypes);
 }
 
 UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 SlotIndex,
@@ -125,21 +125,20 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 	const FGameplayTag& SlotTypeTag)
 {
 #if DO_CHECK
-	check(IsValid(ItemInstance))
+	check(IsValid(ItemInstance));
 #endif
-	// Inventory modifications should only happen on server
-	if (!ensureAlways(GetOwner()->HasAuthority()))
-	{
-		return false;
-	}
+
+#if DO_ENSURE
+	ensureAlways(GetOwner()->HasAuthority());
+#endif
 
 	// Find which inventory array corresponds to the requested slot type
 	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
 
-	const bool bIsSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
+	const bool bSlotsTypeValid = !ensureAlwaysMsgf(SlotsArrayIndex != INDEX_NONE,
 		TEXT("Failed to find a slots array by tag %s"), *SlotTypeTag.ToString());
 
-	if (bIsSlotsTypeValid)
+	if (bSlotsTypeValid)
 	{
 		return false;
 	}
@@ -160,7 +159,7 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 	/**
 	 * TODO: Potential memory leak if you assign the component as the Outer due to UE bug UE-127172. Lyra circumvents
 	 * this by setting the component's owner as the Outer instead. Consider implementing a subsystem to manage the item
-	 * instance lifecycle explicitly.  This would be more robust from an architectural standpoint but is also more
+	 * instance lifecycle explicitly. This would be more robust from an architectural standpoint but is also more
 	 * complex. There may be no issue in practice, but this should be verified.
 	 */
 	UInventoryItemInstance* ItemInstanceDuplicate = ItemInstance->Duplicate(this);
@@ -169,6 +168,7 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 	check(IsValid(ItemInstanceDuplicate))
 #endif
 
+	// Assign the duplicated item instance to the target slot
 	InventoryContent.SetInstance(ItemInstanceDuplicate, SlotsArrayIndex, SlotIndex);
 
 	/**
@@ -187,11 +187,9 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 
 bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGameplayTag& SlotTypeTag)
 {
-	// Inventory modifications should only happen on server
-	if (!ensureAlways(GetOwner()->HasAuthority()))
-	{
-		return false;
-	}
+#if DO_ENSURE
+	ensureAlways(GetOwner()->HasAuthority());
+#endif
 
 	// Find which inventory array corresponds to the requested slot type
 	const int32 SlotsArrayIndex = InventoryContent.IndexOfByTag(SlotTypeTag);
@@ -241,7 +239,7 @@ void UInventoryManagerComponent::OnRep_InventoryContent(FInventorySlotsTypedArra
 	OnContentChanged.Broadcast();
 }
 
-#if !NO_LOGGING
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 void UInventoryManagerComponent::LogInventoryContent() const
 {
 	const FString Separator = TEXT("========================================\n");

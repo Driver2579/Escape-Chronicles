@@ -41,8 +41,8 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 
 	/**
 	 * Initializes inventory slots from configuration data.
-	 * @KeyType FGameplayTag Tag of the slot's type.
-	 * @ValueType int32 Number of slots.
+	 * @tparam KeyType Tag of the slot's type.
+	 * @tparam ValueType Number of slots.
 	 */
 	void Construct(const TMap<FGameplayTag, int32>& InitializationData)
 	{
@@ -83,10 +83,10 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 			});
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
 		return FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>(Arrays,
-			DeltaParms, *this);
+			DeltaParams, *this);
 	}
 
 private:

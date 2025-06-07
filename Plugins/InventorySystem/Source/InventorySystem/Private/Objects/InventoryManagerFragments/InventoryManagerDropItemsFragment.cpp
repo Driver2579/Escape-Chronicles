@@ -7,7 +7,7 @@
 void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const int32 SlotIndex,
 	const FGameplayTag& SlotsType)
 {
-	// Getting the right item instance
+	// === Get the right item instance by the given parameters ===
 
 	UInventoryManagerComponent* Inventory = GetInventoryManager();
 
@@ -25,6 +25,7 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 
 	// === Try to spawn an actor ===
 
+	// Spawn an item into the world to make it able to pick up later
 	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
 		Inventory->GetOwner()->GetActorTransform());
 
@@ -39,6 +40,7 @@ void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const in
 	check(IsValid(ItemActor->GetItemInstance()));
 #endif
 
+	// Remove an item from the slot because we dropped it
 	ensureAlways(Inventory->DeleteItem(SlotIndex, SlotsType));
 
 	const FTransform OwnerActorTransform = Inventory->GetOwner()->GetActorTransform();

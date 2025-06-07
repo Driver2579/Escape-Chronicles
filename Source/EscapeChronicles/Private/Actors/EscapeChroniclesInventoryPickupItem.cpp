@@ -18,8 +18,7 @@ void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableComponent->AddInteractHandler(FOnInteractDelegate::FDelegate::CreateUObject(this,
-		&ThisClass::OnInteract));
+	InteractableComponent->OnInteract.AddUObject(this, &ThisClass::OnInteract);
 }
 
 void AEscapeChroniclesInventoryPickupItem::OnInteract(UInteractionManagerComponent* InteractionManagerComponent)

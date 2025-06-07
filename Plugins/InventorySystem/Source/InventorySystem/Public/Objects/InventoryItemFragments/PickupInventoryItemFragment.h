@@ -16,6 +16,6 @@ public:
 	UStaticMesh* GetMesh() const { return StaticMesh; }
 
 private:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMesh> StaticMesh;
 };

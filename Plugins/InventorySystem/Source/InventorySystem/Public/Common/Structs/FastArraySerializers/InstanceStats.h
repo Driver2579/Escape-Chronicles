@@ -4,7 +4,7 @@
 
 #include "GameplayTagContainer.h"
 #include "Net/Serialization/FastArraySerializer.h"
-#include "LocalData.generated.h"
+#include "InstanceStats.generated.h"
 
 // Represents a single key-value pair in the local data container
 USTRUCT(BlueprintType)
@@ -44,7 +44,7 @@ struct FLocalDataItem : public FFastArraySerializerItem
  * data using FLocalDataItem.
  */
 USTRUCT(BlueprintType)
-struct FLocalData : public FFastArraySerializer
+struct FInstanceStats : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
@@ -92,9 +92,9 @@ struct FLocalData : public FFastArraySerializer
 		return GetData(InTag) != nullptr;
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		return FastArrayDeltaSerialize<FLocalDataItem, FLocalData>(Array, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FLocalDataItem, FInstanceStats>(Array, DeltaParams, *this);
 	}
 
 private:
@@ -104,7 +104,7 @@ private:
 };
 
 template<>
-struct TStructOpsTypeTraits<FLocalData> : TStructOpsTypeTraitsBase2<FLocalData>
+struct TStructOpsTypeTraits<FInstanceStats> : TStructOpsTypeTraitsBase2<FInstanceStats>
 {
 	enum 
 	{

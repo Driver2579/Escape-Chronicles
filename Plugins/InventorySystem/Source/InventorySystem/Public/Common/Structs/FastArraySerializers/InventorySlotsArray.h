@@ -69,9 +69,9 @@ struct FInventorySlotsArray : public FFastArraySerializer
 		return !IsValid(Slots[Index].Instance);
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParams, *this);
 	}
 
 private:

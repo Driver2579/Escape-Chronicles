@@ -5,11 +5,9 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
-
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
-
 
 /**
  * Core inventory management component that handles:
@@ -17,6 +15,7 @@ class UInventoryManagerFragment;
  * - Item instance storage and operations (add/remove/find)
  * - Replicated inventory state with change notifications
  * - Extensible through fragment system
+ * - Notifies about changes
  */
 UCLASS(Blueprintable, Const)
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
@@ -41,16 +40,16 @@ public:
 	 * @return Pointer to item instance or nullptr if slot is empty/invalid
 	 */
 	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
-		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_SlotType_Main) const;
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main) const;
 
 	/**
 	 * Adds a DUPLICATE of the given item to the inventory.
 	 * @param ItemInstance The item being copied.
-	 * @param SlotIndex Index of the slot (if INDEX_NONE searches for an empty slot).
+	 * @param SlotIndex Index of the slot (if INDEX_NONE, searches for an empty slot).
 	 * @param SlotTypeTag Type of the slot.
 	 */
 	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = INDEX_NONE,
-		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_SlotType_Main);
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
 	/**
 	 * Deletes an item from the inventory.
@@ -58,7 +57,7 @@ public:
 	 * @param SlotTypeTag Type of the slot.
 	 */
 	bool DeleteItem(const int32 SlotIndex,
-		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_SlotType_Main);
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
 	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 
@@ -73,7 +72,7 @@ protected:
 	// Executes Action for each valid item instance in inventory
 	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
-#if !NO_LOGGING
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 	// Logs an information about the content of the inventory
 	void LogInventoryContent() const;
 #endif
@@ -99,9 +98,11 @@ private:
 	UFUNCTION()
 	void OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const;
 
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContent = false;
+#endif
 };
 
 template<typename T>

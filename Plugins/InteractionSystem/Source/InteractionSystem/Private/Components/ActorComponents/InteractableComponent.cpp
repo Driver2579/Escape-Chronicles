@@ -66,12 +66,7 @@ void UInteractableComponent::InitializeHintWidget()
 
 void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
 {
-	InteractDelegate.Broadcast(InteractionManagerComponent);
-}
-
-void UInteractableComponent::AddInteractHandler(const FOnInteractDelegate::FDelegate& Delegate)
-{
-	InteractDelegate.Add(Delegate);
+	OnInteract.Broadcast(InteractionManagerComponent);
 }
 
 void UInteractableComponent::SetInteractionHintVisibility(const bool bNewVisibility)

@@ -10,7 +10,7 @@ void UInventoryManagerSelectorFragment::OnManagerInitialized()
 {
 	Super::OnManagerInitialized();
 
-#if !NO_LOGGING
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 	if (bLogCurrentSlotIndex)
 	{
 		OnOffsetCurrentSlotIndex.AddLambda([this](int32 Index)
@@ -55,10 +55,12 @@ void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementa
 	ensureAlways(SlotsTypedArray->Array.IsValidSlotIndex(CurrentSlotIndex));
 #endif
 
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 	if (bLogCurrentSlotIndex)
 	{
 		LogCurrentSlotIndex();
 	}
+#endif
 
 	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
@@ -68,7 +70,7 @@ void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex()
 	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
 
-#if !NO_LOGGING
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 void UInventoryManagerSelectorFragment::LogCurrentSlotIndex() const
 {
 	UE_LOG(LogInventorySystem, Display, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);

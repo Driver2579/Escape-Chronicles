@@ -44,7 +44,7 @@ void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	// Apply item changes only on server after begin play, or for assets
+	// Apply item changes only on server after the world has begun play (it's the first object that begins play)
 	if (HasAuthority() && GetWorld()->HasBegunPlay() || IsAsset())
 	{
 		TryApplyChangesFromItemInstance();
@@ -55,12 +55,12 @@ void AInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority() && !ItemInstance->IsInitialized())
-	{
 #if DO_CHECK
-		check(ItemInstance)
+	check(ItemInstance)
 #endif
 
+	if (HasAuthority() && !ItemInstance->IsInitialized())
+	{
 		ItemInstance->Initialize();
 	}
 }
@@ -74,7 +74,7 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 
 	// === Set the required mesh ===
 
-	// There is a suitable mesh in UPickupInventoryItemFragment
+	// Gets UPickupInventoryItemFragment to get a suitable mesh
 	const UPickupInventoryItemFragment* PickupInventoryItemFragment =
 		ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 
@@ -123,6 +123,7 @@ void AInventoryPickupItem::SetDefaultSettings() const
 
 void AInventoryPickupItem::TryApplyChangesFromItemInstance() const
 {
+	// Try to apply the new settings and fall back to the default ones if failed to apply the new ones
 	if (!ApplyChangesFromItemInstance())
 	{
 		SetDefaultSettings();
@@ -139,9 +140,12 @@ void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerCo
 #if DO_CHECK
 	check(ItemInstance)
 	check(IsValid(InventoryManagerComponent))
-	check(HasAuthority());
 #endif
 
+#if DO_ENSURE
+	ensureAlways(HasAuthority());
+#endif
+	
 	if (InventoryManagerComponent->AddItem(ItemInstance))
 	{
 		Destroy();

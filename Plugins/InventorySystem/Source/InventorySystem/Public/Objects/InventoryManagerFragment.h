@@ -14,7 +14,7 @@ class INVENTORYSYSTEM_API UInventoryManagerFragment : public UObject
 
 public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
-	virtual int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override;
+	virtual inline int32 GetFunctionCallspace(UFunction* Function, FFrame* Stack) override;
 	virtual bool CallRemoteFunction(UFunction* Function, void* Params, FOutParmRec* OutParams, FFrame* Stack) override;
 
 	virtual void OnManagerInitialized() {}

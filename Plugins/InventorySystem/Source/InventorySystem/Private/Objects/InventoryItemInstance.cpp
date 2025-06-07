@@ -11,17 +11,16 @@ void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, Definition);
-	DOREPLIFETIME(ThisClass, LocalData);
+	DOREPLIFETIME(ThisClass, InstanceStats);
 }
 
 void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition)
 {
-	if (!ensureAlwaysMsgf(!bInitialized, TEXT("The instance must only be initialized once!")))
-	{
-		return;
-	}
+#if DO_ENSURE
+	ensureAlwaysMsgf(!bInitialized, TEXT("The instance must only be initialized once!"));
+#endif
 
-	if (InDefinition != nullptr)
+	if (IsValid(InDefinition))
 	{
 		Definition = InDefinition;
 	}
@@ -52,13 +51,13 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	UInventoryItemInstance* NewItemInstance = NewObject<UInventoryItemInstance>(Outer);
 
 #if DO_CHECK
-	check(NewItemInstance);
+	check(IsValid(NewItemInstance));
 #endif
 
 	// Copy LocalData
-	for (const FLocalDataItem& Data : LocalData.GetAllData())
+	for (const FLocalDataItem& Data : InstanceStats.GetAllData())
 	{
-		NewItemInstance->LocalData.SetData(Data);
+		NewItemInstance->InstanceStats.SetData(Data);
 	}
 
 	NewItemInstance->Initialize(GetDefinition());

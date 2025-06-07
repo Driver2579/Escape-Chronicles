@@ -43,7 +43,7 @@ public:
 		ItemInstance = InItemInstance;
 	}
 
-	//Transfers item to inventory and destroys actor
+	// Transfers item to inventory and destroys actor
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
 protected:
@@ -51,7 +51,7 @@ protected:
 
 	/**
 	 * Applies a change to this actor based on the current item instance (sets mesh as an item instance. But can be
-	 * overloaded).
+	 * overriden).
 	 * @return True if all settings are applied correctly.
 	 */
 	virtual bool ApplyChangesFromItemInstance() const;
@@ -68,7 +68,7 @@ private:
 	TObjectPtr<UInventoryItemInstance> ItemInstance;
 
 	// The mesh of this component will be replaced with the one associated with the item instance
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UFUNCTION()
