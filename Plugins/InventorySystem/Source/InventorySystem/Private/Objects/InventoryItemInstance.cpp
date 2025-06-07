@@ -55,9 +55,9 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 #endif
 
 	// Copy FInstanceStats
-	for (const FInstanceStatsItem& Data : InstanceStats.GetAllStats())
+	for (const FInstanceStatsItem& Item : InstanceStats.GetAllStats())
 	{
-		NewItemInstance->InstanceStats.SetData(Data);
+		NewItemInstance->InstanceStats.SetStat(Item);
 	}
 
 	NewItemInstance->Initialize(GetDefinition());
