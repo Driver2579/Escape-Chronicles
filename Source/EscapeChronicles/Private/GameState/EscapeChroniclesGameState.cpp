@@ -67,6 +67,20 @@ void AEscapeChroniclesGameState::RegisterScheduleEventManagerData()
 	CurrentScheduledEventData = ScheduleEventManagerComponent->GetCurrentScheduledEventData();
 	CurrentActiveEventData = ScheduleEventManagerComponent->GetCurrentActiveEventData();
 
+	// === Broadcast the delegates for the first time if the events are already set ===
+
+	if (CurrentScheduledEventData.IsValid())
+	{
+		OnCurrentScheduledEventChanged.Broadcast(FScheduleEventData(), CurrentScheduledEventData);
+	}
+
+	if (CurrentActiveEventData.IsValid())
+	{
+		OnCurrentActiveEventChanged.Broadcast(FScheduleEventData(), CurrentActiveEventData);
+	}
+
+	// === Listen for events changes ===
+
 	ScheduleEventManagerComponent->OnCurrentScheduledEventChanged.AddUObject(this,
 		&ThisClass::NotifyCurrentScheduledEventChanged);
 
@@ -104,7 +118,7 @@ void AEscapeChroniclesGameState::TickGameDateTime()
 	OnCurrentGameDateTimeUpdated.Broadcast(OldGameDateTime, CurrentGameDateTime);
 
 	// TODO: Remove this once the UI is ready
-	UE_LOG(LogTemp, Display, TEXT("Current game time: Day: %d, Hour: %d, Minute: %d"),
+	UE_LOG(LogTemp, Display, TEXT("Current game time: Day: %llu, Hour: %d, Minute: %d"),
 		CurrentGameDateTime.Day, CurrentGameDateTime.Time.Hour, CurrentGameDateTime.Time.Minute);
 }
 
