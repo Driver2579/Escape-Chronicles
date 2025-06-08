@@ -40,6 +40,9 @@ public:
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
 
 	// Gathers all fragments of the specified class type and writes them into the provided array.
+	FInstanceStats& GetInstanceStats_Mutable() { return InstanceStats; }
+
+	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
 	T* GetFragmentByClass() const;
 
@@ -52,6 +55,13 @@ public:
 	 * new instance must be assigned an appropriate outer (e.g., inventory component).
 	 */
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
+
+	/**
+	 * Breaks the object.
+	 * @see for exactly how the item will break is used by Outer. The item can't break without it!
+	 * @warning Outer must implement IStoringItemInstances!
+	 */
+	void Break();
 
 private:
 	// Determines what the item can do (сan be thrown away, is a tool, key, etc.)

@@ -5,6 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
+#include "Interfaces/StoringItemInstances.h"
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
@@ -17,7 +18,7 @@ class UInventoryManagerFragment;
  * - Extensible through fragment system
  */
 UCLASS(Blueprintable, Const)
-class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
+class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
 	
@@ -49,7 +50,7 @@ public:
 	 */
 	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = INDEX_NONE,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
-
+	
 	/**
 	 * Deletes an item from the inventory.
 	 * @param SlotIndex Index of the slot.
@@ -58,18 +59,27 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
+	/**
+	 * Method for obtaining data on item location in inventory
+	 * @return true if the search was successful
+	 */
+	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
+		UInventoryItemInstance* ItemInstance) const;
+	
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
+	
 	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 
 	// Called when the contents of inventory slot changed
 	FOnContentChangedDelegate OnContentChanged;
 
+	// Executes Action for each valid item instance in inventory
+	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+	
 protected:
 	virtual void BeginPlay() override;
 
 	virtual void ReadyForReplication() override;
-
-	// Executes Action for each valid item instance in inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
 #if WITH_EDITORONLY_DATA && !NO_LOGGING
 	// Logs an information about the content of the inventory
@@ -95,7 +105,7 @@ private:
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()
-	void OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const;
+	void OnRep_InventoryContent() const;
 
 #if WITH_EDITORONLY_DATA
 	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged

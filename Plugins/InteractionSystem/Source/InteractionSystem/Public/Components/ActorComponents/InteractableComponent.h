@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
+class UInteractPopupWidget;
 class UInteractionManagerComponent;
 
 // A component that makes an actor interactive
@@ -62,7 +63,7 @@ private:
 	TObjectPtr<UMaterialInterface> OverlayMaterialHint;
 
 	// Widget that is visible when the interaction hint visibility is true
-	TWeakObjectPtr<class UInteractPopupWidget> HintWidget;
+	TWeakObjectPtr<UInteractPopupWidget> HintWidget;
 	
 	// Meshes to hint when the interaction hint visibility is true
 	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;

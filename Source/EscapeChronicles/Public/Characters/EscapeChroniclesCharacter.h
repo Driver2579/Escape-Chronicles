@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "Interfaces/Saveable.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -53,14 +54,14 @@ public:
 
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
-
+	
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
