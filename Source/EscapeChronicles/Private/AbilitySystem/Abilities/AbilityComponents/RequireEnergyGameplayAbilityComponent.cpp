@@ -31,16 +31,29 @@ void URequireEnergyGameplayAbilityComponent::ActivateAbility(const FGameplayAbil
 
 	const UVitalAttributeSet* VitalAttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
+	// Listen for energy attribute changes to cancel the ability if the owner actor runs out of energy
 	if (ensureAlways(VitalAttributeSet))
 	{
-		// Listen to the OnOutOfEnergy event to cancel the ability if the owner actor runs out of energy
-		OnOutOfEnergyDelegateHandle = VitalAttributeSet->OnOutOfEnergy.AddUObject(this, &ThisClass::OnOutOfEnergy);
+		FOnGameplayAttributeValueChange& OnEnergyAttributeValueChangeDelegate =
+			ActorInfo->AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+				VitalAttributeSet->GetEnergyAttribute());
+
+		OnEnergyAttributeValueChangeDelegateHandle = OnEnergyAttributeValueChangeDelegate.AddUObject(this,
+			&ThisClass::OnEnergyAttributeValueChange);
 	}
 }
 
-void URequireEnergyGameplayAbilityComponent::OnOutOfEnergy(AActor* EffectInstigator, AActor* EffectCauser,
-	const FGameplayEffectSpec* EffectSpec, float EffectMagnitude, float OldValue, float NewValue) const
+void URequireEnergyGameplayAbilityComponent::OnEnergyAttributeValueChange(
+	const FOnAttributeChangeData& OnAttributeChangeData) const
 {
+	// Don't do anything if the energy is greater than 0
+	if (OnAttributeChangeData.NewValue > 0)
+	{
+		return;
+	}
+
+	// === Cancel the ability if the energy has dropped to 0 ===
+
 	UEscapeChroniclesGameplayAbility* OwningAbility = GetOwner();
 
 #if DO_CHECK
@@ -57,10 +70,14 @@ void URequireEnergyGameplayAbilityComponent::EndAbility(const FGameplayAbilitySp
 {
 	const UVitalAttributeSet* VitalAttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
+	// Unsubscribe from the energy changes to avoid its callback being called after the ability is ended
 	if (ensureAlways(IsValid(VitalAttributeSet)))
 	{
-		// Unsubscribe from the OnOutOfEnergy event to avoid its callback being called after the ability is ended
-		VitalAttributeSet->OnOutOfEnergy.Remove(OnOutOfEnergyDelegateHandle);
+		FOnGameplayAttributeValueChange& OnEnergyAttributeValueChangeDelegate =
+			ActorInfo->AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(
+				VitalAttributeSet->GetEnergyAttribute());
+
+		OnEnergyAttributeValueChangeDelegate.Remove(OnEnergyAttributeValueChangeDelegateHandle);
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

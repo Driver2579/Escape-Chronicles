@@ -6,10 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "SendGameplayEventAnimNotify.generated.h"
 
-class IAbilitySystemInterface;
-class AEscapeChroniclesPlayerState;
-
-UCLASS(meta=(DisplayName="Send Gameplay Even"))
+UCLASS(meta=(DisplayName="Send Gameplay Event"))
 class ESCAPECHRONICLES_API USendGameplayEventAnimNotify : public UAnimNotify
 {
 	GENERATED_BODY()
@@ -19,7 +16,7 @@ public:
 		const FAnimNotifyEventReference& EventReference) override;
     
 private:
-	// Gameplay tag to send
+	// Gameplay tag of the event to send
 	UPROPERTY(EditAnywhere)
 	FGameplayTag GameplayEventTag;
 };

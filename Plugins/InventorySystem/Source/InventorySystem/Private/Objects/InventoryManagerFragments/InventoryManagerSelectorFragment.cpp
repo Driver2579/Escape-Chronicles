@@ -6,64 +6,73 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Net/UnrealNetwork.h"
 
-void UInventoryManagerSelectorFragment::OnManagerInitialized(UInventoryManagerComponent* Inventory)
+void UInventoryManagerSelectorFragment::OnManagerInitialized()
 {
-	Super::OnManagerInitialized(Inventory);
+	Super::OnManagerInitialized();
 
-	if (!ensureAlways(IsValid(Inventory)))
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
+	if (bLogCurrentSlotIndex)
 	{
-		CurrentSlotIndex = INDEX_NONE;
+		OnOffsetCurrentSlotIndex.AddLambda([this](int32 Index)
+		{
+			LogCurrentSlotIndex();
+		});	
 	}
-	else
-	{
-		CurrentSlotIndex = 0;
-	}
+#endif
 }
 
 void UInventoryManagerSelectorFragment::GetLifetimeReplicatedProps(
 	TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	
+
 	DOREPLIFETIME(ThisClass, CurrentSlotIndex);
 }
 
 void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementation(const int32 Offset)
 {
 	UInventoryManagerComponent* Inventory = GetInventoryManager();
-	
+
 	if (!ensureAlways(IsValid(Inventory)))
 	{
 		return;
 	}
-	
-	const FInventorySlotsTypedArray* SlotsTypedArray = Inventory->GetTypedInventorySlotsLists().GetArrays()
-		.FindByKey(SelectableSlotsType);
-	
-	if (!ensureAlways(SlotsTypedArray != nullptr))
+
+	const FInventorySlotsTypedArray* SlotsTypedArray =
+		Inventory->GetInventoryContent().GetItems().FindByKey(SelectableSlotsTypeTag);
+
+	if (!ensureAlways(SlotsTypedArray))
 	{
 		return;
 	}
 
-	const int32 SlotsNumber = SlotsTypedArray->Array.GetSlots().Num();
-	
+	const int32 SlotsNumber = SlotsTypedArray->Array.GetItems().Num();
+
+	// Offset the index taking into account the array size
 	CurrentSlotIndex = ((CurrentSlotIndex + Offset) % SlotsNumber + SlotsNumber) % SlotsNumber;
-	
+
+#if DO_ENSURE
+	ensureAlways(SlotsTypedArray->Array.IsValidSlotIndex(CurrentSlotIndex));
+#endif
+
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 	if (bLogCurrentSlotIndex)
 	{
 		LogCurrentSlotIndex();
 	}
+#endif
+
+	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
 
 void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex()
 {
-	if (bLogCurrentSlotIndex)
-	{
-		LogCurrentSlotIndex();
-	}
+	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
 }
 
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
 void UInventoryManagerSelectorFragment::LogCurrentSlotIndex() const
 {
-	UE_LOG(LogInventorySystem, Log, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);
+	UE_LOG(LogInventorySystem, Display, TEXT("UInventoryManagerSelectorFragment: %i"), CurrentSlotIndex);
 }
+#endif

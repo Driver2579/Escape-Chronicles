@@ -6,7 +6,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "InventoryMenuWidget.generated.h"
 
-//  Inventory menu screen widget
+// Inventory menu screen widget
 UCLASS()
 class ESCAPECHRONICLES_API UInventoryMenuWidget : public URoutableWidget
 {

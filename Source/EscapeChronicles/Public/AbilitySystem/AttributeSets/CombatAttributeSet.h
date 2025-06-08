@@ -17,13 +17,8 @@ public:
 
 	ATTRIBUTE_GETTERS(ThisClass, Damage);
 
-	mutable FAttributeChangedDelegate OnDamageChanged;
-
 protected:
 	virtual void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const override;
-
-	virtual bool PreGameplayEffectExecute(FGameplayEffectModCallbackData& Data) override;
-	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 private:
 	UPROPERTY(Transient, ReplicatedUsing="OnRep_Damage")
@@ -31,6 +26,4 @@ private:
 
 	UFUNCTION()
 	void OnRep_Damage(const FGameplayAttributeData& OldValue) const;
-
-	float DamageBeforeChangeByGameplayEffect = 0;
 };

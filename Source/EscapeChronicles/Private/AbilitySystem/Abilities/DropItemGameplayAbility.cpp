@@ -39,7 +39,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 
 	const UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 	
-	if (!IsValid(InventoryManagerComponent))
+	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
@@ -49,7 +49,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 	const UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment = 
 		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
 
-	if (!IsValid(InventoryManagerSelectorFragment))
+	if (!ensureAlways(IsValid(InventoryManagerSelectorFragment)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
@@ -57,9 +57,9 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 	}
 
 	UInventoryManagerDropItemsFragment* InventoryManagerDropItemsFragment = 
-	InventoryManagerComponent->GetFragmentByClass<UInventoryManagerDropItemsFragment>();
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerDropItemsFragment>();
 
-	if (!IsValid(InventoryManagerDropItemsFragment))
+	if (!ensureAlways(IsValid(InventoryManagerDropItemsFragment)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
@@ -67,7 +67,7 @@ void UDropItemGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle 
 	}
 
 	InventoryManagerDropItemsFragment->Server_DropItem(InventoryManagerSelectorFragment->GetCurrentSlotIndex(),
-		InventoryManagerSelectorFragment->GetSelectableSlotsType());
+		InventoryManagerSelectorFragment->GetSelectableSlotsTypeTag());
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
