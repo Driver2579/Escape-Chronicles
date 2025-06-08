@@ -75,6 +75,11 @@ struct FInstanceStats : public FFastArraySerializer
 		}
 	}
 
+	void SetStat(FGameplayTag Tag, float Value)
+	{
+		SetStat(FInstanceStatsItem(Tag, Value));
+	}
+
 	// Try to avoid calling this method as deleting an element completely leads to replication of the whole array
 	void RemoveStat(const FGameplayTag& InTag)
 	{

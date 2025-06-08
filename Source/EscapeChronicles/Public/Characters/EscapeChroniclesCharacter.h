@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "Interfaces/Saveable.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -60,7 +61,7 @@ public:
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -143,6 +144,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	// If has at least one of these tags then movement is disabled
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
+	FGameplayTagContainer NullMovementGrantTags;
+	
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
@@ -292,4 +297,7 @@ private:
 	void OnFaintedGameplayEffectClassLoaded();
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
+	
+	// Checks if has a tag that block movement and does so
+	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count);
 };

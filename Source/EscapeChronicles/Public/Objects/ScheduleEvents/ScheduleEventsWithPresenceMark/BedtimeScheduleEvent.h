@@ -8,10 +8,28 @@
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "BedtimeScheduleEvent.generated.h"
 
+class ADoor;
+
+// Information about how the door should be locked during the UBedtimeScheduleEvent
+USTRUCT()
+struct FLockDoorInfo
+{
+	GENERATED_BODY()
+
+	// Whether the door's entrance should be locked
+	UPROPERTY(EditAnywhere)
+	bool bLockEntrance = false;
+
+	// Whether the door's exit should be locked
+	UPROPERTY(EditAnywhere)
+	bool bLockExit = true;
+};
+
 /**
  * An event that handles the players checking in only in their prisoner chambers, filtering the chambers of other
  * prisoners. This event has a time limit for the players to check in. If they don't check in within this time, then an
- * alert event will be started.
+ * alert event will be started. Also, once this time limit ends, all the specified doors will be closed until the event
+ * ends or paused.
  */
 UCLASS()
 class ESCAPECHRONICLES_API UBedtimeScheduleEvent : public UScheduleEventWithPresenceMark
@@ -42,6 +60,9 @@ protected:
 
 	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent) override;
 
+	virtual void OnEventPaused() override;
+	virtual void OnEventResumed() override;
+
 	virtual void OnEventEnded(const EScheduleEventEndReason EndReason) override;
 
 private:
@@ -54,14 +75,33 @@ private:
 	FDelegateHandle OnCurrentGameDateTimeUpdatedDelegateHandle;
 
 	/**
-	 * The time players have to check in after the event started. If some of the real players don't check in within this
-	 * time, an alert will be started for them.
+	 * The time players have to check in after the event started. Once this time ends, all specified doors in the
+	 * DoorsToLock list will be locked. If some of the real players don't check in within this time, an alert will be
+	 * started for them.
 	 */
-	UPROPERTY(EditDefaultsOnly, Category="Alert")
+	UPROPERTY(EditDefaultsOnly)
 	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
 
 	// Whether the time for players to check in has passed
 	bool bTimeForPlayersToCheckInPassed = false;
+
+	/**
+	 * A list of doors that should be locked once the time for players to check in has passed.
+	 * @tparam KeyType A key access tag that the door requires to be opened when it isn't locked.
+	 * @tparam ValueType An information about how exactly the door should be locked.
+	 */
+	UPROPERTY(EditDefaultsOnly)
+	TMap<FGameplayTag, FLockDoorInfo> DoorsToLock;
+
+	/**
+	 * Instances of doors that should be locked once the time for players to check in has passed.
+	 * @tparam KeyType An instance of the door on the scene.
+	 * @tparam ValueType A reference to the information about how exactly the door should be locked.
+	 */
+	TMap<TWeakObjectPtr<ADoor>, const FLockDoorInfo*> CachedDoorsInstancesToLock;
+
+	// Locks or unlocks all the doors in the CachedDoorsInstancesToLock map based on the FLockDoorInfo
+	void SetDoorsLocked(const bool bLockDoors);
 
 	// An event to start if the players don't check in within the time limit. Expected to be an alert event.
 	UPROPERTY(EditDefaultsOnly, Category="Alert")

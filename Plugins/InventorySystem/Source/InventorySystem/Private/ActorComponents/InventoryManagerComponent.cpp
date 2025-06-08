@@ -234,9 +234,40 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	return true;
 }
 
-void UInventoryManagerComponent::OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const
+void UInventoryManagerComponent::OnRep_InventoryContent() const
 {
 	OnContentChanged.Broadcast();
+}
+
+bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
+	UInventoryItemInstance* ItemInstance) const
+{
+	for (const FInventorySlotsTypedArray& TypedArray : InventoryContent.GetItems())
+	{
+		for (int32 Index = 0; Index <= TypedArray.Array.GetItems().Num(); Index++)
+		{
+			if (ItemInstance == TypedArray.Array[Index].Instance)
+			{
+				OutSlotsType = TypedArray.TypeTag;
+				OutSlotIndex = Index;
+
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemInstance)
+{
+	FGameplayTag SlotsType;
+	int32 SlotIndex;
+	
+	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
+	{
+		DeleteItem(SlotIndex, SlotsType);
+	}
 }
 
 #if WITH_EDITORONLY_DATA && !NO_LOGGING

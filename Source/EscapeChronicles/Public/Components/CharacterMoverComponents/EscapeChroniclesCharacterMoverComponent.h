@@ -41,7 +41,9 @@ public:
 
 	void SetGroundSpeedMode(const EGroundSpeedMode NewGroundSpeedMode) const;
 	void ResetGroundSpeedMode() const;
-
+	
+	float GetMaxSpeed() const;
+	
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnGroundSpeedModeChangedDelegate, EGroundSpeedMode OldGroundSpeedMode,
 		EGroundSpeedMode NewGroundSpeedMode);
 
@@ -53,6 +55,40 @@ protected:
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;
 
+	virtual void OnHandleImpact(const FMoverOnImpactParams& ImpactParams) override;
+
+	/**
+	 * Apply physics forces to the impacted component, if bEnablePhysicsInteraction is true.
+	 * @param Impact				HitResult that resulted in the impact
+	 * @param ImpactAcceleration	Acceleration of the character at the time of impact
+	 * @param ImpactVelocity		Velocity of the character at the time of impact
+	 */
+	virtual void ApplyImpactPhysicsForces(const FHitResult& Impact, const FVector& ImpactAcceleration,
+		const FVector& ImpactVelocity);
+	
 private:
+	// If enabled, the player will interact with physics objects when walking into them
+	UPROPERTY(Category="Physics Interaction", EditAnywhere)
+	uint8 bEnablePhysicsInteraction:1;
+
+	// If enabled, the PushForceFactor is applied per kg mass of the affected object
+	UPROPERTY(Category="Physics Interaction", EditAnywhere, meta=(editcondition="bEnablePhysicsInteraction"))
+	uint8 bPushForceScaledToMass:1;
+	
+	/**
+	 * If enabled, the applied push force will try to get the physics object to the same velocity than the player, not
+	 * faster. This will only scale the force down, it will never apply more force than defined by PushForceFactor.
+	 */
+	UPROPERTY(Category="Physics Interaction", EditAnywhere, meta=(editcondition="bEnablePhysicsInteraction"))
+	uint8 bScalePushForceToVelocity:1;
+
+	// Initial impulse force to apply when the player bounces into a blocking physics object
+	UPROPERTY(Category="Physics Interaction", EditAnywhere, meta=(editcondition="bEnablePhysicsInteraction"))
+	float InitialPushForceFactor;
+
+	// Force to apply when the player collides with a blocking physics object
+	UPROPERTY(Category="Physics Interaction", EditAnywhere, meta=(editcondition="bEnablePhysicsInteraction"))
+	float PushForceFactor;
+	
 	EGroundSpeedMode LastGroundSpeedMode;
 };

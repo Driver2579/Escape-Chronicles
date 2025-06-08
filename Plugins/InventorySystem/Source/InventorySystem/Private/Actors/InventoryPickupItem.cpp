@@ -13,6 +13,7 @@ AInventoryPickupItem::AInventoryPickupItem()
 	PrimaryActorTick.bCanEverTick = false;
 
 	bReplicates = true;
+	bReplicateUsingRegisteredSubObjectList = true;
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetSimulatePhysics(true);
@@ -66,6 +67,8 @@ void AInventoryPickupItem::BeginPlay()
 	{
 		ItemInstance->Initialize();
 	}
+	
+	AddReplicatedSubObject(ItemInstance);
 }
 
 bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
@@ -122,6 +125,11 @@ void AInventoryPickupItem::SetDefaultSettings() const
 	{
 		MeshComponent->SetStaticMesh(PickupItemCDOMesh);
 	}
+}
+
+void AInventoryPickupItem::BreakItemInstance(UInventoryItemInstance* ItemInstancee)
+{
+	Destroy();
 }
 
 void AInventoryPickupItem::TryApplyChangesFromItemInstance() const
