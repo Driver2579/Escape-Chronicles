@@ -50,7 +50,7 @@ public:
 	 */
 	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = INDEX_NONE,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
-	
+
 	/**
 	 * Deletes an item from the inventory.
 	 * @param SlotIndex Index of the slot.
@@ -65,17 +65,17 @@ public:
 	 */
 	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
 		UInventoryItemInstance* ItemInstance) const;
-	
+
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
-	
+
+	// Executes Action for each valid item instance in inventory
+	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+
 	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 
 	// Called when the contents of inventory slot changed
 	FOnContentChangedDelegate OnContentChanged;
 
-	// Executes Action for each valid item instance in inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
-	
 protected:
 	virtual void BeginPlay() override;
 

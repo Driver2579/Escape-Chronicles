@@ -38,11 +38,9 @@ public:
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
-
-	// Gathers all fragments of the specified class type and writes them into the provided array.
 	FInstanceStats& GetInstanceStats_Mutable() { return InstanceStats; }
-
-	// Returns the first fragment of type T, or nullptr if none exists
+	
+	// Gathers all fragments of the specified class type and writes them into the provided array.
 	template<typename T>
 	T* GetFragmentByClass() const;
 

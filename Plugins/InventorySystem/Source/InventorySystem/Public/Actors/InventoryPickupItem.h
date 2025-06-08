@@ -25,11 +25,8 @@ public:
 	AInventoryPickupItem();
 
 	UInventoryItemInstance* GetItemInstance() const { return ItemInstance; }
-
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
-	
-	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
-	
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
@@ -49,6 +46,8 @@ public:
 	// Transfers item to inventory and destroys actor
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
+	
 protected:
 	virtual void BeginPlay() override;
 
