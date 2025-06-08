@@ -164,8 +164,15 @@ void AEscapeChroniclesCharacter::BeginPlay()
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = GetPlayerState<AEscapeChroniclesPlayerState>();
 
-	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+	if (!IsValid(EscapeChroniclesPlayerState))
+	{
+		return;
+	}
+	
+	UAbilitySystemComponent* AbilitySystemComponent = EscapeChroniclesPlayerState->GetAbilitySystemComponent();
 
 	if (IsValid(AbilitySystemComponent) && AbilitySystemComponent->HasAnyMatchingGameplayTags(BlockTurningTags))
 	{

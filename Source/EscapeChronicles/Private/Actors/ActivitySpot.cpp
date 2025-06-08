@@ -33,8 +33,7 @@ void AActivitySpot::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InteractableComponent->AddInteractionHandler(FInteractDelegate::FDelegate::CreateUObject(this,
-		&ThisClass::InteractHandler));
+	InteractableComponent->OnInteract.AddUObject(this, &ThisClass::OnInteract);
 }
 
 UAbilitySystemComponent* AActivitySpot::GetAbilitySystemComponent() const
@@ -54,7 +53,7 @@ void AActivitySpot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& 
 	DOREPLIFETIME(ThisClass, CachedOccupyingCharacter)
 }
 
-void AActivitySpot::InteractHandler(UInteractionManagerComponent* InteractionManagerComponent)
+void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerComponent)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());

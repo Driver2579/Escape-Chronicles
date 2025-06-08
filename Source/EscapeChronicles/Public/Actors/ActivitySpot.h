@@ -73,7 +73,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 	
-	void InteractHandler(UInteractionManagerComponent* InteractionManagerComponent);
+	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
     
 	// === Effect ===
 
