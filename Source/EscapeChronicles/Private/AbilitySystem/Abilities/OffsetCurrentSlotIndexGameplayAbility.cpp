@@ -7,8 +7,6 @@
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
-class UInventoryManagerSelectorFragment;
-
 UOffsetCurrentSlotIndexGameplayAbility::UOffsetCurrentSlotIndexGameplayAbility()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalOnly;
@@ -30,7 +28,7 @@ void UOffsetCurrentSlotIndexGameplayAbility::ActivateAbility(const FGameplayAbil
 	const AEscapeChroniclesCharacter* Character = CastChecked<AEscapeChroniclesCharacter>(ActorInfo->AvatarActor.Get(),
 		ECastCheckedType::NullAllowed);
 	
-	if (!IsValid(Character))
+	if (!ensureAlways(IsValid(Character)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
@@ -39,7 +37,7 @@ void UOffsetCurrentSlotIndexGameplayAbility::ActivateAbility(const FGameplayAbil
 
 	const UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 	
-	if (!IsValid(InventoryManagerComponent))
+	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 
@@ -49,7 +47,7 @@ void UOffsetCurrentSlotIndexGameplayAbility::ActivateAbility(const FGameplayAbil
 	UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment = 
 		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
 
-	if (!IsValid(InventoryManagerSelectorFragment))
+	if (!ensureAlways(IsValid(InventoryManagerSelectorFragment)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
 

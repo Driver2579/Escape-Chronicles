@@ -8,7 +8,7 @@
 class UInventoryItemDefinition;
 class UInventoryItemInstance;
 
-// Base class for creating fragments of an item that can describe various logic for it
+// Base class for item's fragments that can describe various logic for it
 UCLASS(Abstract, EditInlineNew)
 class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 {
@@ -17,5 +17,5 @@ class INVENTORYSYSTEM_API UInventoryItemFragment : public UObject
 public:
 	virtual bool IsValidConfiguration(UInventoryItemDefinition* ItemDefinition) { return true; }
 	
-	virtual void OnInstanceInitialized(UInventoryItemInstance* Instance) {}
+	virtual void OnItemInstanceInitialized(UInventoryItemInstance* Instance) {}
 };

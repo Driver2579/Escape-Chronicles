@@ -4,17 +4,17 @@
 
 #include "InventorySlotsArray.h"
 #include "Net/Serialization/FastArraySerializer.h"
-
 #include "InventorySlotsTypedArrayContainer.generated.h"
 
 class UInventoryItemInstance;
+
 struct FInventorySlotsArray;
 
 // Typifies an array of slots with tag
 USTRUCT()
 struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY()
 	FGameplayTag TypeTag;
@@ -37,12 +37,12 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 USTRUCT()
 struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	/**
-	 * Creates arrays typed arrays of slots by Map.
-	 * @tparam FGameplayTag Inventory slots type.
-	 * @tparam int32 Number of slots.
+	 * Initializes inventory slots from configuration data.
+	 * @tparam KeyType Tag of the slot's type.
+	 * @tparam ValueType Number of slots.
 	 */
 	void Construct(const TMap<FGameplayTag, int32>& InitializationData)
 	{
@@ -75,7 +75,7 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 		MarkItemDirty(Arrays[ArrayIndex]);
 	}
 
-	int32 IndexOfByTag(const FGameplayTag TypeTag) const
+	int32 IndexOfByTag(const FGameplayTag& TypeTag) const
 	{
 		return Arrays.IndexOfByPredicate([TypeTag](const FInventorySlotsTypedArray& List)
 			{
@@ -83,10 +83,10 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 			});
 	}
 
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
 		return FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>(Arrays,
-			DeltaParms, *this);
+			DeltaParams, *this);
 	}
 
 private:

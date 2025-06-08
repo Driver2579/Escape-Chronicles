@@ -6,15 +6,17 @@
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
 #include "Interfaces/StoringItemInstances.h"
-
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
 
-// Called when the contents of inventory slot change
-DECLARE_MULTICAST_DELEGATE(FOnInventoryContentChanged);
-
-// Adds a custom inventory to an actor
+/**
+ * Core inventory management component that handles:
+ * - Multi-slot inventory system with typed containers
+ * - Item instance storage and operations (add/remove/find)
+ * - Replicated inventory state with notifications about the changes
+ * - Extensible through fragment system
+ */
 UCLASS(Blueprintable, Const)
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
@@ -22,36 +24,42 @@ class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, p
 	
 public:
 	UInventoryManagerComponent();
-	
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
 
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
 	T* GetFragmentByClass() const;
 
-	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
-		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType) const;
-	
 	/**
-	 * Add item DUPLICATE to inventory
-	 * @param ItemInstance The item being copied
-	 * @param SlotIndex Index of the slot (if -1 searches for an empty slot)
-	 * @param SlotsType Slot type tag
+	 * Gets item instance from specified inventory slot.
+	 * @param SlotIndex Index of the slot to query.
+	 * @param SlotTypeTag Type of slots to search (defaults to Main).
+	 * @return Pointer to item instance or nullptr if slot is empty/invalid
 	 */
-	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = -1,
-		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	UInventoryItemInstance* GetItemInstance(const int32 SlotIndex,
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main) const;
 
-	bool AddItem(const UInventoryItemDefinition* ItemInstance, int32 SlotIndex = -1,
-		FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+	/**
+	 * Adds a DUPLICATE of the given item to the inventory.
+	 * @param ItemInstance The item being copied.
+	 * @param SlotIndex Index of the slot (if INDEX_NONE, searches for an empty slot).
+	 * @param SlotTypeTag Type of the slot.
+	 */
+	bool AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex = INDEX_NONE,
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 	
 	/**
-	 * Delete an item from inventory
-	 * @param SlotIndex Index of the slot
-	 * @param SlotsType Slot type tag
+	 * Deletes an item from the inventory.
+	 * @param SlotIndex Index of the slot.
+	 * @param SlotTypeTag Type of the slot.
 	 */
 	bool DeleteItem(const int32 SlotIndex,
-		const FGameplayTag SlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
+	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful
@@ -61,11 +69,10 @@ public:
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
 	
-	void AddInventoryContentChangedHandler(const FOnInventoryContentChanged::FDelegate& Callback);
+	// Called when the contents of inventory slot changed
+	FOnContentChangedDelegate OnContentChanged;
 
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
-	// Do an action on each item in the inventory
+	// Executes Action for each valid item instance in inventory
 	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 	
 protected:
@@ -73,17 +80,17 @@ protected:
 
 	virtual void ReadyForReplication() override;
 
-	// Log information about the contents of the inventory
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
+	// Logs an information about the content of the inventory
 	void LogInventoryContent() const;
-	
+#endif
+
 private:
-	FOnInventoryContentChanged OnInventoryContentChanged;
-	
 	/**
-	* Settings for the number of slots in different types of inventory slots
-	* (Doesn't work dynamically, value must be set before BeginPlay)
-	* @tparam FGameplayTag Inventory slots type;
-	* @tparam int32 Number of slots;
+	* Settings for the number of slots in different types of inventory slots (doesn't work dynamically, value must be
+	* set before BeginPlay).
+	* @tparam KeyType Type of the slots.
+	* @tparam ValueType Number of slots.
 	*/
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, int32> SlotsNumberByTypes;
@@ -92,16 +99,18 @@ private:
 	UPROPERTY(EditDefaultsOnly, Instanced, Replicated)
 	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
 
-	// Arranged by type inventory slots capable of storing item instances
+	// Inventory storage with typed slots containers
 	UPROPERTY(ReplicatedUsing="OnRep_InventoryContent")
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()
-	void OnRep_InventoryContent();
+	void OnRep_InventoryContent() const;
 
-	// If true will log the contents of the inventory when calling OnInventoryContentChanged
+#if WITH_EDITORONLY_DATA
+	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogInventoryContent = false;
+#endif
 };
 
 template<typename T>
@@ -109,11 +118,11 @@ T* UInventoryManagerComponent::GetFragmentByClass() const
 {
 	static_assert(TIsDerivedFrom<T, UInventoryManagerFragment>::Value,
 		"T must be inherited from UInventoryManagerFragment!");
-		
+
 	for (UInventoryManagerFragment* Fragment : Fragments)
 	{
 		T* CastedFragment = Cast<T>(Fragment);
-            
+
 		if (IsValid(CastedFragment))
 		{
 			return CastedFragment;

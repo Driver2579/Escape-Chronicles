@@ -8,7 +8,7 @@
 
 class AInventoryPickupItem;
 
-// Allows to customize and call items to be dropped from the inventory
+// Allows an item to be dropped from the inventory
 UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerDropItemsFragment : public UInventoryManagerFragment
 {
@@ -17,14 +17,14 @@ class INVENTORYSYSTEM_API UInventoryManagerDropItemsFragment : public UInventory
 public:
 	// Throws the item instance in the ThrowingDirection relative to the actor creating DropItemActorClass
 	UFUNCTION(Server, Reliable)
-	void Server_DropItem(const int32 SlotIndex, const FGameplayTag SlotsType);
+	void Server_DropItem(const int32 SlotIndex, const FGameplayTag& SlotsType);
 
 private:
 	// Class used for dropping away item instances
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AInventoryPickupItem> DropItemActorClass;
 
-	// Used as an impulse when an object is ejected
+	// Impulse of the item when it's dropped. It will be multiplied with owner's rotation
 	UPROPERTY(EditDefaultsOnly)
-	FVector ThrowingDirection;
+	FVector ThrowingImpulse;
 };

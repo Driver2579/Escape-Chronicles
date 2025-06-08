@@ -6,12 +6,16 @@
 #include "GameFramework/Actor.h"
 #include "Interfaces/StoringItemInstances.h"
 #include "Objects/InventoryItemInstance.h"
-
 #include "InventoryPickupItem.generated.h"
 
 class UInventoryManagerComponent;
 
-// Can be picked up into inventory
+/**
+ * Physical representation of inventory item instance in game world (ItemInstance must be set before BeginPlay)
+ * - Spawnable pickup actor that holds ItemInstance data.
+ * - Automatically updates visual representation (mesh) from item data.
+ * - Handles pickup interaction and inventory transfer.
+ */
 UCLASS()
 class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
 {
@@ -20,38 +24,46 @@ class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringI
 public:
 	AInventoryPickupItem();
 
-	/**
-	 * Associates an actor with an instance of an item.
-	 * @see Must be called before BeginPlay.
-	 */
-	void SetItemInstance(UInventoryItemInstance* InItemInstance)
-	{
-		if (ensureAlways(!HasActorBegunPlay()) && ensureAlways(IsValid(InItemInstance)))
-		{
-			ItemInstance = InItemInstance;
-		}
-	}
+	UInventoryItemInstance* GetItemInstance() const { return ItemInstance; }
 
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
-protected:
 	virtual void OnConstruction(const FTransform& Transform) override;
-	virtual void BeginPlay() override;
 
+	// Associates an actor with an instance of an item. Must be called before BeginPlay.
+	void SetItemInstance(UInventoryItemInstance* InItemInstance)
+	{
+#if DO_ENSURE
+		ensureAlways(!HasActorBegunPlay());
+		ensureAlways(IsValid(InItemInstance));
+#endif
+
+		ItemInstance = InItemInstance;
+	}
+
+	// Transfers item to inventory and destroys actor
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
+protected:
+	virtual void BeginPlay() override;
+
 	/**
-	 * Applies a change to this actor based on the current item instance
-	 * @return True if all settings are applied correctly
+	 * Applies a change to this actor based on the current item instance (sets mesh as an item instance. But can be
+	 * overriden).
+	 * @return True if all settings are applied correctly.
 	 */
 	virtual bool ApplyChangesFromItemInstance() const;
 
-	// Set the settings  mesh as default object
+	// Reverts settings to CDO (opposite of ApplyChangesFromItemInstance)
 	virtual void SetDefaultSettings() const;
+
+	// Like ApplyChangesFromItemInstance, but at false additionally applies SetDefaultSettings
+	void TryApplyChangesFromItemInstance() const;
 
 private:
 	// An item instance this actor is associated with
@@ -59,16 +71,9 @@ private:
 	TObjectPtr<UInventoryItemInstance> ItemInstance;
 
 	// The mesh of this component will be replaced with the one associated with the item instance
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UFUNCTION()
 	void OnRep_ItemInstance();
-
-	/**
-	 * Indicates whether an ItemInstance is valid for creating an AInventoryPickupItem. Updated in OnConstruction. Must
-	 * be true before the BeginPlay is called.
-	 */
-	UPROPERTY()
-	bool bValidItemInstance;
 };

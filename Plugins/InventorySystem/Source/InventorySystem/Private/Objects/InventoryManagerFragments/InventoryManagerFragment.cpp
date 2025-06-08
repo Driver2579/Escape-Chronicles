@@ -22,12 +22,12 @@ bool UInventoryManagerFragment::CallRemoteFunction(UFunction* Function, void* Pa
 
 #if DO_CHECK
 	checkf(IsValid(OwningActor),
-	  TEXT("Replicated object %s was created with different outer than actor or component!"), *GetName());
+		TEXT("Replicated object %s was created with different outer than actor or component!"), *GetName());
 #endif
 
 	UNetDriver* NetDriver = OwningActor->GetNetDriver();
 
-	if (IsValid(NetDriver) )
+	if (IsValid(NetDriver))
 	{
 		NetDriver->ProcessRemoteFunction(OwningActor, Function, Params, OutParams, Stack, this);
 

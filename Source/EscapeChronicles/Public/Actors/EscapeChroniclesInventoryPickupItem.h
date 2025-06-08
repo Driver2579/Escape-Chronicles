@@ -22,8 +22,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
-	void InteractHandler (UInteractionManagerComponent* InteractionManagerComponent);
+	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
 };

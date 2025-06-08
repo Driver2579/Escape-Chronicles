@@ -45,7 +45,7 @@ void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 }
 
 void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
-{ 
+{
 	QueueNextMode(StartingMovementMode);
 }
 

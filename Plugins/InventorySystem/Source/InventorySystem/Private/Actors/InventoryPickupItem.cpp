@@ -3,11 +3,11 @@
 #include "Actors/InventoryPickupItem.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
+#include "Engine/ActorChannel.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemInstance.h"
 #include "Objects/InventoryItemFragments/PickupInventoryItemFragment.h"
 
-// Sets default values
 AInventoryPickupItem::AInventoryPickupItem()
 {
 	PrimaryActorTick.bCanEverTick = false;
@@ -15,28 +15,43 @@ AInventoryPickupItem::AInventoryPickupItem()
 	bReplicates = true;
 	bReplicateUsingRegisteredSubObjectList = true;
 
-	MeshComponent= CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
+	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetSimulatePhysics(true);
 
 	SetRootComponent(MeshComponent); 
+}
+
+void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, ItemInstance);
+}
+
+bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
+	FReplicationFlags* RepFlags)
+{
+	bool bParentResult = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	if (ItemInstance)
+	{
+		bParentResult |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
+	}
+	
+	return bParentResult;
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	// Process only on the server and not during editing in blueprint
-	if (!HasAuthority() || !GetWorld()->HasBegunPlay() && !IsAsset())
+	/**
+	 * Apply item changes only on server after the world has begun play (it's the first object that begins play), or
+	 * for assets
+	 */
+	if (HasAuthority() && GetWorld()->HasBegunPlay() || IsAsset())
 	{
-		return;
-	}
-
-	bValidItemInstance = ApplyChangesFromItemInstance();
-
-	// While bValidItemInstance is invalid, set the default settings
-	if (!bValidItemInstance)
-	{
-		SetDefaultSettings();
+		TryApplyChangesFromItemInstance();
 	}
 }
 
@@ -44,12 +59,11 @@ void AInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority())
-	{
-		return;
-	}
+#if DO_CHECK
+	check(ItemInstance)
+#endif
 
-	if (ensureAlways(bValidItemInstance) && !ItemInstance->IsInitialized())
+	if (HasAuthority() && !ItemInstance->IsInitialized())
 	{
 		ItemInstance->Initialize();
 	}
@@ -64,6 +78,9 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 		return false;
 	}
 
+	// === Set the required mesh ===
+
+	// Gets the UPickupInventoryItemFragment to get a suitable mesh
 	const UPickupInventoryItemFragment* PickupInventoryItemFragment =
 		ItemInstance->GetFragmentByClass<UPickupInventoryItemFragment>();
 
@@ -71,9 +88,9 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 	{
 		return false;
 	}
-	
-	UStaticMesh* StaticMesh = PickupInventoryItemFragment->GetStaticMesh();
-	
+
+	UStaticMesh* StaticMesh = PickupInventoryItemFragment->GetMesh();
+
 	if (!IsValid(StaticMesh))
 	{
 		return false;
@@ -86,25 +103,27 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 
 void AInventoryPickupItem::SetDefaultSettings() const
 {
-	const AInventoryPickupItem* DefaultObject = GetClass()->GetDefaultObject<AInventoryPickupItem>();
+	const AInventoryPickupItem* PickupItemCDO = GetClass()->GetDefaultObject<AInventoryPickupItem>();
 
-	if (!ensureAlways(IsValid(DefaultObject)))
+	if (!ensureAlways(IsValid(PickupItemCDO)))
 	{
 		return;
 	}
 
-	const UStaticMeshComponent* DefaultObjectStaticMeshComponent = DefaultObject->GetMesh();
+	// === Set up a standard mesh ===
+
+	const UStaticMeshComponent* PickupItemCDOMeshComponent = PickupItemCDO->GetMesh();
 	
-	if (!ensureAlways(IsValid(DefaultObjectStaticMeshComponent)))
+	if (!ensureAlways(IsValid(PickupItemCDOMeshComponent)))
 	{
 		return;
 	}
 	
-	UStaticMesh* DefaultObjectStaticMesh = DefaultObjectStaticMeshComponent->GetStaticMesh();
+	UStaticMesh* PickupItemCDOMesh = PickupItemCDOMeshComponent->GetStaticMesh();
 
-	if (ensureAlways(IsValid(DefaultObjectStaticMesh)))
+	if (ensureAlways(IsValid(PickupItemCDOMesh)))
 	{
-		MeshComponent->SetStaticMesh(DefaultObjectStaticMesh);
+		MeshComponent->SetStaticMesh(PickupItemCDOMesh);
 	}
 }
 
@@ -113,40 +132,32 @@ void AInventoryPickupItem::BreakItemInstance(UInventoryItemInstance* ItemInstanc
 	Destroy();
 }
 
-void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+void AInventoryPickupItem::TryApplyChangesFromItemInstance() const
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, ItemInstance);
+	// Try to apply the new settings and fall back to the default ones if failed to apply the new ones
+	if (!ApplyChangesFromItemInstance())
+	{
+		SetDefaultSettings();
+	}
 }
 
 void AInventoryPickupItem::OnRep_ItemInstance()
 {
-	if (!ensureAlways(ItemInstance))
-	{
-		return;
-	}
-
-	bValidItemInstance = ApplyChangesFromItemInstance();
-
-	// While bItemInstanceIsValidSet is invalid, set the default settings
-	if (!bValidItemInstance)
-	{
-		SetDefaultSettings();
-	}
-
-	if (!ItemInstance->IsInitialized())
-	{
-		ItemInstance->Initialize();
-	}
+	TryApplyChangesFromItemInstance();
 }
 
 void AInventoryPickupItem::Pickup(UInventoryManagerComponent* InventoryManagerComponent)
 {
-	const bool bSuccess = ensureAlways(IsValid(InventoryManagerComponent)) && ensureAlways(ItemInstance) &&
-		InventoryManagerComponent->AddItem(ItemInstance);
+#if DO_CHECK
+	check(ItemInstance)
+	check(IsValid(InventoryManagerComponent))
+#endif
 
-	if (bSuccess)
+#if DO_ENSURE
+	ensureAlways(HasAuthority());
+#endif
+	
+	if (InventoryManagerComponent->AddItem(ItemInstance))
 	{
 		Destroy();
 	}
