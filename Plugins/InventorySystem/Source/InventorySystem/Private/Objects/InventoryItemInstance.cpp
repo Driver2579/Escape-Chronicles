@@ -77,11 +77,3 @@ void UInventoryItemInstance::Break()
 
 	Outer->BreakItemInstance(this);
 }
-
-void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	UObject::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(ThisClass, Definition);
-	DOREPLIFETIME(ThisClass, LocalData);
-}

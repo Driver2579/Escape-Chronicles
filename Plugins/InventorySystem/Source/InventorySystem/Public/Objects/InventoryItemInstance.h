@@ -55,17 +55,13 @@ public:
 	 * new instance must be assigned an appropriate outer (e.g., inventory component).
 	 */
 	UInventoryItemInstance* Duplicate(UObject* Outer) const;
-	
+
 	/**
 	 * Breaks the object.
 	 * @see for exactly how the item will break is used by Outer. The item can't break without it!
 	 * @warning Outer must implement IStoringItemInstances!
 	 */
 	void Break();
-
-	DECLARE_DELEGATE_OneParam(FOnShouldBeBroken, UInventoryItemInstance*);
-
-	FOnShouldBeBroken OnShouldBeRemoved;
 
 private:
 	// Determines what the item can do (сan be thrown away, is a tool, key, etc.)

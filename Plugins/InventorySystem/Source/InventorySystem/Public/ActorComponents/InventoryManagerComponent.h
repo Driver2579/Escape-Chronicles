@@ -59,7 +59,6 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
-	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful
@@ -69,6 +68,8 @@ public:
 	
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
 	
+	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
+
 	// Called when the contents of inventory slot changed
 	FOnContentChangedDelegate OnContentChanged;
 

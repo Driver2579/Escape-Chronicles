@@ -29,7 +29,7 @@ public:
 		return ensureAlwaysMsgf(ItemDefinition->GetFragments().FindItemByClass<UDurabilityInventoryItemFragment>(),
 			TEXT("If bUseDurability is true, the definition must include UDurabilityInventoryItemFragment"));
 	}
-	
+
 private:
 	// Indicates which doors this key can open
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))

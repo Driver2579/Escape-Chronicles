@@ -15,7 +15,7 @@ UCLASS()
 class ESCAPECHRONICLES_API ADoor : public AActor
 {
 	GENERATED_BODY()
-	
+
 public:	
 	ADoor();
 

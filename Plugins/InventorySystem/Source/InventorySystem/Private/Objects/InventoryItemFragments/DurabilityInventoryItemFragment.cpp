@@ -4,24 +4,24 @@
 
 #include "Objects/InventoryItemInstance.h"
 
+void UDurabilityInventoryItemFragment::OnItemInstanceInitialized(UInventoryItemInstance* Instance)
+{
+	Super::OnItemInstanceInitialized(Instance);
+
+	Instance->GetInstanceStats_Mutable().SetStat(DurabilityStatTag, InitialDurability);
+}
+
 void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* Instance, int32 Amount) const
 {
-	const float CurrentDurability = Instance->GetLocalData_Mutable().GetData(DurabilityDataTag)->Value;
+	const float CurrentDurability = Instance->GetInstanceStats_Mutable().GetStat(DurabilityStatTag)->Value;
 
 	const float NewDurability = CurrentDurability - Amount;
 	
-	Instance->GetLocalData_Mutable().SetData(DurabilityDataTag, NewDurability);
+	Instance->GetInstanceStats_Mutable().SetStat(DurabilityStatTag, NewDurability);
 
-	// Break item
+	// Break item if durability has run out
 	if (NewDurability <= 0)
 	{
 		Instance->Break();
 	}
-}
-
-void UDurabilityInventoryItemFragment::OnInstanceInitialized(UInventoryItemInstance* Instance)
-{
-	Super::OnInstanceInitialized(Instance);
-
-	Instance->GetLocalData_Mutable().SetData(DurabilityDataTag, InitialDurability);
 }

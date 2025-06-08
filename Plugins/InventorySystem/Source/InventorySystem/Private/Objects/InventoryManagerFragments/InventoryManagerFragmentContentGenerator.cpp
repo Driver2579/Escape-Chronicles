@@ -39,9 +39,9 @@ void UInventoryManagerFragmentContentGenerator::OnDataTableLoaded(UInventoryMana
 			UInventoryItemInstance* ItemInstance = NewObject<UInventoryItemInstance>();
 			ItemInstance->Initialize(Row->ItemDefinition);
 
-			for (FLocalDataItem Data : Row->LocalDataOverride.GetAllData())
+			for (const FInstanceStatsItem& Stat : Row->InstanceStatsOverride.GetAllStats())
 			{
-				ItemInstance->GetLocalData_Mutable().SetData(Data);
+				ItemInstance->GetInstanceStats_Mutable().SetStat(Stat);
 			}
 			
 			Inventory->AddItem(ItemInstance);
