@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "GameplayTagContainer.h"
+#include "Common/Structs/ScheduleEventData.h"
 #include "SleepingManagementSubsystem.generated.h"
 
 class AEscapeChroniclesCharacter;
@@ -17,7 +19,7 @@ class ESCAPECHRONICLES_API USleepingManagementSubsystem : public UWorldSubsystem
 
 public:
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
-	
+
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
 	// Returns the number of player controllers who are sleeping right now
@@ -25,7 +27,11 @@ public:
 
 	// Sets TimeDilation depending on whether players are sleeping
 	void UpdateTimeSpeed() const;
-	
+
+protected:
+	virtual void OnCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
+		const FScheduleEventData& NewEventData);
+
 private:
 	// Using these objects will be considered as if the player is sleeping
 	UPROPERTY(EditAnywhere)
@@ -34,6 +40,12 @@ private:
 	// TimeDilation when everyone is asleep
 	UPROPERTY(EditAnywhere)
 	float SleepTimeDilation = 1;
+
+	// If specified, then to change the time dilation, the current active event must have one of these tags
+	UPROPERTY(EditAnywhere)
+	FGameplayTagContainer RequiredEventsToChangeTimeDilation;
+
+	FGameplayTag CurrentActiveEventTag;
 
 	// Used to set all players to the same TimeDilation
 	UFUNCTION(NetMulticast, Reliable)
