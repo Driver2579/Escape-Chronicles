@@ -38,5 +38,5 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AEscapeChroniclesPlayerState> PlayerStateClassOverride;
 
-	void OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState) const;
+	void OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerStat, const bool bLoaded) const;
 };

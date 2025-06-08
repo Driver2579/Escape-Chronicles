@@ -465,6 +465,30 @@ void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn)
 	LoadAndInitPlayer(PlayerController);
 }
 
+bool AEscapeChroniclesGameMode::IsPlayerOrBotFullyInitialized(const FUniquePlayerID& UniquePlayerID,
+	bool& bOutLoaded) const
+{
+	// Try to find the given FUniquePlayerID in the list of fully initialized players or bots
+	const bool* bLoadedPtr = FullyInitializedPlayersOrBots.Find(UniquePlayerID);
+
+	/**
+	 * If the FUniquePlayerID was found, then return whether it was loaded or not and true to indicate that the player
+	 * or bot was fully initialized.
+	 */
+	if (bLoadedPtr)
+	{
+		bOutLoaded = *bLoadedPtr;
+
+		return true;
+	}
+
+	// === Otherwise, return false for both values to indicate that the player or bot wasn't fully initialized ===
+
+	bOutLoaded = false;
+
+	return false;
+}
+
 void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* PlayerController)
 {
 #if DO_CHECK
@@ -482,12 +506,14 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* Playe
 	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(
 		PlayerController->PlayerState);
 
+	bool bLoaded = false;
+
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerID(PlayerState);
+		bLoaded = SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerID(PlayerState);
 	}
 
-	PostLoadInitPlayerOrBot(PlayerState);
+	PostLoadInitPlayerOrBot(PlayerState, bLoaded);
 }
 
 void AEscapeChroniclesGameMode::LoadAndInitBot_Implementation(AEscapeChroniclesPlayerState* PlayerState)
@@ -502,19 +528,22 @@ void AEscapeChroniclesGameMode::LoadAndInitBot_Implementation(AEscapeChroniclesP
 
 	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
 
+	bool bLoaded = false;
+
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
+		bLoaded = SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
 	}
 
-	PostLoadInitPlayerOrBot(PlayerState);
+	PostLoadInitPlayerOrBot(PlayerState, bLoaded);
 }
 
-void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)
+void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded)
 {
 #if DO_ENSURE
 	ensureAlwaysMsgf(bInitialGameLoadFinishedOrFailed,
-		TEXT("You must call this function only after the initial loading of the game has finished or failed!"));
+		TEXT("You must call this function only after the initial loading of the game has finished or "
+			"failed!"));
 #endif
 
 #if DO_CHECK
@@ -524,7 +553,14 @@ void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerS
 	// Register the player in the player ownership system because we have a valid UniquePlayerID now
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
 
-	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+	OnPlayerOrBotInitialized.Broadcast(PlayerState, bLoaded);
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->GetUniquePlayerID().IsValid());
+#endif
+
+	// Remember that this player or bot was fully initialized and whether he was successfully loaded or not
+	FullyInitializedPlayersOrBots.Add(PlayerState->GetUniquePlayerID(), bLoaded);
 }
 
 void AEscapeChroniclesGameMode::BeginPlay()
@@ -541,7 +577,16 @@ void AEscapeChroniclesGameMode::Logout(AController* Exiting)
 	check(Exiting->PlayerState->IsA<AEscapeChroniclesPlayerState>());
 #endif
 
-	OnPlayerOrBotLogout.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState));
+	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState);
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->GetUniquePlayerID().IsValid());
+#endif
+
+	// Since the player or bot is logging out, remove him from the list of fully initialized players or bots
+	FullyInitializedPlayersOrBots.Remove(PlayerState->GetUniquePlayerID());
+
+	OnPlayerOrBotLogout.Broadcast(PlayerState);
 
 	Super::Logout(Exiting);
 }

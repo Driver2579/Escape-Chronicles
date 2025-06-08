@@ -10,6 +10,7 @@
 #include "GameFramework/Actor.h"
 #include "ActivitySpot.generated.h"
 
+class AEscapeChroniclesPlayerState;
 class UPlayerOwnershipComponent;
 struct FStreamableHandle;
 class AEscapeChroniclesCharacter;
@@ -43,6 +44,13 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+
+	/**
+	 * Tries to set the initialized character as an occupying character for this spot if
+	 * bOccupyWhenOwningPlayerFirstJoined is true, the initialized player or bot wasn't loaded (which means that he
+	 * joined the game for the first time), and it is the player or bot that owns this spot.
+	 */
+	virtual void OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -107,6 +115,10 @@ private:
 	
 	FTransform CachedMeshTransform;
 	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
+
+	// If true, then the owning player or bot will occupy this spot when he first joined the game (i.e., wasn't loaded)
+	UPROPERTY(EditAnywhere)
+	bool bOccupyWhenOwningPlayerFirstJoined = false;
 
 	// === Events when unoccupy occupied character ===
 

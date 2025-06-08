@@ -40,7 +40,8 @@ void AEscapeChroniclesAIController::InitPlayerState()
 	}
 }
 
-void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState) const
+void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState,
+	const bool bLoaded) const
 {
 	if (InitializedPlayerState != PlayerState)
 	{

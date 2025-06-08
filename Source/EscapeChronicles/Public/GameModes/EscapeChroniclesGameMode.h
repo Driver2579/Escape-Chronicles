@@ -47,14 +47,29 @@ public:
 	 */
 	void LoadAndInitBot(AEscapeChroniclesPlayerState* PlayerState);
 
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
-		AEscapeChroniclesPlayerState* PlayerState)
+	/**
+	 * @param PlayerState The PlayerState of the player or bot that was initialized.
+	 * @param bLoaded Whether the player or bot was loaded successfully or not before the final initialization. If
+	 * false, then it's the first time the player or bot has joined this game.
+	 */
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerOrBotInitializedDelegate, AEscapeChroniclesPlayerState* PlayerState,
+		const bool bLoaded);
+
+	/**
+	 * @param UniquePlayerID FUniquePlayerID of the player or bot that you want to know whether he's initialized or not.
+	 * @param bOutLoaded Whether the player or bot with the given UniquePlayerID was loaded at least once.
+	 * @return Whether the player or bot with the given UniquePlayerID is fully initialized, meaning that the
+	 * OnPlayerOrBotInitialized delegate was called for this player or bot.
+	 */
+	bool IsPlayerOrBotFullyInitialized(const FUniquePlayerID& UniquePlayerID, bool& bOutLoaded) const;
 
 	// Called when the player or bot is fully initialized
-	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotInitialized;
+	FOnPlayerOrBotInitializedDelegate OnPlayerOrBotInitialized;
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotLogoutDelegate, AEscapeChroniclesPlayerState* PlayerState)
 
 	// Called when the player or bot logs out
-	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotLogout;
+	FOnPlayerOrBotLogoutDelegate OnPlayerOrBotLogout;
 
 protected:
 	virtual void OnLoadGameCalled();
@@ -64,7 +79,14 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
-	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
+	/**
+	 * Called after the player or bot is loaded from the last save game object that was saved or loaded (if any) or
+	 * failed to be loaded. This is the place where final initialization of the player or bot happens.
+	 * @param PlayerState PlayerState of the player or bot that was loaded or failed to be loaded.
+	 * @param bLoaded Whether the player or bot was loaded successfully or not. If false, then it's the first time the
+	 * player of bot has joined this game.
+	 */
+	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded);
 
 	virtual void BeginPlay() override;
 
@@ -128,4 +150,12 @@ private:
 	 * generates the new FUniquePlayerID for this bot. After that, it calls PostLoadInitPlayerOrBot for the bot.
 	 */
 	void LoadAndInitBot_Implementation(AEscapeChroniclesPlayerState* PlayerState);
+
+	/**
+	 * List of players or bots that were fully initialized, meaning that the PostLoadInitPlayerOrBot was called for
+	 * them.
+	 * @param KeyType The FUniquePlayerID of the player or bot that was initialized.
+	 * @param ValueType Whether this player or bot was loaded at least once or not.
+	 */
+	TMap<FUniquePlayerID, bool> FullyInitializedPlayersOrBots;
 };

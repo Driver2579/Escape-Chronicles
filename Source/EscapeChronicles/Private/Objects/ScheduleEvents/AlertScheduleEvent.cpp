@@ -392,7 +392,7 @@ void UAlertScheduleEvent::LoadAlertScheduleEventFromSaveData(const FAlertSchedul
 	SetWantedPlayers(SaveData.WantedPlayers);
 }
 
-void UAlertScheduleEvent::OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState)
+void UAlertScheduleEvent::OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded)
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
