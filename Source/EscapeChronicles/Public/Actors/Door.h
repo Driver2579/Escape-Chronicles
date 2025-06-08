@@ -11,6 +11,7 @@ class AEscapeChroniclesCharacter;
 class UBoxComponent;
 class UPhysicsConstraintComponent;
 
+// Door actor with configurable access rules (keys/tags) and automatic collision handling
 UCLASS()
 class ESCAPECHRONICLES_API ADoor : public AActor
 {
@@ -47,29 +48,44 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	/* 
+	 * Entrance trigger zone. Must be placed only on one door side and MUST NOT overlap with ExitBox.
+	 * Character presence in this zone means they're on the outside of the door.
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> EnterBox;
-	
+
+	/*
+	 * Exit trigger zone. Must be placed only on one door side and MUST NOT overlap with EnterBox.
+	 * Character presence in this zone means They're on the inside of the door
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> ExitBox;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
-
+	// Checks if the door needs to be unlocked. Must be between EnterBox and ExitBox.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> DoorwayBoxOverlap;
 
-	// Tag witch must have the key to open this door
+	/*
+	 * Physical door blocker collider. Blocks passage when active. Automatically disabled during valid access. Should
+	 * fully cover doorway and be inside the DoorwayBoxOverlap.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
+
+	// Tag that the key must have to open this door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTag KeyAccessTag;
 
 	// Characters who have one of these tags can pass freely through the door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTagContainer CharacterAccessTags;
-	
+
+	// Do character need to use a key to enter this door
 	UPROPERTY(EditAnywhere, Category="Access")
 	bool bEnterRequiresKey = false;
 
+	// Do character need to use a key to exit this door
 	UPROPERTY(EditAnywhere, Category="Access")
 	bool bExitRequiresKey = false;
 

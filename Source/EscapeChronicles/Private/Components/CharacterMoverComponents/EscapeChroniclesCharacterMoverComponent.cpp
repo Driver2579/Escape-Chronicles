@@ -108,7 +108,7 @@ float UEscapeChroniclesCharacterMoverComponent::GetMaxSpeed() const
 }
 
 void UEscapeChroniclesCharacterMoverComponent::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
-                                                                        const FMoverInputCmdContext& InputCmd)
+	const FMoverInputCmdContext& InputCmd)
 {
 	Super::OnMoverPreSimulationTick(TimeStep, InputCmd);
 	

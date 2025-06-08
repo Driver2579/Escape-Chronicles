@@ -9,7 +9,7 @@
 #include "Objects/InventoryItemFragment.h"
 #include "DoorKeyInventoryItemFragment.generated.h"
 
-// This fragment makes the item a key to the door
+// Fragment for key items that can unlock doors/containers
 UCLASS()
 class ESCAPECHRONICLES_API UDoorKeyInventoryItemFragment : public UInventoryItemFragment
 {
@@ -21,21 +21,23 @@ public:
 
 	virtual bool IsValidConfiguration(UInventoryItemDefinition* ItemDefinition) override
 	{
+		// Non-durability keys are always valid
 		if (!bUseDurability)
 		{
 			return true;
 		}
 
+		// Durability keys must include durability fragment
 		return ensureAlwaysMsgf(ItemDefinition->GetFragments().FindItemByClass<UDurabilityInventoryItemFragment>(),
 			TEXT("If bUseDurability is true, the definition must include UDurabilityInventoryItemFragment"));
 	}
 
 private:
-	// Indicates which doors this key can open
+	// Gameplay tags that specify compatible locks/doors
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	FGameplayTagContainer CompatibleAccessTags;
 
-	// If True, takes away a unit of strength from the item
+	// Whether using this key consumes durability
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	bool bUseDurability;
 };

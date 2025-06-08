@@ -54,7 +54,7 @@ public:
 
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
-	
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -144,6 +144,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	// If has at least one of these tags then movement is disabled
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
+	FGameplayTagContainer NullMovementGrantTags;
+	
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
@@ -293,4 +297,7 @@ private:
 	void OnFaintedGameplayEffectClassLoaded();
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
+	
+	// Checks if has a tag that block movement and does so
+	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count);
 };
