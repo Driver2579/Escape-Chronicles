@@ -19,8 +19,10 @@ class ESCAPECHRONICLES_API ADoor : public AActor
 public:	
 	ADoor();
 
-	bool IsEnterRequiresKey() const { return bEnterRequiresKey; };
-	bool IsExitRequiresKey() const { return bExitRequiresKey; };
+	const FGameplayTag& GetKeyAccessTag() const { return KeyAccessTag; }
+	const FGameplayTagContainer& GetCharacterAccessTags() const { return CharacterAccessTags; }
+	bool IsEnterRequiresKey() const { return bEnterRequiresKey; }
+	bool IsExitRequiresKey() const { return bExitRequiresKey; }
 	
 	// Returns true if the character has access tag to this door
 	bool HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) const;
@@ -30,14 +32,17 @@ public:
 
 	bool HasCharacterEnterAccess(const AEscapeChroniclesCharacter* Character) const
 	{
-		return HasCharacterAccessTag(Character) || !bEnterRequiresKey || HasCharacterMatchingKey(Character);
+		return !bEnterRequiresKey || HasCharacterAccessTag(Character) || HasCharacterMatchingKey(Character);
 	}
 	
 	bool HasCharacterExitAccess(const AEscapeChroniclesCharacter* Character) const
 	{
-		return HasCharacterAccessTag(Character) || !bExitRequiresKey || HasCharacterMatchingKey(Character);
+		return !bExitRequiresKey || HasCharacterAccessTag(Character) || HasCharacterMatchingKey(Character);
 	}
-	
+
+	void SetEnterRequiresKey(const bool InEnterRequiresKey) { bEnterRequiresKey = InEnterRequiresKey; }
+	void SetExitRequiresKey(const bool InExitRequiresKey) { bExitRequiresKey = InExitRequiresKey; }
+
 protected:
 	virtual void BeginPlay() override;
 
