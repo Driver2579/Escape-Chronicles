@@ -13,10 +13,6 @@ class UAbilitySystemComponent;
 class AEscapeChroniclesPlayerState;
 class UGameplayEffect;
 
-// TODO: Удалить пустые C++ классы ивентов, переместив их в BP
-// TODO: Добавить документацию на все ивенты
-// TODO: Реализовать перекличку
-
 /**
  * An event that marks specific players as "wanted" with gameplay effect applied. "Wanted player" means that the guards
  * should hunt him. The medics should remove the "wanted" mark once they cared the wanted player to the hospital after

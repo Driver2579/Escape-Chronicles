@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/StoringItemInstances.h"
 #include "Objects/InventoryItemInstance.h"
 #include "InventoryPickupItem.generated.h"
 
@@ -16,7 +17,7 @@ class UInventoryManagerComponent;
  * - Handles pickup interaction and inventory transfer.
  */
 UCLASS()
-class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
+class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
 {
 	GENERATED_BODY()
 
@@ -24,7 +25,6 @@ public:
 	AInventoryPickupItem();
 
 	UInventoryItemInstance* GetItemInstance() const { return ItemInstance; }
-
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
@@ -46,6 +46,8 @@ public:
 	// Transfers item to inventory and destroys actor
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
+	
 protected:
 	virtual void BeginPlay() override;
 
