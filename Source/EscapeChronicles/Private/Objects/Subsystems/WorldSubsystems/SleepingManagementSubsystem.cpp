@@ -6,6 +6,7 @@
 #include "Actors/ActivitySpot.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "GameFramework/GameModeBase.h"
+#include "GameState/EscapeChroniclesGameState.h"
 
 bool USleepingManagementSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
@@ -36,7 +37,18 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 
 		Beds.Add(Bed);
 	}
-	
+
+	AEscapeChroniclesGameState* GameState = InWorld.GetGameState<AEscapeChroniclesGameState>();
+
+	if (IsValid(GameState))
+	{
+		// Initialize the CurrentActiveEventTag with the tag from... the current active event 🤩
+		CurrentActiveEventTag = GameState->GetCurrentActiveEventData().EventTag;
+
+		// Listen for active event changes
+		GameState->OnCurrentActiveEventChanged.AddUObject(this, &ThisClass::OnCurrentActiveEventChanged);
+	}
+
 	FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &ThisClass::OnGameModePostLogin);
 	FGameModeEvents::GameModeLogoutEvent.AddUObject(this, &ThisClass::OnGameModeLogout);
 
@@ -50,6 +62,16 @@ void USleepingManagementSubsystem::OnBedOccupyingCharacterChanged(AEscapeChronic
 		// Updating as the total number of players has changed
 		UpdateTimeSpeed();
 	}
+}
+
+void USleepingManagementSubsystem::OnCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
+	const FScheduleEventData& NewEventData)
+{
+	// Remember the current event
+	CurrentActiveEventTag = NewEventData.EventTag;
+
+	// Try to update the time dilation since the criteria for it have changed
+	UpdateTimeSpeed();
 }
 
 void USleepingManagementSubsystem::OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer)
@@ -89,7 +111,11 @@ int32 USleepingManagementSubsystem::GetSleepingPlayersNumber() const
 
 void USleepingManagementSubsystem::UpdateTimeSpeed() const
 {
-	if (GetWorld()->GetNumPlayerControllers() == GetSleepingPlayersNumber())
+	// Check if all the players are in their beds and if the current active event allows changing the time dilation
+	const bool bCanChangeTimeDilation = GetWorld()->GetNumPlayerControllers() == GetSleepingPlayersNumber() &&
+		RequiredEventsToChangeTimeDilation.HasTagExact(CurrentActiveEventTag);
+
+	if (bCanChangeTimeDilation)
 	{
 		NetMulticast_SetTimeDilation(SleepTimeDilation);
 	}
