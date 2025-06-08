@@ -11,7 +11,7 @@ enum class EGroundSpeedMode : uint8;
 USTRUCT()
 struct ESCAPECHRONICLES_API FEscapeChroniclesCharacterExtendedDefaultInputs : public FMoverDataStructBase
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	FEscapeChroniclesCharacterExtendedDefaultInputs();
 
