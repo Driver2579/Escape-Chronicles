@@ -128,7 +128,7 @@ bool UInteractionManagerComponent::IsPathObstructed(const UInteractableComponent
 	TraceParams.AddIgnoredActor(InteractableActor);
 	TraceParams.bTraceComplex = true;
 
-	FHitResult HitResult;;
+	FHitResult HitResult;
 	return GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
 }
 

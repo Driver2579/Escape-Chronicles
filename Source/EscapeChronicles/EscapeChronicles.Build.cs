@@ -21,6 +21,7 @@ public class EscapeChronicles : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"InteractionSystem",
+			"InventorySystem",
 			"UMG",
 			"CommonUI",
 			"OnlineSubsystem"
