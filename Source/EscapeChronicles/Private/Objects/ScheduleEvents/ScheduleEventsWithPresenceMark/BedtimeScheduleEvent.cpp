@@ -2,7 +2,9 @@
 
 #include "Objects/ScheduleEvents/ScheduleEventsWithPresenceMark/BedtimeScheduleEvent.h"
 
+#include "EngineUtils.h"
 #include "EscapeChroniclesGameplayTags.h"
+#include "Actors/Door.h"
 #include "Actors/Triggers/PrisonerChamberZone.h"
 #include "Components/BoxComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
@@ -19,6 +21,34 @@ UBedtimeScheduleEvent::UBedtimeScheduleEvent()
 void UBedtimeScheduleEvent::OnEventStarted(const bool bStartPaused)
 {
 	Super::OnEventStarted(bStartPaused);
+
+	const UWorld* World = GetWorld();
+
+#if DO_CHECK
+	check(IsValid(World));
+#endif
+
+	// Cache all the doors we have to lock once the time for players to check in has passed if we should lock any
+	if (!DoorsToLock.IsEmpty())
+	{
+		for (TActorIterator<ADoor> It(World); It; ++It)
+		{
+			ADoor* Door = *It;
+
+#if DO_CHECK
+			check(IsValid(Door));
+#endif
+
+			// Try to find the door in the DoorsToLock map by its key access tag
+			const FLockDoorInfo* LockDoorInfo = DoorsToLock.Find(Door->GetKeyAccessTag());
+
+			// If the door was found in the DoorsToLock map, then we have to lock it later. Cache it in this case.
+			if (LockDoorInfo)
+			{
+				CachedDoorsInstancesToLock.Add(Door, LockDoorInfo);
+			}
+		}
+	}
 
 	/**
 	 * Listen for owning players to be initialized for the triggers, because the player may overlap with the trigger
@@ -50,7 +80,7 @@ void UBedtimeScheduleEvent::OnEventStarted(const bool bStartPaused)
 		}
 	}
 
-	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+	AEscapeChroniclesGameState* GameState = World->GetGameState<AEscapeChroniclesGameState>();
 
 	/**
 	 * If GameState is valid, then we can listen for the game time being updated to start an alert if any player doesn't
@@ -144,15 +174,16 @@ void UBedtimeScheduleEvent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime
 		TimeForPlayersToCheckIn.ToTotalMinutes();
 
 	/**
-	 * We can start an alert only in case the event is active and not paused, and if enough time has passed since the
-	 * event start to start an alert.
+	 * We can do the next logic only in case the event is active and not paused, and if enough time has passed since the
+	 * event start.
 	 */
-	const bool bCanStartAlert = !IsPaused() && IsActive() && bTimeForPlayersToCheckInPassed;
-
-	if (!bCanStartAlert)
+	if (!bTimeForPlayersToCheckInPassed || IsPaused() || !IsActive())
 	{
 		return;
 	}
+
+	// If the time for players to check in has passed, we need to lock the specified doors
+	SetDoorsLocked(true);
 
 	// This will automatically start an alert if any player still didn't check in
 	CollectPlayersThatMissedAnEvent();
@@ -163,6 +194,29 @@ void UBedtimeScheduleEvent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime
 	 */
 	GetWorld()->GetGameStateChecked<AEscapeChroniclesGameState>()->OnCurrentGameDateTimeUpdated.Remove(
 		OnCurrentGameDateTimeUpdatedDelegateHandle);
+}
+
+void UBedtimeScheduleEvent::SetDoorsLocked(const bool bLockDoors)
+{
+	for (const auto& Pair : CachedDoorsInstancesToLock)
+	{
+#if DO_CHECK
+		check(Pair.Key.IsValid());
+		check(Pair.Value);
+#endif
+
+		// Lock or unlock the door's entrance based on the bLockDoors value if we should
+		if (Pair.Value->bLockEntrance)
+		{
+			Pair.Key->SetEnterRequiresKey(bLockDoors);
+		}
+
+		// Lock or unlock the door's exit based on the bLockDoors value if we should
+		if (Pair.Value->bLockExit)
+		{
+			Pair.Key->SetExitRequiresKey(bLockDoors);
+		}
+	}
 }
 
 FBedtimeScheduleEventSaveData UBedtimeScheduleEvent::GetBedtimeScheduleEventSaveData() const
@@ -234,13 +288,42 @@ void UBedtimeScheduleEvent::NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState
 	}
 }
 
+void UBedtimeScheduleEvent::OnEventPaused()
+{
+	Super::OnEventPaused();
+
+	// We need to unlock the doors when the event is unpaused
+	SetDoorsLocked(false);
+}
+
+void UBedtimeScheduleEvent::OnEventResumed()
+{
+	Super::OnEventResumed();
+
+	// We need to lock the doors again if we locked them before the event was paused
+	if (bTimeForPlayersToCheckInPassed)
+	{
+		SetDoorsLocked(true);
+	}
+}
+
 void UBedtimeScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
 {
+	/**
+	 * Unlock the doors if the EndReason isn't EndPlay because there is no point of unlocking the doors if the world is
+	 * about to be destroyed (yeah, that's so dramatic...).
+	 */
+	if (EndReason != EScheduleEventEndReason::EndPlay)
+	{
+		SetDoorsLocked(false);
+	}
+
 	// We don't need to listen for the owning player initialization when the event ends, so unsubscribe from them
 	UnregisterOnOwningPlayerInitializedDelegates();
 
-	// Clear the variable
+	// Clear the variables
 	bTimeForPlayersToCheckInPassed = false;
+	CachedDoorsInstancesToLock.Empty();
 
 	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
 
