@@ -4,6 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -109,11 +110,15 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	InteractionManagerComponent = CreateDefaultSubobject<UInteractionManagerComponent>(
 		TEXT("Interaction Manager Component"));
-	
+
 	InteractionManagerComponent->SetupAttachment(RootComponent);
 
 	InteractionZone = CreateDefaultSubobject<UBoxComponent>(TEXT("Interaction Zone"));
 	InteractionZone->SetupAttachment(InteractionManagerComponent);
+
+	// === Inventory ===
+
+	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("Inventory Manager Component"));
 }
 
 UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const

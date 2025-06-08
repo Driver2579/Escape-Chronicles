@@ -8,12 +8,6 @@
 
 class UInteractionManagerComponent;
 
-/**
- * Delegate called when interacting with the actor
- * @param InteractionManagerComponent Reference to the manager of the actor that call the event
- */
-DECLARE_MULTICAST_DELEGATE_OneParam(FInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
-
 // A component that makes an actor interactive
 UCLASS()
 class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
@@ -23,27 +17,33 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
+	const FName& GetHintMeshTag() const { return HintMeshTag; }
+	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
+
 	bool CanInteract() const { return bCanInteract; }
 	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
-	
+
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
 
-	// Adds an interaction event handler (InteractDelegate)
-	void AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate);
-	
 	// Enables/disables the visibility of the interaction hint
 	virtual void SetInteractionHintVisibility(const bool bNewVisibility);
-	
+
+	/**
+	 * Delegate called when interacting with the actor
+	 * @param InteractionManagerComponent Reference to the manager of the actor that call the event
+	 */
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractDelegate, UInteractionManagerComponent* InteractionManagerComponent);
+
+	// A delegate called when interacting with an actor
+	FOnInteractDelegate OnInteract;
+
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	void InitializeHintMeshes();
 	void InitializeHintWidget();
-	
-	// A delegate called when interacting with an actor
-	FInteractDelegate InteractDelegate;
 
 	// Whether interaction is possible
 	UPROPERTY(EditAnywhere)

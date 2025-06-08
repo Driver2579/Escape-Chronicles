@@ -12,6 +12,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UInventoryManagerComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
 class UEscapeChroniclesCharacterMoverComponent;
@@ -60,6 +61,8 @@ public:
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
+
+	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -256,6 +259,9 @@ private:
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
