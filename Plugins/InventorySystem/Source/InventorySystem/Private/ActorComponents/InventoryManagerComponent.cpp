@@ -263,7 +263,8 @@ void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemI
 {
 	FGameplayTag SlotsType;
 	int32 SlotIndex;
-	
+
+	// Find the location of the breaking item instance and remove it from the slot
 	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
 	{
 		DeleteItem(SlotIndex, SlotsType);

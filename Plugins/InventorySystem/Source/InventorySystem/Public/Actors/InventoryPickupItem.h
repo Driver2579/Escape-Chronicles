@@ -28,7 +28,6 @@ public:
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -56,13 +55,13 @@ protected:
 	 * overriden).
 	 * @return True if all settings are applied correctly.
 	 */
-	virtual bool ApplyChangesFromItemInstance() const;
+	virtual bool ApplyChangesFromItemInstance();
 
 	// Reverts settings to CDO (opposite of ApplyChangesFromItemInstance)
-	virtual void SetDefaultSettings() const;
+	virtual void SetDefaultSettings();
 
 	// Like ApplyChangesFromItemInstance, but at false additionally applies SetDefaultSettings
-	void TryApplyChangesFromItemInstance() const;
+	void TryApplyChangesFromItemInstance();
 
 private:
 	// An item instance this actor is associated with
