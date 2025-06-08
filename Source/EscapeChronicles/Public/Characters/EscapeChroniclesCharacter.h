@@ -8,7 +8,6 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
-#include "ActiveGameplayEffectHandle.h"
 #include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
@@ -321,7 +320,7 @@ private:
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 	
 	// Checks if has a tag that block movement and does so
-	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count);
+	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count) const;
 
 	/**
 	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the
