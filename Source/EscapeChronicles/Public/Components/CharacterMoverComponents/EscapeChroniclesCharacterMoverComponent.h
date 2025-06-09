@@ -18,6 +18,8 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	virtual void InitializeComponent() override;
+
 	// Whether the movement is currently enabled or not (movement mode is not null)
 	bool IsMovementEnabled() const
 	{
@@ -58,6 +60,8 @@ public:
 	const static FName NullModeName;
 
 protected:
+	virtual void BeginPlay() override;
+
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;
 
@@ -98,8 +102,8 @@ private:
 	
 	EGroundSpeedMode LastGroundSpeedMode;
 
-	// Owning pawn's rotation settings before disabling the movement
-	bool bWasUseControllerRotationPitchEnabled = false;
-	bool bWasUseControllerRotationYawEnabled = false;
-	bool bWasUseControllerRotationRollEnabled = false;
+	// Owning pawn's rotation settings that were set in owning pawn at the time of InitializeComponent being called
+	bool bDefaultUseControllerRotationPitch = false;
+	bool bDefaultUseControllerRotationYaw = false;
+	bool bUseControllerRotationRoll = false;
 };

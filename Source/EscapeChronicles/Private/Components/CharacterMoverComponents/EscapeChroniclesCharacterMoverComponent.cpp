@@ -32,21 +32,33 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 }
 #endif
 
+void UEscapeChroniclesCharacterMoverComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+
+#if DO_CHECK
+	check(IsValid(GetOwner()));
+	check(GetOwner()->IsA<APawn>());
+#endif
+
+	const APawn* OwningPawn = CastChecked<APawn>(GetOwner());
+
+	// Remember which rotation settings were set by default
+	bDefaultUseControllerRotationPitch = OwningPawn->bUseControllerRotationPitch;
+	bDefaultUseControllerRotationYaw = OwningPawn->bUseControllerRotationYaw;
+	bUseControllerRotationRoll = OwningPawn->bUseControllerRotationRoll;
+}
+
 void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 {
+	QueueNextMode(NullModeName);
+
 #if DO_CHECK
 	check(IsValid(GetOwner()));
 	check(GetOwner()->IsA<APawn>());
 #endif
 
 	APawn* OwningPawn = CastChecked<APawn>(GetOwner());
-
-	// Remember which rotation settings were enabled before disabling movement
-	bWasUseControllerRotationPitchEnabled = OwningPawn->bUseControllerRotationPitch;
-	bWasUseControllerRotationYawEnabled = OwningPawn->bUseControllerRotationYaw;
-	bWasUseControllerRotationRollEnabled = OwningPawn->bUseControllerRotationRoll;
-
-	QueueNextMode(NullModeName);
 
 	// Disable any rotation on the pawn
 	OwningPawn->bUseControllerRotationPitch = false;
@@ -73,9 +85,9 @@ void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
 	APawn* OwningPawn = CastChecked<APawn>(GetOwner());
 
 	// Get the default rotation settings back to the pawn
-	OwningPawn->bUseControllerRotationPitch = bWasUseControllerRotationPitchEnabled;
-	OwningPawn->bUseControllerRotationYaw = bWasUseControllerRotationYawEnabled;
-	OwningPawn->bUseControllerRotationRoll = bWasUseControllerRotationRollEnabled;
+	OwningPawn->bUseControllerRotationPitch = bDefaultUseControllerRotationPitch;
+	OwningPawn->bUseControllerRotationYaw = bDefaultUseControllerRotationYaw;
+	OwningPawn->bUseControllerRotationRoll = bUseControllerRotationRoll;
 }
 
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
