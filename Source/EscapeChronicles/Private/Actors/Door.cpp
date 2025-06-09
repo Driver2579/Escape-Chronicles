@@ -58,7 +58,7 @@ void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedCompo
 		return;
 	}
 
-	// Determine whether character needs a key under the current conditions
+	// Determine whether character needs a key in the current conditions
 	const bool bRequiresKey = IsRequiresKey(Character);
 
 	// Unlock the door if the key is not required or the character has an access tag
