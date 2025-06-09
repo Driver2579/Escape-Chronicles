@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
 
+	UFUNCTION(BlueprintCallable)
+	bool HasAnyMeshControllingStateTags() const;
+
 	virtual void PostLoad() override;
 
 	virtual FVector GetNavAgentLocation() const override;
@@ -292,7 +295,7 @@ private:
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
 
-	void OnFaintedGameplayEffectClassLoaded();
+	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 	
