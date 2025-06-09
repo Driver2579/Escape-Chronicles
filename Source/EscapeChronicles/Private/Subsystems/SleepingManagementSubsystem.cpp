@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Objects/Subsystems/WorldSubsystems/SleepingManagementSubsystem.h"
+#include "Subsystems/SleepingManagementSubsystem.h"
 
 #include "EngineUtils.h"
 #include "Actors/ActivitySpot.h"
