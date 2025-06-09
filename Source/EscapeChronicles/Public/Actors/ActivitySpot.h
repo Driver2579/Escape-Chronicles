@@ -84,19 +84,19 @@ private:
 
 	// Effect that is applied on the occupied character and is removed when he gets up
 	UPROPERTY(EditAnywhere)
-	TSoftClassPtr<UGameplayEffect> OccupingEffectClass;
+	TSoftClassPtr<UGameplayEffect> OccupyingEffectClass;
 
 	UPROPERTY(EditAnywhere)
 	int32 EffectLevel;
 
-	FActiveGameplayEffectHandle OccupingEffectSpecHandle;
+	FActiveGameplayEffectHandle OccupyingEffectSpecHandle;
 
 	// === Animation montage ===
 
 	UPROPERTY(EditAnywhere)
-	TArray<TSoftObjectPtr<UAnimMontage>> OccupingAnimMontages;
+	TArray<TSoftObjectPtr<UAnimMontage>> OccupyingAnimMontages;
 
-	int32 SelectedOccupingAnimMontage;
+	int32 SelectedOccupyingAnimMontage;
 
 	// === Occupying ===
 

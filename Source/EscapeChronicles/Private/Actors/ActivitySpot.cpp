@@ -167,17 +167,17 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	// === Load and apply animation and effect ===
 
 	OccupyingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		OccupingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+		OccupyingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 			&ThisClass::OnOccupyingEffectLoaded));
 
 #if DO_CHECK
-	check(OccupingAnimMontages.Num() > 0);
+	check(OccupyingAnimMontages.Num() > 0);
 #endif
 
-	SelectedOccupingAnimMontage = FMath::Rand() % OccupingAnimMontages.Num();
+	SelectedOccupyingAnimMontage = FMath::Rand() % OccupyingAnimMontages.Num();
 
 	OccupyingAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		OccupingAnimMontages[SelectedOccupingAnimMontage].ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+		OccupyingAnimMontages[SelectedOccupyingAnimMontage].ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 			&ThisClass::OnOccupyingAnimMontageLoaded));
 }
 
@@ -224,7 +224,7 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 
 	if (ensureAlways(IsValid(AnimInstance)))
 	{
-		AnimInstance->Montage_Play(OccupingAnimMontages[SelectedOccupingAnimMontage].Get());
+		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 	}
 }
 
@@ -238,9 +238,9 @@ void AActivitySpot::OnOccupyingEffectLoaded()
 	}
 
 	const FGameplayEffectSpecHandle EffectSpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
-		OccupingEffectClass.Get(), EffectLevel, AbilitySystemComponent->MakeEffectContext());
+		OccupyingEffectClass.Get(), EffectLevel, AbilitySystemComponent->MakeEffectContext());
 
-	OccupingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+	OccupyingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
 }
 
 void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter* Character)
@@ -265,7 +265,7 @@ void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter
 		return;
 	}
 
-	AnimInstance->Montage_Stop(0.0, OccupingAnimMontages[SelectedOccupingAnimMontage].Get());
+	AnimInstance->Montage_Stop(0.0, OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 
 	// === Stop effect ===
 
@@ -276,7 +276,7 @@ void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter
 		return;
 	}
 
-	AbilitySystemComponent->RemoveActiveGameplayEffect(OccupingEffectSpecHandle);
+	AbilitySystemComponent->RemoveActiveGameplayEffect(OccupyingEffectSpecHandle);
 	
 	// === Releasing the memory ===
 
