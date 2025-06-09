@@ -200,8 +200,13 @@ void UBedtimeScheduleEvent::SetDoorsLocked(const bool bLockDoors)
 {
 	for (const auto& Pair : CachedDoorsInstancesToLock)
 	{
+		// Skip invalid instances in case they were destroyed
+		if (!Pair.Key.IsValid())
+		{
+			continue;
+		}
+
 #if DO_CHECK
-		check(Pair.Key.IsValid());
 		check(Pair.Value);
 #endif
 
