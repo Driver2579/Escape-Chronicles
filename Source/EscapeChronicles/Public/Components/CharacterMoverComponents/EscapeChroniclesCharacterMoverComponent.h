@@ -60,8 +60,6 @@ public:
 	const static FName NullModeName;
 
 protected:
-	virtual void BeginPlay() override;
-
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;
 
