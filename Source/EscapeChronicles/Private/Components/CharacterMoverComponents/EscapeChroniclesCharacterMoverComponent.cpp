@@ -34,7 +34,24 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 
 void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 {
+#if DO_CHECK
+	check(IsValid(GetOwner()));
+	check(GetOwner()->IsA<APawn>());
+#endif
+
+	APawn* OwningPawn = CastChecked<APawn>(GetOwner());
+
+	// Remember which rotation settings were enabled before disabling movement
+	bWasUseControllerRotationPitchEnabled = OwningPawn->bUseControllerRotationPitch;
+	bWasUseControllerRotationYawEnabled = OwningPawn->bUseControllerRotationYaw;
+	bWasUseControllerRotationRollEnabled = OwningPawn->bUseControllerRotationRoll;
+
 	QueueNextMode(NullModeName);
+
+	// Disable any rotation on the pawn
+	OwningPawn->bUseControllerRotationPitch = false;
+	OwningPawn->bUseControllerRotationYaw = false;
+	OwningPawn->bUseControllerRotationRoll = false;
 
 	// TODO: It is also necessary that when the movement is turned off, the rotation does not work too! 
 
@@ -47,6 +64,18 @@ void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
 {
 	QueueNextMode(StartingMovementMode);
+
+#if DO_CHECK
+	check(IsValid(GetOwner()));
+	check(GetOwner()->IsA<APawn>());
+#endif
+
+	APawn* OwningPawn = CastChecked<APawn>(GetOwner());
+
+	// Get the default rotation settings back to the pawn
+	OwningPawn->bUseControllerRotationPitch = bWasUseControllerRotationPitchEnabled;
+	OwningPawn->bUseControllerRotationYaw = bWasUseControllerRotationYawEnabled;
+	OwningPawn->bUseControllerRotationRoll = bWasUseControllerRotationRollEnabled;
 }
 
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
