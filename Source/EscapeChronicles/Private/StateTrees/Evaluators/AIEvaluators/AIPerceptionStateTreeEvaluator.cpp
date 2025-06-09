@@ -17,26 +17,27 @@ void FAIPerceptionStateTreeEvaluator::TreeStart(FStateTreeExecutionContext& Cont
 	check(InstanceData.Pawn->GetController()->IsA<AAIController>());
 #endif
 
-	InstanceData.AIController = CastChecked<AAIController>(InstanceData.Pawn->GetController());
+	AAIController* AIController = CastChecked<AAIController>(InstanceData.Pawn->GetController());
+
+	// Cache the AIPerceptionComponent to not get it every tick
+	InstanceData.AIPerceptionComponent = AIController->GetAIPerceptionComponent();
+
+#if DO_ENSURE
+	ensureAlways(InstanceData.AIPerceptionComponent.IsValid());
+#endif
 }
 
 void FAIPerceptionStateTreeEvaluator::Tick(FStateTreeExecutionContext& Context, const float DeltaTime) const
 {
 	FInstanceDataType& InstanceData = Context.GetInstanceData<FInstanceDataType>(*this);
 
-#if DO_CHECK
-	check(InstanceData.AIController.IsValid());
-#endif
-
-	const UAIPerceptionComponent* AIPerceptionComponent = InstanceData.AIController->GetAIPerceptionComponent();
-
-	if (!ensure(IsValid(AIPerceptionComponent)))
+	if (!ensure(InstanceData.AIPerceptionComponent.IsValid()))
 	{
 		return;
 	}
 
 	TArray<AActor*> SeenActors;
-	AIPerceptionComponent->GetCurrentlyPerceivedActors(UAISense_Sight::StaticClass(), SeenActors);
+	InstanceData.AIPerceptionComponent->GetCurrentlyPerceivedActors(UAISense_Sight::StaticClass(), SeenActors);
 
 	/**
 	 * Update the SeenActors array with a new one and broadcast the delegate if it was changed. We use MoveTemp to avoid

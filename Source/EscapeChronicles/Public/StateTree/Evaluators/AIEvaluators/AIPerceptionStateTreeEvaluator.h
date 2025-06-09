@@ -6,7 +6,7 @@
 #include "StateTreeEvaluatorBase.h"
 #include "AIPerceptionStateTreeEvaluator.generated.h"
 
-class AAIController;
+class UAIPerceptionComponent;
 
 USTRUCT()
 struct FAISeesCharacterStateTreeEvaluatorInstanceData
@@ -25,7 +25,7 @@ struct FAISeesCharacterStateTreeEvaluatorInstanceData
 	UPROPERTY(EditAnywhere)
 	FStateTreeDelegateDispatcher OnSeenActorsChangedDispatcher;
 
-	TWeakObjectPtr<AAIController> AIController;
+	TWeakObjectPtr<UAIPerceptionComponent> AIPerceptionComponent;
 };
 
 // An evaluator that gets values from AI perception
