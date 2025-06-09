@@ -32,8 +32,6 @@ void UEscapeChroniclesCharacterMoverComponent::PostEditChangeProperty(FPropertyC
 }
 #endif
 
-
-
 void UEscapeChroniclesCharacterMoverComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
