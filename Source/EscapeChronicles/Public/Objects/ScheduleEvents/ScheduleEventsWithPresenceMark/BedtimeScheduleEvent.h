@@ -53,8 +53,6 @@ protected:
 	virtual bool CanCheckInPlayer(const AActor* PresenceMarkTrigger,
 		const AEscapeChroniclesPlayerState* PlayerToCheckIn) const override;
 
-	// TODO: Close the door on lock when the player is checked in and update documentation
-
 	virtual void OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
 		const FGameplayDateTime& NewDateTime);
 
