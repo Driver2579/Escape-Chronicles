@@ -24,10 +24,9 @@ class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemI
 	GENERATED_BODY()
 	
 public:
-	// When a character occupies or unoccupies this actor this delegate is triggered
-	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* Character);
-	
 	AActivitySpot();
+
+	int32 GetEffectLevel() const { return EffectLevel; }
 
 	/**
 	 * Determines who is currently occupying
@@ -36,12 +35,17 @@ public:
 	 */
 	bool SetOccupyingCharacter(AEscapeChroniclesCharacter* Character);
 
+	void SetEffectLevel(int32 InEffectLevel) { EffectLevel = InEffectLevel; }
+
 	AEscapeChroniclesCharacter* GetOccupyingCharacter() const { return CachedOccupyingCharacter; }
-	
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	void AddOccupyingCharacterChangedHandler(const FOnOccupyingCharacterChanged::FDelegate& Callback);
-	
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* Character);
+
+	// Called when a character occupies or unoccupies this actor this delegate
+	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -59,33 +63,34 @@ protected:
 
 	// Makes character unoccupy this actor (The value of CachedOccupyingCharacter does not change)
 	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
-	
-private:
-	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
 
+private:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UPlayerOwnershipComponent> PlayerOwnershipComponent;
 
 	// === Attaching ===
-	
+
 	// Mesh for display, interaction and attach to when character occupying
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UStaticMeshComponent> Mesh;
 
-	// Socket on the mesh that the character will attach to when it occupying 
+	// Socket on the mesh that the character will attach to when it is occupying
 	UPROPERTY(EditAnywhere)
 	FName AttachSocketName;
-	
+
+	FTransform CachedMeshTransform;
+	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
+
 	// === Interaction ===
-	
-	UPROPERTY(EditAnywhere)
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components|Movement", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInteractableComponent> InteractableComponent;
-	
+
 	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
-    
+
 	// === Effect ===
 
-	// Effect that is applyed on the occupied character and is removed when he gets up.
+	// Effect that is applied on the occupied character and is removed when he gets up
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<UGameplayEffect> OccupingEffectClass;
 
@@ -95,26 +100,23 @@ private:
 	FActiveGameplayEffectHandle OccupingEffectSpecHandle;
 
 	// === Animation montage ===
-    
+
 	UPROPERTY(EditAnywhere)
 	TArray<TSoftObjectPtr<UAnimMontage>> OccupingAnimMontages;
 
 	int32 SelectedOccupingAnimMontage;
-	
+
 	// === Occupying ===
-	
+
 	UPROPERTY(ReplicatedUsing="OnRep_CachedOccupyingCharacter")
 	TObjectPtr<AEscapeChroniclesCharacter> CachedOccupyingCharacter;
-	
+
 	UFUNCTION()
 	void OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue);
 
 	// OccupySpot does not work on characters with these tags
 	UPROPERTY(EditAnywhere)
 	FGameplayTagContainer OccupyingBlockedTags;
-	
-	FTransform CachedMeshTransform;
-	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
 
 	// If true, then the owning player or bot will occupy this spot when he first joined the game (i.e., wasn't loaded)
 	UPROPERTY(EditAnywhere)

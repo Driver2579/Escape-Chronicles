@@ -165,10 +165,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
-	// If has at least one of these tags then movement is disabled
+	/**
+	 * If a character has at least one such tag, it means that it is in a mesh controlling state. This is useful when
+	 * you need to block a character to process it in a specific way (put it on a chair, enable ragdoll physics).
+	 * This includes:
+	 * - Disabling capsule collision
+	 * - Enabling mesh doll collision
+	 * - Switching to NullMovement
+	*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
-	FGameplayTagContainer NullMovementGrantTags;
-	
+	FGameplayTagContainer MeshControllingStateTags;
+
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
@@ -180,10 +187,6 @@ protected:
 	// ActorAndViewDelta interpolation speed when rotating mesh
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
-
-	// Tags that block mesh rotation
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
-	FGameplayTagContainer BlockTurningTags;
 
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
@@ -320,7 +323,7 @@ private:
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 	
 	// Checks if has a tag that block movement and does so
-	void DisablingMovementHandler(const FGameplayTag GameplayTag, int32 Count) const;
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const;
 
 	/**
 	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the

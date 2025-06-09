@@ -18,6 +18,7 @@ class ESCAPECHRONICLES_API USleepingManagementSubsystem : public UWorldSubsystem
 	GENERATED_BODY()
 
 public:
+	// This system requires settings. Therefore, we allow the creation of only a blueprint version.
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
@@ -47,14 +48,10 @@ private:
 
 	FGameplayTag CurrentActiveEventTag;
 
-	// Used to set all players to the same TimeDilation
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_SetTimeDilation(float InTimeDilation) const;
-
 	// Events when TimeDilation is updated
-	void OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer);
-	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting);
-	void OnBedOccupyingCharacterChanged(AEscapeChroniclesCharacter* Character);
+	void OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer) const;
+	void OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting) const;
+	void OnBedOccupyingCharacterChanged(AEscapeChroniclesCharacter* Character) const;
 
 	/**
 	 * All beds sleeping on which sets SleepTimeDilation.

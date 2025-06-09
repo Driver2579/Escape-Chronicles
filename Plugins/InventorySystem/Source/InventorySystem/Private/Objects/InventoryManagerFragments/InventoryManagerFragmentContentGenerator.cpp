@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Objects/InventoryManagerFragments/InventoryManagerFragmentContentGenerator.h"
-
 #include "Common/Structs/TableRowBases/InventoryManagerGeneratingContentData.h"
 #include "Engine/AssetManager.h"
 
