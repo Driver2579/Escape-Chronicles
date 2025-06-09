@@ -17,11 +17,6 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
 	
-	if (InWorld.GetNetMode() == NM_Client)
-	{
-		return;
-	}
-	
 	for (TActorIterator<AActor> It(&InWorld, BedClass.Get()); It; ++It)
 	{
 		AActivitySpot* Bed = Cast<AActivitySpot>(*It);
@@ -31,9 +26,7 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 			continue;
 		}
 		
-		Bed->AddOccupyingCharacterChangedHandler(
-			AActivitySpot::FOnOccupyingCharacterChanged::FDelegate::CreateUObject(this,
-				&ThisClass::OnBedOccupyingCharacterChanged));
+		Bed->OnOccupyingCharacterChanged.AddUObject(this, &ThisClass::OnBedOccupyingCharacterChanged);
 
 		Beds.Add(Bed);
 	}
@@ -55,13 +48,10 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	UpdateTimeSpeed();
 }
 
-void USleepingManagementSubsystem::OnBedOccupyingCharacterChanged(AEscapeChroniclesCharacter* Character)
+void USleepingManagementSubsystem::OnBedOccupyingCharacterChanged(AEscapeChroniclesCharacter* Character) const
 {
-	if (GetWorld()->GetNetMode() != NM_Client)
-	{
-		// Updating as the total number of players has changed
-		UpdateTimeSpeed();
-	}
+	// Updating as the total number of players has changed
+	UpdateTimeSpeed();
 }
 
 void USleepingManagementSubsystem::OnCurrentActiveEventChanged(const FScheduleEventData& OldEventData,
@@ -74,29 +64,23 @@ void USleepingManagementSubsystem::OnCurrentActiveEventChanged(const FScheduleEv
 	UpdateTimeSpeed();
 }
 
-void USleepingManagementSubsystem::OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer)
+void USleepingManagementSubsystem::OnGameModePostLogin(AGameModeBase* GameMode, APlayerController* NewPlayer) const
 {
-	if (GetWorld()->GetNetMode() != NM_Client)
-	{
-		// Updating as the total number of players has changed
-		UpdateTimeSpeed();
-	}
+	// Updating as the total number of players has changed
+	UpdateTimeSpeed();
 }
 
-void USleepingManagementSubsystem::OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting)
+void USleepingManagementSubsystem::OnGameModeLogout(AGameModeBase* GameMode, AController* Exiting) const
 {
-	if (GetWorld()->GetNetMode() != NM_Client)
-	{
-		// Updating as the total number of players has changed
-		UpdateTimeSpeed();
-	}
+	// Updating as the total number of players has changed
+	UpdateTimeSpeed();
 }
 
 int32 USleepingManagementSubsystem::GetSleepingPlayersNumber() const
 {
 	int32 Result = 0;
 
-	for (AActivitySpot* Bed : Beds)
+	for (const AActivitySpot* Bed : Beds)
 	{
 		const AEscapeChroniclesCharacter* Character = Bed->GetOccupyingCharacter();
 
@@ -117,15 +101,10 @@ void USleepingManagementSubsystem::UpdateTimeSpeed() const
 
 	if (bCanChangeTimeDilation)
 	{
-		NetMulticast_SetTimeDilation(SleepTimeDilation);
+		GetWorld()->GetWorldSettings()->SetTimeDilation(SleepTimeDilation);
 	}
 	else
 	{
-		NetMulticast_SetTimeDilation(1);
+		GetWorld()->GetWorldSettings()->SetTimeDilation(1);
 	}
-}
-
-void USleepingManagementSubsystem::NetMulticast_SetTimeDilation_Implementation(const float InTimeDilation) const
-{
-	GetWorld()->GetWorldSettings()->SetTimeDilation(InTimeDilation);
 }
