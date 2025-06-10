@@ -74,6 +74,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
 
+	UFUNCTION(BlueprintCallable)
+	bool HasAnyMeshControllingStateTags() const;
+
 	virtual void PostLoad() override;
 
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,
@@ -297,7 +300,7 @@ private:
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
 
-	void OnFaintedGameplayEffectClassLoaded();
+	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 	
