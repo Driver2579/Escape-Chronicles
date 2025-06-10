@@ -18,11 +18,18 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const FName& GetHintMeshTag() const { return HintMeshTag; }
 	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
 
 	bool CanInteract() const { return bCanInteract; }
-	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
+	void SetCanInteract(const bool bInbCanInteract)
+	{
+		bCanInteract = bInbCanInteract;
+
+		SetInteractionHintVisibility(false);
+	}
 
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
@@ -47,9 +54,12 @@ private:
 	void InitializeHintWidget();
 
 	// Whether interaction is possible
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, ReplicatedUsing="OnRep_CanInteract")
 	bool bCanInteract;
 	
+	UFUNCTION()
+	void OnRep_CanInteract();
+
 	// Tag to find meshes to hint when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")
 	FName HintMeshTag = TEXT("HintMesh");
