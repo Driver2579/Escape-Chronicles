@@ -156,21 +156,15 @@ void AActivitySpot::OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* Playe
 	SetOccupyingCharacter(CastChecked<AEscapeChroniclesCharacter>(PlayerState->GetPawn()));
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerComponent)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 
-	if (!ensureAlways(IsValid(Character)) || CachedOccupyingCharacter != nullptr)
+	if (ensureAlways(IsValid(Character)) && !IsOccupied())
 	{
-		return;
-	}
-
-	AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-	if (ensureAlways(IsValid(PlayerState)) && SetOccupyingCharacter(Character))
-	{
-		PlayerState->SetOccupyingActivitySpot(this);
+		SetOccupyingCharacter(Character);
 	}
 }
 
