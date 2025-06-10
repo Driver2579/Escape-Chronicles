@@ -192,6 +192,10 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 
 	CacheMeshData(CharacterMesh);
 
+	// Move the character
+	Character->SetActorLocation(CharacterLocationOnOccupySpot);
+	Character->SetActorRotation(CharacterRotationOnOccupySpot);
+
 	// === Start async loading of assets ===
 
 	LoadOccupyingAnimMontage();
@@ -340,10 +344,6 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 	}
 
 	ApplyCachedMeshData(CharacterMesh);
-
-	// Move the character (must be before mesh controlling)
-	Character->SetActorLocation(CharacterLocationOnOccupySpot);
-	Character->SetActorRotation(CharacterRotationOnOccupySpot);
 }
 
 void AActivitySpot::CancelOccupyingAnimation(const USkeletalMeshComponent* CharacterMesh)
