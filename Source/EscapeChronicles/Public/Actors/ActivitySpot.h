@@ -36,6 +36,8 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 #endif
 
+	bool IsOccupied() const { return  CachedOccupyingCharacter != nullptr; }
+
 	int32 GetEffectLevel() const { return EffectLevel; }
 
 	void SetEffectLevel(const int32 InEffectLevel) { EffectLevel = InEffectLevel; }

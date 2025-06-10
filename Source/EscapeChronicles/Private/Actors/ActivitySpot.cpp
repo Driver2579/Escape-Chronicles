@@ -107,7 +107,6 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 
 	AEscapeChroniclesPlayerState* PlayerState;
 	UAbilitySystemComponent* AbilitySystemComponent;
-	const UVitalAttributeSet* VitalAttributeSet = nullptr;
 
 	// Branch for unoccupying (Character == nullptr)
 	if (Character == nullptr)
@@ -122,16 +121,14 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 	}
 
-	if (ensureAlways(IsValid(AbilitySystemComponent)))
+	if (!ensureAlways(IsValid(PlayerState)) || !ensureAlways(IsValid(AbilitySystemComponent)))
 	{
-		VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
+		return false;
 	}
 
-	// Validate all required components
-	const bool bAllDataValid = ensureAlways(IsValid(PlayerState)) && ensureAlways(AbilitySystemComponent) &&
-		ensureAlways(VitalAttributeSet);
-	
-	if (!bAllDataValid)
+	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
+
+	if (!ensureAlways(VitalAttributeSet))
 	{
 		return false;
 	}
@@ -149,14 +146,9 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 
 		InteractableComponent->SetCanInteract(true);
 	}
-	else
+	// Check for blocking tags
+	else if (!AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
 	{
-		// Check for blocking tags
-		if (AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
-		{
-			return false;
-		}
-
 		OccupySpot(Character);
 		PlayerState->SetOccupyingActivitySpot(this);
 
@@ -166,6 +158,10 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		UnoccupyIfAttributeHasDecreasedDelegateHandle =
 			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 				.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
+	}
+	else
+	{
+		return false;
 	}
 
 	CachedOccupyingCharacter = Character;
