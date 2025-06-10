@@ -29,8 +29,8 @@ AActivitySpot::AActivitySpot()
 	MeshComponent->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
 	MeshComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
-#if WITH_EDITORONLY_DATA && WITH_EDITOR
-	CharacterTransformOnOccupySpotComponent = CreateDefaultSubobject<UCapsuleComponent>(
+#if WITH_EDITORONLY_DATA
+	CharacterTransformOnOccupySpotComponent = CreateEditorOnlyDefaultSubobject<UCapsuleComponent>(
 		TEXT("Character Transform On Occupy Spot"));
 
 	CharacterTransformOnOccupySpotComponent->SetupAttachment(MeshComponent);
