@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/BoxComponent.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/Saveable.h"
 #include "Door.generated.h"
 
 class AEscapeChroniclesCharacter;
@@ -14,7 +15,7 @@ class UPhysicsConstraintComponent;
 
 // Door actor with configurable access rules (keys/tags) and automatic collision handling
 UCLASS()
-class ESCAPECHRONICLES_API ADoor : public AActor
+class ESCAPECHRONICLES_API ADoor : public AActor, public ISaveable
 {
 	GENERATED_BODY()
 
@@ -56,6 +57,11 @@ public:
 		UpdateConfirmedCharactersPool();
 	}
 
+	virtual void OnPostLoadObject() override
+	{
+		UpdateConfirmedCharactersPool();
+	}
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -94,11 +100,11 @@ private:
 	FGameplayTagContainer CharacterAccessTags;
 
 	// Do character need to use a key to enter this door
-	UPROPERTY(EditAnywhere, Category="Access")
+	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
 	bool bEnterRequiresKey = false;
 
 	// Do character need to use a key to exit this door
-	UPROPERTY(EditAnywhere, Category="Access")
+	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
 	bool bExitRequiresKey = false;
 
 	UFUNCTION()
