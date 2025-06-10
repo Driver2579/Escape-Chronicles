@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Components/BoxComponent.h"
 #include "GameFramework/Actor.h"
 #include "Door.generated.h"
 
@@ -41,8 +42,19 @@ public:
 		return !bExitRequiresKey || HasCharacterAccessTag(Character) || HasCharacterMatchingKey(Character);
 	}
 
-	void SetEnterRequiresKey(const bool InEnterRequiresKey) { bEnterRequiresKey = InEnterRequiresKey; }
-	void SetExitRequiresKey(const bool InExitRequiresKey) { bExitRequiresKey = InExitRequiresKey; }
+	void SetEnterRequiresKey(const bool InEnterRequiresKey)
+	{
+		bEnterRequiresKey = InEnterRequiresKey;
+
+		UpdateConfirmedCharactersPool();
+	}
+	
+	void SetExitRequiresKey(const bool InExitRequiresKey)
+	{
+		bExitRequiresKey = InExitRequiresKey;
+
+		UpdateConfirmedCharactersPool();
+	}
 
 protected:
 	virtual void BeginPlay() override;
@@ -109,6 +121,10 @@ private:
 	
 	// Removes 1 unit of durability if needed
 	void UseKey(const AEscapeChroniclesCharacter* Character) const;
+
+	void UpdateConfirmedCharactersPool();
+
+	void TryAddCharacterToPool(AEscapeChroniclesCharacter* Character);
 
 	// Characters who are in the process of going through the door
 	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ConfirmedCharactersPool;
