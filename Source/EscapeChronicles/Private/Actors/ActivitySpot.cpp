@@ -29,6 +29,7 @@ AActivitySpot::AActivitySpot()
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+	MeshComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
 #if WITH_EDITORONLY_DATA && WITH_EDITOR
 	CharacterTransformOnOccupySpotComponent = CreateDefaultSubobject<UCapsuleComponent>(
