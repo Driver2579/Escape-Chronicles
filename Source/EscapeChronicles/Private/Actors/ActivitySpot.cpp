@@ -97,7 +97,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		return false;
 	}
 
-	// === Actor State Preparation  ===
+	// === Actor State Preparation ===
 
 	AEscapeChroniclesPlayerState* PlayerState;
 	UAbilitySystemComponent* AbilitySystemComponent;
