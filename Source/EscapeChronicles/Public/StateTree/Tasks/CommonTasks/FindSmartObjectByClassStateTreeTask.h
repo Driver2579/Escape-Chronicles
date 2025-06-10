@@ -66,4 +66,10 @@ struct FFindSmartObjectByClassStateTreeTask : public FStateTreeTaskCommonBase
 
 	virtual EStateTreeRunStatus EnterState(FStateTreeExecutionContext& Context,
 		const FStateTreeTransitionResult& Transition) const override;
+
+	/**
+	 * Child tasks can override this method to remove unwanted actors from the list of found actors that contain the
+	 * required smart object.
+	 */
+	virtual void FilterFoundActors(FStateTreeExecutionContext& Context, TArray<AActor*>& InOutFoundActors) const {}
 };

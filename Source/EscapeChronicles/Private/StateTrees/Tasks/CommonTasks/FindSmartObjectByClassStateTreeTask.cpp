@@ -42,6 +42,12 @@ EStateTreeRunStatus FFindSmartObjectByClassStateTreeTask::EnterState(FStateTreeE
 		return EStateTreeRunStatus::Failed;
 	}
 
+	/**
+	 * The default implementation doesn't do anything here, but the derived class may want to exclude some actors from
+	 * the FoundActors list.
+	 */
+	FilterFoundActors(Context, FoundActors);
+
 	// Find smart objects in the list of found actors
 	TArray<FSmartObjectRequestResult> FindSmartObjectsResults;
 	SmartObjectSubsystem->FindSmartObjectsInList(InstanceData.SmartObjectRequestFilter, FoundActors,
