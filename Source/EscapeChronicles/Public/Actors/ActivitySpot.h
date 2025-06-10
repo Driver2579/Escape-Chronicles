@@ -125,8 +125,6 @@ private:
 	 */
 	void AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const;
 
-	void AttachOccupyingCharacterMesh() const;
-
 	// Original transform of character's mesh before occupation
 	FTransform CachedMeshTransform;
 

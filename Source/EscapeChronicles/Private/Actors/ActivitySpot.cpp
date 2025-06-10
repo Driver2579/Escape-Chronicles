@@ -19,6 +19,8 @@ AActivitySpot::AActivitySpot()
 
 	bReplicates = true;
 
+	SetRootComponent(CreateDefaultSubobject<USceneComponent>("Root"));
+
 	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("Player Ownership"));
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("Interactable"));
 
@@ -77,13 +79,10 @@ void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerC
 
 	AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
 
-	if (!ensureAlways(IsValid(PlayerState)))
+	if (ensureAlways(IsValid(PlayerState)) && SetOccupyingCharacter(Character))
 	{
-		return;
+		PlayerState->SetOccupyingActivitySpot(this);
 	}
-
-	SetOccupyingCharacter(Character);
-	PlayerState->SetOccupyingActivitySpot(this);
 }
 
 bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
@@ -146,8 +145,9 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		InteractableComponent->SetCanInteract(false);
 
 		// Setup health monitoring
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
-			.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
+		UnoccupyIfAttributeHasDecreasedDelegateHandle =
+			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
+				.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
 	}
 
 	CachedOccupyingCharacter = Character;
@@ -185,7 +185,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	check(IsValid(Character));
 #endif
 
-	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
+	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -193,6 +193,8 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	}
 
 	CacheMeshData(CharacterMesh);
+
+	AttachSkeletalMesh(CharacterMesh);
 
 	// Move the character
 	Character->SetActorLocation(CharacterLocationOnOccupySpot);
@@ -206,6 +208,21 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	{
 		LoadOccupyingEffect();
 	}
+}
+
+void AActivitySpot::AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const
+{
+#if DO_CHECK
+	check(IsValid(SkeletalMesh));
+#endif
+
+	SkeletalMesh->SetUsingAbsoluteRotation(false);
+
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, SkeletalMesh]
+	{
+		SkeletalMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			AttachSocketName);
+	}));
 }
 
 void AActivitySpot::CacheMeshData(const USkeletalMeshComponent* SkeletalMesh)
@@ -223,8 +240,6 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 {
 	if (!ensureAlways(OccupyingAnimMontages.Num() > 0))
 	{
-		AttachOccupyingCharacterMesh();
-		
 		return;
 	}
 
@@ -234,8 +249,6 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 
 	if (!ensureAlways(!OccupyingAnimMontages[SelectedOccupyingAnimMontage].IsNull()))
 	{
-		AttachOccupyingCharacterMesh();
-
 		return;
 	}
 
@@ -273,38 +286,9 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 
 	UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance();
 
-	if (!ensureAlways(IsValid(AnimInstance)))
+	if (ensureAlways(IsValid(AnimInstance)))
 	{
-		return;
-	}
-
-	AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
-
-	AttachSkeletalMesh(CharacterMesh);
-}
-
-void AActivitySpot::AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const
-{
-	// Set this false to make the mesh rotate when attach it
-	SkeletalMesh->SetUsingAbsoluteRotation(false);
-
-	// Attach only the mesh to the desired location
-	SkeletalMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		AttachSocketName);
-}
-
-void AActivitySpot::AttachOccupyingCharacterMesh() const
-{
-	if (!ensureAlways(IsValid(CachedOccupyingCharacter)))
-	{
-		return;
-	}
-
-	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
-
-	if (ensureAlways(IsValid(CharacterMesh)))
-	{
-		AttachSkeletalMesh(CharacterMesh);
+		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 	}
 }
 
@@ -407,4 +391,3 @@ void AActivitySpot::ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) co
 	SkeletalMesh->SetRelativeTransform(CachedMeshTransform);
 	SkeletalMesh->SetUsingAbsoluteRotation(true);
 }
-
