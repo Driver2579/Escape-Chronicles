@@ -114,6 +114,12 @@ bool APrisonerChamberZone::IsOwningCharacterBedOccupied(bool& bOutHasBedWithSame
 {
 	bOutHasBedWithSameOwningCharacter = false;
 
+	// If the bed class is invalid, then it for sure isn't on the scene, so none of the beds are occupied
+	if (!PrisonerBedClass.IsValid())
+	{
+		return false;
+	}
+
 	const FUniquePlayerID* OwningPlayerID = PlayerOwnershipComponent->GetOwningPlayer();
 
 	// Return false if this chamber doesn't have an owning player
@@ -122,20 +128,19 @@ bool APrisonerChamberZone::IsOwningCharacterBedOccupied(bool& bOutHasBedWithSame
 		return false;
 	}
 
-	// TODO: Uncomment this when the bed is implemented
-	/*TSet<AActor*> OverlappingBeds;
-	GetOverlappingActors(OverlappingBeds, ABed::StaticClass());
+	TSet<AActor*> OverlappingBeds;
+	GetOverlappingActors(OverlappingBeds, PrisonerBedClass.Get());
 
 	for (AActor* OverlappingBed : OverlappingBeds)
 	{
 #if DO_CHECK
 		check(IsValid(OverlappingBed));
-		check(OverlappingBed->IsA<ABed>());
+		check(OverlappingBed->IsA<AActivitySpot>());
 #endif
 
-		ABed* Bed = CastChecked<ABed>(OverlappingBed);
+		const AActivitySpot* CastedBed = CastChecked<AActivitySpot>(OverlappingBed);
 
-		const FUniquePlayerID* BedOwningPlayerID = Bed->GetPlayerOwnershipComponent()->GetOwningPlayer();
+		const FUniquePlayerID* BedOwningPlayerID = CastedBed->GetPlayerOwnershipComponent()->GetOwningPlayer();
 
 		// Go to the next bed if this one doesn't have an owning player or if it isn't the one that owns this chamber
 		if (!BedOwningPlayerID || *BedOwningPlayerID != *OwningPlayerID)
@@ -146,12 +151,14 @@ bool APrisonerChamberZone::IsOwningCharacterBedOccupied(bool& bOutHasBedWithSame
 		// We found a bed that overlaps this chamber and has the same owning player
 		bOutHasBedWithSameOwningCharacter = true;
 
-		// If the bed is occupied, then return true
+		// TODO: Uncomment this
+
+		/*// If the bed is occupied, then return true
 		if (Bed->IsOccupied())
 		{
 			return true;
-		}
-	}*/
+		}*/
+	}
 
 	/**
 	 * Return false if we didn't find any bed that overlaps this chamber and has the same owning player, or if the bed

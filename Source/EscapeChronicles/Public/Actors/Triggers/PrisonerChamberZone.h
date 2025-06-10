@@ -6,6 +6,7 @@
 #include "Interfaces/Saveable.h"
 #include "PrisonerChamberZone.generated.h"
 
+class AActivitySpot;
 class AEscapeChroniclesCharacter;
 class UBoxComponent;
 class UPlayerOwnershipComponent;
@@ -91,4 +92,8 @@ private:
 
 	// Characters that overlapped the inner zone and didn't leave the outer zone yet
 	TSet<TWeakObjectPtr<const AEscapeChroniclesCharacter>> CharactersInChamber;
+
+	// The class of the bed that the prisoner that owns this chamber should sleep in
+	UPROPERTY(EditAnywhere)
+	TSoftClassPtr<AActivitySpot> PrisonerBedClass;
 };

@@ -33,6 +33,8 @@ class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemI
 public:
 	AActivitySpot();
 
+	UPlayerOwnershipComponent* GetPlayerOwnershipComponent() const { return PlayerOwnershipComponent; }
+
 #if WITH_EDITORONLY_DATA && WITH_EDITOR
 	virtual void OnConstruction(const FTransform& Transform) override;
 #endif
