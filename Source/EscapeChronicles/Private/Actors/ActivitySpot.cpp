@@ -89,6 +89,7 @@ void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerC
 bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 {
 	/**
+	 * Initial Validation:
 	 * - Server-only.
 	 * - Must not be trying to reassign the same character.
 	 * - Allows unoccupying (if Character == nullptr).
@@ -102,26 +103,37 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		return false;
 	}
 
-	/**
-	 * Get the appropriate ability system component:
-	 * - When unoccupying (Character == nullptr), use the currently occupying character.
-	 * - When occupying, use the character that is trying to occupy the spot.
-	 */
-	UAbilitySystemComponent* AbilitySystemComponent = Character == nullptr ?
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter) :
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+	// === Actor State Preparation  ===
 
-	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	AEscapeChroniclesPlayerState* PlayerState;
+	UAbilitySystemComponent* AbilitySystemComponent;
+
+	// Branch for unoccupying (Character == nullptr)
+	if (Character == nullptr)
+	{
+		PlayerState = CachedOccupyingCharacter->GetPlayerState<AEscapeChroniclesPlayerState>();
+		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
+	}
+	// Branch for new occupation
+	else
+	{
+		PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
+		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+	}
+
+	if (!ensureAlways(IsValid(PlayerState)) || !ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return false;
 	}
 
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
-	if (!ensureAlways(IsValid(VitalAttributeSet)))
+	if (!ensureAlways(VitalAttributeSet))
 	{
 		return false;
 	}
+
+	// ===== Occupation State Change =====
 
 	if (Character == nullptr)
 	{
@@ -130,18 +142,15 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 
 		UnoccupySpot(CachedOccupyingCharacter);
+		PlayerState->SetOccupyingActivitySpot(nullptr);
 
 		InteractableComponent->SetCanInteract(true);
 	}
-	else
+	// Check for blocking tags
+	else if (!AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
 	{
-		// Check for blocking tags
-		if (AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
-		{
-			return false;
-		}
-
 		OccupySpot(Character);
+		PlayerState->SetOccupyingActivitySpot(this);
 
 		InteractableComponent->SetCanInteract(false);
 
@@ -149,6 +158,10 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		UnoccupyIfAttributeHasDecreasedDelegateHandle =
 			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 				.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
+	}
+	else
+	{
+		return false;
 	}
 
 	CachedOccupyingCharacter = Character;

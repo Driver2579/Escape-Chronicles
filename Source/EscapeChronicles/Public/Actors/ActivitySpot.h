@@ -36,6 +36,8 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 #endif
 
+	bool IsOccupied() const { return  CachedOccupyingCharacter != nullptr; }
+
 	int32 GetEffectLevel() const { return EffectLevel; }
 
 	void SetEffectLevel(const int32 InEffectLevel) { EffectLevel = InEffectLevel; }
@@ -80,6 +82,10 @@ protected:
 	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 
 private:
+	bool SetOccupyingCharacter1(AEscapeChroniclesCharacter* Character);
+
+	bool SetOccupyingCharacter2(AEscapeChroniclesCharacter* Character);
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UPlayerOwnershipComponent> PlayerOwnershipComponent;
 
