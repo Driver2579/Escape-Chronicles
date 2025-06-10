@@ -26,7 +26,7 @@ void USleepingManagementSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 			continue;
 		}
 		
-		Bed->OnOccupyingCharacterChanged.AddUObject(this, &ThisClass::OnBedOccupyingCharacterChanged);
+		Bed->OnOccupyingStateChanged.AddUObject(this, &ThisClass::OnBedOccupyingCharacterChanged);
 
 		Beds.Add(Bed);
 	}

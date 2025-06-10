@@ -58,14 +58,12 @@ void UMealScheduleEvent::SetActivitySpotsUpgraded(const bool bUpgrade)
 		// Set the gameplay effect level to the specified value if upgrading was requested
 		if (bUpgrade)
 		{
-			Pair.Key->SetEffectLevel(Pair.Value);
+			Pair.Key->SetGameplayEffectLevel(Pair.Value);
 		}
 		// Otherwise, reset the level to the original one
 		else
 		{
-			// TODO: Uncomment
-
-			//Pair.Key->ResetEffectLevel();
+			Pair.Key->ResetGameplayEffectLevel();
 		}
 	}
 }

@@ -254,7 +254,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 
 	CachedOccupyingCharacter = Character;
 
-	OnOccupyingCharacterChanged.Broadcast(Character);
+	OnOccupyingStateChanged.Broadcast(Character);
 
 	return true;
 }
