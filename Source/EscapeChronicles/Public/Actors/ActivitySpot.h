@@ -61,8 +61,8 @@ public:
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* NewCharacter);
 
-	// Broadcast when occupation state changes (both occupy and unoccupy)
-	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
+	// Called when occupation state changes (both occupy and unoccupy)
+	FOnOccupyingCharacterChanged OnOccupyingStateChanged;
 
 protected:
 	virtual void BeginPlay() override;
