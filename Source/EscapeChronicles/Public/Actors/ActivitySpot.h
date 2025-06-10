@@ -119,12 +119,6 @@ private:
 	 */
 	void ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) const;
 
-	/**
-	 * Attach character's mesh to MeshComponent
-	 * @param SkeletalMesh The mesh component to attach
-	 */
-	void AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const;
-
 	// Original transform of character's mesh before occupation
 	FTransform CachedMeshTransform;
 
