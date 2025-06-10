@@ -11,6 +11,7 @@
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Engine/AssetManager.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AActivitySpot::AActivitySpot()
 {
@@ -69,23 +70,20 @@ void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerC
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 
-	if (!ensureAlways(IsValid(Character)))
+	if (!ensureAlways(IsValid(Character)) || CachedOccupyingCharacter != nullptr)
 	{
 		return;
 	}
 
-	// === Toggle occupation state ===
+	AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
 
-	// Occupy if empty
-	if (!IsValid(CachedOccupyingCharacter))
+	if (!ensureAlways(IsValid(PlayerState)))
 	{
-		SetOccupyingCharacter(Character);
+		return;
 	}
-	// Unoccupy if same character
-	else if (CachedOccupyingCharacter == Character)
-	{
-		SetOccupyingCharacter(nullptr);
-	}
+
+	SetOccupyingCharacter(Character);
+	PlayerState->SetOccupyingActivitySpot(this);
 }
 
 bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
@@ -132,6 +130,8 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 
 		UnoccupySpot(CachedOccupyingCharacter);
+
+		InteractableComponent->SetCanInteract(true);
 	}
 	else
 	{
@@ -142,6 +142,8 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		}
 
 		OccupySpot(Character);
+
+		InteractableComponent->SetCanInteract(false);
 
 		// Setup health monitoring
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
