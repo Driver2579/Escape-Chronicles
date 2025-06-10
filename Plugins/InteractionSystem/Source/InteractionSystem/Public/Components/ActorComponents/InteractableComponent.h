@@ -28,7 +28,7 @@ public:
 	{
 		bCanInteract = bInbCanInteract;
 
-		SetInteractionHintVisibility(false);
+		OnCanInteractChanged.Broadcast(bInbCanInteract);
 	}
 
 	// Calls the interaction delegate (InteractDelegate)
@@ -45,6 +45,11 @@ public:
 
 	// A delegate called when interacting with an actor
 	FOnInteractDelegate OnInteract;
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnCanInteractChangedDelegate, bool bCurrentCanInteract);
+
+	// Delegate called when bCanInteract is changed
+	FOnCanInteractChangedDelegate OnCanInteractChanged;
 
 protected:
 	virtual void BeginPlay() override;
