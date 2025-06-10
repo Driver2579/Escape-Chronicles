@@ -194,7 +194,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 
 	CacheMeshData(CharacterMesh);
 
-	AttachSkeletalMesh(CharacterMesh);
+	CharacterMesh->SetUsingAbsoluteRotation(false);
 
 	// Move the character
 	Character->SetActorLocation(CharacterLocationOnOccupySpot);
@@ -208,21 +208,6 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	{
 		LoadOccupyingEffect();
 	}
-}
-
-void AActivitySpot::AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const
-{
-#if DO_CHECK
-	check(IsValid(SkeletalMesh));
-#endif
-
-	SkeletalMesh->SetUsingAbsoluteRotation(false);
-
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, SkeletalMesh]
-	{
-		SkeletalMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			AttachSocketName);
-	}));
 }
 
 void AActivitySpot::CacheMeshData(const USkeletalMeshComponent* SkeletalMesh)
@@ -289,6 +274,9 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 	if (ensureAlways(IsValid(AnimInstance)))
 	{
 		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
+
+		CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			AttachSocketName);
 	}
 }
 
