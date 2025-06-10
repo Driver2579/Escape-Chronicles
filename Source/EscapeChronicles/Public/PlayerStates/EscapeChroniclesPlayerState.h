@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
+#include "Actors/ActivitySpot.h"
 #include "Common/Structs/UniquePlayerID.h"
 #include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 #include "EscapeChroniclesPlayerState.generated.h"
@@ -36,6 +37,13 @@ public:
 	}
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	AActivitySpot* GetOccupyingActivitySpot() const { return OccupyingActivitySpot.Get(); }
+
+	void SetOccupyingActivitySpot(AActivitySpot* InOccupyingActivitySpot)
+	{
+		OccupyingActivitySpot = InOccupyingActivitySpot;
+	}
 
 	// The same as AController::InitPlayerState() but with a custom PlayerState class
 	static void InitPlayerStateForController(AController* OwnerController,
@@ -77,6 +85,8 @@ private:
 
 	UPROPERTY(Transient, Replicated)
 	FUniquePlayerID UniquePlayerID;
+
+	TWeakObjectPtr<AActivitySpot> OccupyingActivitySpot;
 
 	// The set of team IDs that the player will use to determine its team
 	UPROPERTY(EditDefaultsOnly, Category="Team")

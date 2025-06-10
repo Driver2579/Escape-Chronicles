@@ -2,6 +2,7 @@
 
 #include "EscapeChronicles/Public/Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 
+#include "DelayAction.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -51,7 +52,10 @@ void UEscapeChroniclesCharacterMoverComponent::InitializeComponent()
 
 void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 {
-	QueueNextMode(NullModeName);
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]
+	{
+		QueueNextMode(NullModeName);
+	}));
 
 #if DO_CHECK
 	check(IsValid(GetOwner()));
@@ -64,18 +68,14 @@ void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 	OwningPawn->bUseControllerRotationPitch = false;
 	OwningPawn->bUseControllerRotationYaw = false;
 	OwningPawn->bUseControllerRotationRoll = false;
-
-	// TODO: It is also necessary that when the movement is turned off, the rotation does not work too! 
-
-	// TODO: Find out how to disable Mover completely and do it here
-	//CachedLastSyncState.SyncStateCollection.Empty();
-	//CachedLastSyncState.Reset();
-	//LastMoverDefaultSyncState = nullptr;
 }
 
 void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
 {
-	QueueNextMode(StartingMovementMode);
+	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]
+	{
+		QueueNextMode(StartingMovementMode);
+	}));
 
 #if DO_CHECK
 	check(IsValid(GetOwner()));

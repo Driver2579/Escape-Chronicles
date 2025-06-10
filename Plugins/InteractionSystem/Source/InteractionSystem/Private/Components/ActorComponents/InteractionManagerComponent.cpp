@@ -76,7 +76,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
-	if (IsValid(InteractableComponent) && InteractableComponent->CanInteract())
+	if (IsValid(InteractableComponent))
 	{
 		InteractableComponentsPool.Add(InteractableComponent);
 	}
@@ -137,7 +137,7 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 	{
 		return;
 	}
-	
+
 	// Find the view location and view rotation
 	FVector ViewLocation;
 	FRotator ViewRotation;
@@ -153,7 +153,10 @@ void UInteractionManagerComponent::SelectInteractableComponent()
 
 	for (TWeakObjectPtr<UInteractableComponent> InteractableComponent : InteractableComponentsPool)
 	{
-		if (!IsValid(InteractableComponent.Get()) || IsPathObstructed(InteractableComponent.Get()))
+		const bool bCanInteract = IsValid(InteractableComponent.Get()) && InteractableComponent->CanInteract() &&
+			!IsPathObstructed(InteractableComponent.Get());
+
+		if (!bCanInteract)
 		{
 			continue;
 		}

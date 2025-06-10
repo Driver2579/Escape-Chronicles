@@ -1,15 +1,14 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Actors/ActivitySpot.h"
-
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ActorComponents/InteractableComponent.h"
+#include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
-#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -22,15 +21,34 @@ AActivitySpot::AActivitySpot()
 
 	bReplicates = true;
 
-	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("PlayerOwnershipComponent"));
-	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
+	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("Player Ownership"));
+	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("Interactable"));
 
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-	Mesh->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	MeshComponent->SetupAttachment(RootComponent);
+	MeshComponent->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+
+#if WITH_EDITORONLY_DATA && WITH_EDITOR
+	CharacterTransformOnOccupySpotComponent = CreateDefaultSubobject<UCapsuleComponent>(
+		TEXT("Character Transform On Occupy Spot"));
+
+	CharacterTransformOnOccupySpotComponent->SetupAttachment(MeshComponent);
+#endif
 }
 
-void AActivitySpot::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+#if WITH_EDITORONLY_DATA && WITH_EDITOR
+void AActivitySpot::OnConstruction(const FTransform& Transform)
+{
+	Super::OnConstruction(Transform);
+
+	const FTransform& CharacterTransformOnOccupySpot = CharacterTransformOnOccupySpotComponent->GetComponentTransform();
+
+	CharacterLocationOnOccupySpot = CharacterTransformOnOccupySpot.GetLocation();
+	CharacterRotationOnOccupySpot = CharacterTransformOnOccupySpot.GetRotation().Rotator();
+}
+#endif
+
+void AActivitySpot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -140,35 +158,48 @@ void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerC
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 
-	if (!ensureAlways(IsValid(Character)))
+	if (!ensureAlways(IsValid(Character)) || CachedOccupyingCharacter != nullptr)
 	{
 		return;
 	}
-	
-	if (!IsValid(CachedOccupyingCharacter))
+
+	AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
+
+	if (!ensureAlways(IsValid(PlayerState)))
 	{
-		SetOccupyingCharacter(Character);
+		return;
 	}
-	else if (CachedOccupyingCharacter == Character)
-	{
-		SetOccupyingCharacter(nullptr);
-	}
+
+	SetOccupyingCharacter(Character);
+	PlayerState->SetOccupyingActivitySpot(this);
 }
 
 bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 {
-	check(HasAuthority());
+	/**
+	 * - Server-only.
+	 * - Must not be trying to reassign the same character.
+	 * - Allows unoccupying (if Character == nullptr).
+	 * - Prevents assigning if already occupied.
+	 */
+	const bool bSuccessfulInitialCheck = ensureAlways(HasAuthority()) && CachedOccupyingCharacter != Character &&
+		CachedOccupyingCharacter == nullptr || Character == nullptr;
 
-	if (CachedOccupyingCharacter == Character)
+	if (!bSuccessfulInitialCheck)
 	{
 		return false;
 	}
 
+	/**
+	 * Get the appropriate ability system component:
+	 * - When unoccupying (Character == nullptr), use the currently occupying character.
+	 * - When occupying, use the character that is trying to occupy the spot.
+	 */
 	UAbilitySystemComponent* AbilitySystemComponent = Character == nullptr ?
 		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter) :
 		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 
-	if (!IsValid(AbilitySystemComponent))
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return false;
 	}
@@ -179,26 +210,30 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	{
 		return false;
 	}
-	
+
 	if (Character == nullptr)
 	{
-		// End track health changes
+		// Cleanup health monitoring
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
-		
+
 		UnoccupySpot(CachedOccupyingCharacter);
+
+		InteractableComponent->SetCanInteract(true);
 	}
 	else
 	{
-		// Block the occupying if the character has a blocking tag
+		// Check for blocking tags
 		if (AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
 		{
 			return false;
 		}
-		
+
 		OccupySpot(Character);
 
-		// Start track health changes
+		InteractableComponent->SetCanInteract(false);
+
+		// Setup health monitoring
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
 	}
@@ -212,15 +247,16 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 
 void AActivitySpot::OnOccupyingCharacterHealthChanged(const FOnAttributeChangeData& AttributeChangeData)
 {
-	// We need to unoccupy the character if his health is decreasing
+	// Unoccupy if health decreased
 	if (AttributeChangeData.OldValue > AttributeChangeData.NewValue)
 	{
-		SetOccupyingCharacter(nullptr);	
+		SetOccupyingCharacter(nullptr);
 	}
 }
 
 void AActivitySpot::OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* OldValue)
 {
+	// Handle occupation change on clients
 	if (CachedOccupyingCharacter == nullptr)
 	{
 		UnoccupySpot(OldValue);
@@ -237,62 +273,76 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	check(IsValid(Character));
 #endif
 
-	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
-	const UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
-	const UEscapeChroniclesCharacterMoverComponent* CharacterMover = Character->GetCharacterMoverComponent();
+	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 
+	if (!ensureAlways(IsValid(CharacterMesh)))
+	{
+		return;
+	}
+
+	CacheMeshData(CharacterMesh);
+
+	// Move the character
+	Character->SetActorLocation(CharacterLocationOnOccupySpot);
+	Character->SetActorRotation(CharacterRotationOnOccupySpot);
+
+	// === Start async loading of assets ===
+
+	LoadOccupyingAnimMontage();
+
+	if (HasAuthority())
+	{
+		LoadOccupyingEffect();
+	}
+}
+
+void AActivitySpot::CacheMeshData(const USkeletalMeshComponent* SkeletalMesh)
+{
 #if DO_CHECK
-	check(IsValid(CharacterMesh));
-	check(IsValid(CharacterCapsule))
-	check(IsValid(CharacterMover));
+	check(IsValid(SkeletalMesh));
 #endif
 
-	// === Attach only the mesh to the desired location ===
+	// Remember original mesh state for later restoration
+	CachedMeshAttachParent = SkeletalMesh->GetAttachParent();
+	CachedMeshTransform = SkeletalMesh->GetRelativeTransform();
+}
 
-	CachedMeshAttachParent = CharacterMesh->GetAttachParent();
-	CachedMeshTransform = CharacterMesh->GetRelativeTransform();
-	CharacterMesh->AttachToComponent(Mesh, FAttachmentTransformRules::SnapToTargetNotIncludingScale, AttachSocketName);
+void AActivitySpot::LoadOccupyingAnimMontage()
+{
+	if (!ensureAlways(OccupyingAnimMontages.Num() > 0))
+	{
+		AttachOccupyingCharacterMesh();
+		
+		return;
+	}
 
-	// === Load and apply animation and effect ===
-
-	OccupyingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		OccupyingEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&ThisClass::OnOccupyingEffectLoaded));
-
-#if DO_CHECK
-	check(OccupyingAnimMontages.Num() > 0);
-#endif
+	// Randomly select and load animation
 
 	SelectedOccupyingAnimMontage = FMath::Rand() % OccupyingAnimMontages.Num();
 
+	if (!ensureAlways(!OccupyingAnimMontages[SelectedOccupyingAnimMontage].IsNull()))
+	{
+		AttachOccupyingCharacterMesh();
+
+		return;
+	}
+
 	OccupyingAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		OccupyingAnimMontages[SelectedOccupyingAnimMontage].ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&ThisClass::OnOccupyingAnimMontageLoaded));
+		OccupyingAnimMontages[SelectedOccupyingAnimMontage].ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnOccupyingAnimMontageLoaded));
 }
 
-void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
+void AActivitySpot::LoadOccupyingEffect()
 {
-#if DO_CHECK
-	check(IsValid(Character));
-#endif
+	if (!ensureAlways(!OccupyingEffectClass.IsNull()))
+	{
+		return;
+	}
 
-	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
-	const UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
-	const UEscapeChroniclesCharacterMoverComponent* CharacterMover = Character->GetCharacterMoverComponent();
-
-#if DO_CHECK
-	check(IsValid(CharacterMesh));
-	check(IsValid(CharacterCapsule))
-	check(IsValid(CharacterMover));
-#endif
-
-	CancelOccupyingAnimationAndEffect(Character);
-
-	// === Return the mesh to the state it was in before occupying spot ===
-
-	CharacterMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-	CharacterMesh->AttachToComponent(CachedMeshAttachParent.Get(), FAttachmentTransformRules::KeepWorldTransform);
-	CharacterMesh->SetRelativeTransform(CachedMeshTransform);
+	// Load gameplay effect asynchronously
+	OccupyingEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		OccupyingEffectClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnOccupyingEffectLoaded));
 }
 
 void AActivitySpot::OnOccupyingAnimMontageLoaded()
@@ -302,7 +352,7 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 		return;
 	}
 
-	const USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
+	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -311,9 +361,38 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 
 	UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance();
 
-	if (ensureAlways(IsValid(AnimInstance)))
+	if (!ensureAlways(IsValid(AnimInstance)))
 	{
-		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
+		return;
+	}
+
+	AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
+
+	AttachSkeletalMesh(CharacterMesh);
+}
+
+void AActivitySpot::AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const
+{
+	// Set this false to make the mesh rotate when attach it
+	SkeletalMesh->SetUsingAbsoluteRotation(false);
+
+	// Attach only the mesh to the desired location
+	SkeletalMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+		AttachSocketName);
+}
+
+void AActivitySpot::AttachOccupyingCharacterMesh() const
+{
+	if (!ensureAlways(IsValid(CachedOccupyingCharacter)))
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
+
+	if (ensureAlways(IsValid(CharacterMesh)))
+	{
+		AttachSkeletalMesh(CharacterMesh);
 	}
 }
 
@@ -321,7 +400,7 @@ void AActivitySpot::OnOccupyingEffectLoaded()
 {
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	if (!IsValid(AbilitySystemComponent))
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return;
 	}
@@ -332,21 +411,37 @@ void AActivitySpot::OnOccupyingEffectLoaded()
 	OccupyingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
 }
 
-void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter* Character)
+void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 {
 #if DO_CHECK
 	check(IsValid(Character));
 #endif
 
-	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
+	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
 		return;
 	}
 
-	// === Stop animation montage ===
-	
+	// === Restore character to original state ===
+
+	CancelOccupyingAnimation(CharacterMesh);
+
+	if (HasAuthority())
+	{
+		CancelOccupyingEffect(Character);
+	}
+
+	ApplyCachedMeshData(CharacterMesh);
+}
+
+void AActivitySpot::CancelOccupyingAnimation(const USkeletalMeshComponent* CharacterMesh)
+{
+#if DO_CHECK
+	check(IsValid(CharacterMesh));
+#endif
+
 	UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance();
 
 	if (!ensureAlways(IsValid(AnimInstance)))
@@ -356,7 +451,19 @@ void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter
 
 	AnimInstance->Montage_Stop(0.0, OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 
-	// === Stop effect ===
+	// Cleanup loading handle
+	if (OccupyingAnimMontageHandle.IsValid())
+	{
+		OccupyingAnimMontageHandle->CancelHandle();
+		OccupyingAnimMontageHandle.Reset();
+	}
+}
+
+void AActivitySpot::CancelOccupyingEffect(const AEscapeChroniclesCharacter* Character)
+{
+#if DO_CHECK
+	check(IsValid(Character));
+#endif
 
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
@@ -365,19 +472,27 @@ void AActivitySpot::CancelOccupyingAnimationAndEffect(AEscapeChroniclesCharacter
 		return;
 	}
 
+	// Remove gameplay effect
 	AbilitySystemComponent->RemoveActiveGameplayEffect(OccupyingEffectSpecHandle);
-	
-	// === Releasing the memory ===
 
-	if (OccupyingAnimMontageHandle.IsValid())
-	{
-		OccupyingAnimMontageHandle->CancelHandle();
-		OccupyingAnimMontageHandle.Reset();
-	}
-
+	// Cleanup loading handle
 	if (OccupyingEffectHandle.IsValid())
 	{
 		OccupyingEffectHandle->CancelHandle();
 		OccupyingEffectHandle.Reset();
 	}
 }
+
+void AActivitySpot::ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) const
+{
+#if DO_CHECK
+	check(IsValid(SkeletalMesh));
+	check(CachedMeshAttachParent.IsValid());
+#endif
+
+	// Restore original mesh transform
+	SkeletalMesh->AttachToComponent(CachedMeshAttachParent.Get(), FAttachmentTransformRules::KeepWorldTransform);
+	SkeletalMesh->SetRelativeTransform(CachedMeshTransform);
+	SkeletalMesh->SetUsingAbsoluteRotation(true);
+}
+
