@@ -464,6 +464,9 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		return;
 	}
 
+	// Broadcast the delegate right before loading anything from the save game object
+	OnSaveGameObjectLoaded.Broadcast();
+
 	const UWorld* World = GetWorld();
 
 	// === Load world subsystems ===

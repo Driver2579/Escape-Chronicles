@@ -117,7 +117,7 @@ void UEscapeChroniclesAbilitySystemComponent::OnPreSaveObject()
 void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
 {
 	// Iterate all attribute sets to update their attributes with loaded data
-	for (UAttributeSet* AttributeSet : GetSpawnedAttributes())
+	for (const UAttributeSet* AttributeSet : GetSpawnedAttributes())
 	{
 #if DO_CHECK
 		check(IsValid(AttributeSet));
@@ -142,14 +142,7 @@ void UEscapeChroniclesAbilitySystemComponent::OnPostLoadObject()
 			// Set the loaded base value to the attribute if it was found
 			if (LoadedBaseValue)
 			{
-				FGameplayAttributeData* GameplayAttributeData = Attribute.GetGameplayAttributeDataChecked(AttributeSet);
-
-				/**
-				 * We need to set both base	and current value because setting the base value doesn't automatically
-				 * update the current value.
-				 */
-				GameplayAttributeData->SetBaseValue(*LoadedBaseValue);
-				GameplayAttributeData->SetCurrentValue(*LoadedBaseValue);
+				SetNumericAttributeBase(Attribute, *LoadedBaseValue);
 			}
 		}
 	}

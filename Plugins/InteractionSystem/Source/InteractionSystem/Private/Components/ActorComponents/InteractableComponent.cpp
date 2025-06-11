@@ -51,7 +51,7 @@ void UInteractableComponent::InitializeHintWidget()
 {
 	const UWidgetComponent* WidgetComponent = GetOwner()->FindComponentByTag<UWidgetComponent>(HintWidgetTag);
 	
-	if (!ensureAlways(IsValid(WidgetComponent)))
+	if (!IsValid(WidgetComponent))
 	{
 		return;
 	}
@@ -66,12 +66,7 @@ void UInteractableComponent::InitializeHintWidget()
 
 void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
 {
-	InteractDelegate.Broadcast(InteractionManagerComponent);
-}
-
-void UInteractableComponent::AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate)
-{
-	InteractDelegate.Add(Delegate);
+	OnInteract.Broadcast(InteractionManagerComponent);
 }
 
 void UInteractableComponent::SetInteractionHintVisibility(const bool bNewVisibility)

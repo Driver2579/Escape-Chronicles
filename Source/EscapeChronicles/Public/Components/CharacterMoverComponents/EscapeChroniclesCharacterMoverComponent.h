@@ -18,6 +18,20 @@ public:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #endif
 
+	virtual void InitializeComponent() override;
+
+	// Whether the movement is currently enabled or not (movement mode is not null)
+	bool IsMovementEnabled() const
+	{
+		return GetMovementModeName() != NullModeName;
+	}
+
+	// Makes movement impossible (sets movement mode to MOVE_None)
+	void DisableMovement();
+
+	// Sets movement mode to the default based on the current physics volume
+	void SetDefaultMovementMode();
+
 	virtual bool CanCrouch() override { return !IsAirborne(); }
 
 	/**
@@ -41,10 +55,17 @@ public:
 
 	FOnGroundSpeedModeChangedDelegate OnGroundSpeedModeChanged;
 
+	const static FName NullModeName;
+
 protected:
 	virtual void OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 		const FMoverInputCmdContext& InputCmd) override;
 
 private:
 	EGroundSpeedMode LastGroundSpeedMode;
+
+	// Owning pawn's rotation settings that were set in owning pawn at the time of InitializeComponent being called
+	bool bDefaultUseControllerRotationPitch = false;
+	bool bDefaultUseControllerRotationYaw = false;
+	bool bUseControllerRotationRoll = false;
 };

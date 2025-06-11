@@ -68,7 +68,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (!IsValid(OtherActor))
+	if (!IsValid(OtherActor) || OtherActor == GetOwner())
 	{
 		return;
 	}
@@ -77,7 +77,7 @@ void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveC
 	
 	UInteractableComponent* InteractableComponent = OtherActor->FindComponentByClass<UInteractableComponent>();
 
-	if (IsValid(InteractableComponent))
+	if (IsValid(InteractableComponent) && InteractableComponent->CanInteract())
 	{
 		InteractableComponentsPool.Add(InteractableComponent);
 	}
@@ -128,7 +128,7 @@ bool UInteractionManagerComponent::IsPathObstructed(const UInteractableComponent
 	TraceParams.AddIgnoredActor(InteractableActor);
 	TraceParams.bTraceComplex = true;
 
-	FHitResult HitResult;;
+	FHitResult HitResult;
 	return GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Visibility, TraceParams);
 }
 
@@ -222,7 +222,7 @@ void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractab
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	if (!IsValid(InteractableComponent))
+	if (!IsValid(InteractableComponent) || !InteractableComponent->CanInteract())
 	{
 		return false;
 	}
