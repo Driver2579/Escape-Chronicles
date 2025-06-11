@@ -197,6 +197,27 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 		return;
 	}
 
+#if DO_CHECK
+	check(NewPawn->IsA<AEscapeChroniclesCharacter>());
+#endif
+
+	const AEscapeChroniclesCharacter* Character = CastChecked<AEscapeChroniclesCharacter>(NewPawn);
+
+	/**
+	 * TODO:
+	 * There is a bug in the engine that makes the UWorld::EncroachingBlockingGeometry function (or at least I think
+	 * it's because of it) not work correctly if the actor has any components except of the RootComponent that have
+	 * collisions enabled. The issue is that it completely ignores collision responses on such components, so even
+	 * though the mesh component ignores the capsule, the engine still thinks that the mesh is colliding with capsule
+	 * which results that the engine thinks that the character is colliding with something even if it doesn't. So the
+	 * solution would be to disable the collision for the mesh component before restarting the character and then enable
+	 * it back after the character is restarted. Otherwise, the PlayerStart selection won't work correctly because the
+	 * engine would always think that the character would collide with something when choosing the PlayerStart, and the
+	 * character will be spawned at ZeroLocation instead.
+	 */
+	const FName DefaultMeshCollisionProfileName = Character->GetMesh()->GetCollisionProfileName();
+	Character->GetMesh()->SetCollisionProfileName(TEXT("NoCollision"));
+
 	/**
 	 * Restart the AI controller. This will choose a PlayerStart for the character and move it there. If there was no
 	 * character spawned, the default one will be spawned.
@@ -205,6 +226,8 @@ void UBotSpawnerComponent::OnControllerPossessedPawnChanged(APawn* OldPawn, APaw
 	{
 		GameMode->RestartPlayer(Controller);
 	}
+
+	Character->GetMesh()->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 
 	if (ensureAlways(Controller->PlayerState))
 	{

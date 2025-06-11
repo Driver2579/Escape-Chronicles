@@ -21,6 +21,9 @@ APrisonerChamberZone::APrisonerChamberZone()
 	InnerZoneBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Inner Zone"));
 	InnerZoneBoxComponent->SetupAttachment(RootComponent);
 
+	OuterZoneBoxComponent->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
+	InnerZoneBoxComponent->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
+
 	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("Player Ownership"));
 }
 
@@ -32,23 +35,25 @@ void APrisonerChamberZone::BeginPlay()
 	OuterZoneBoxComponent->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnOuterZoneEndOverlap);
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void APrisonerChamberZone::OnInnerZoneBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	const AEscapeChroniclesCharacter* OverlappingCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (IsValid(OverlappingCharacter))
+	if (IsValid(OverlappingCharacter) && OtherComp == OverlappingCharacter->GetMesh())
 	{
 		CharactersInChamber.Add(OverlappingCharacter);
 	}
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void APrisonerChamberZone::OnOuterZoneEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int OtherBodyIndex)
 {
 	const AEscapeChroniclesCharacter* OverlappingCharacter = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (IsValid(OverlappingCharacter))
+	if (IsValid(OverlappingCharacter) && OtherComp == OverlappingCharacter->GetMesh())
 	{
 		CharactersInChamber.Remove(OverlappingCharacter);
 	}

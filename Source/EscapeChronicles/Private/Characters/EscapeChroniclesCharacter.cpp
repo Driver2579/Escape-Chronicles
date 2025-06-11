@@ -23,6 +23,8 @@
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	: DesiredGroundSpeedModeOverride(EGroundSpeedMode::None)
 {
+	SpawnCollisionHandlingMethod = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
 	CapsuleComponent = CreateDefaultSubobject<UCapsuleComponent>("Capsule Component");
 	RootComponent = CapsuleComponent;
 
@@ -44,8 +46,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->bCastDynamicShadow = true;
 	MeshComponent->bAffectDynamicIndirectLighting = true;
 	MeshComponent->PrimaryComponentTick.TickGroup = TG_PrePhysics;
-	MeshComponent->SetCollisionProfileName(TEXT("NoCollision"));
-	MeshComponent->SetGenerateOverlapEvents(false);
+	MeshComponent->SetCollisionProfileName(TEXT("CharacterMesh"));
+	MeshComponent->SetGenerateOverlapEvents(true);
 	MeshComponent->SetCanEverAffectNavigation(false);
 	MeshComponent->SetUsingAbsoluteRotation(true);
 
@@ -743,6 +745,7 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 
 	if (bFainted)
 	{
+		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		MeshComponent->WakeAllRigidBodies();
 
 		if (!ensureAlways(!FaintedGameplayEffectClass.IsNull()))
@@ -764,6 +767,7 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 	else
 	{
 		MeshComponent->PutAllRigidBodiesToSleep();
+		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
@@ -817,7 +821,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 	{
 		CharacterMoverComponent->DisableMovement();
 
-		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
 	}
 	else if (MovementModeName == UEscapeChroniclesCharacterMoverComponent::NullModeName)
@@ -825,7 +828,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 		CharacterMoverComponent->SetDefaultMovementMode();
 
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
-		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 	}
 }
 
