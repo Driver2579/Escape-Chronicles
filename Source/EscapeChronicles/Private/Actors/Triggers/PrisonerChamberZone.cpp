@@ -21,9 +21,6 @@ APrisonerChamberZone::APrisonerChamberZone()
 	InnerZoneBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Inner Zone"));
 	InnerZoneBoxComponent->SetupAttachment(RootComponent);
 
-	OuterZoneBoxComponent->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
-	InnerZoneBoxComponent->SetCollisionProfileName(TEXT("OverlapOnlyPawn"));
-
 	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("Player Ownership"));
 }
 
