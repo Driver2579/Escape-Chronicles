@@ -48,7 +48,6 @@ EStateTreeRunStatus FPushAlertEventStateTreeTask::EnterState(FStateTreeExecution
 #if DO_CHECK
 	check(InstanceData.AlertEventData.IsValid());
 	check(InstanceData.AlertEventData.EventTag == EscapeChroniclesGameplayTags::ScheduleEvent_Alert);
-	check(InstanceData.AlertEventData.EventClass->IsChildOf(UAlertScheduleEvent::StaticClass()));
 #endif
 
 	const bool bWantedCharactersAreNotEmpty = ensureAlwaysMsgf(!InstanceData.WantedCharacters.IsEmpty(),
@@ -91,15 +90,19 @@ EStateTreeRunStatus FPushAlertEventStateTreeTask::EnterState(FStateTreeExecution
 	// Start an alert event and load it synchronously because we need its instance immediately
 	ScheduleEventManagerComponent->PushEvent(InstanceData.AlertEventData, true);
 
-	// Make sure the event was started successfully and has a valid instance
+	const FScheduleEventData& CurrentActiveEventData =
+		ScheduleEventManagerComponent->GetCurrentActiveEventDataChecked();
+
+	// Make sure the event was started successfully, it has a valid instance and it's an alert event
 #if DO_CHECK
-	check(ScheduleEventManagerComponent->GetCurrentActiveEventDataChecked() == InstanceData.AlertEventData);
-	check(IsValid(ScheduleEventManagerComponent->GetCurrentActiveEventDataChecked().GetEventInstance()));
+	check(CurrentActiveEventData == InstanceData.AlertEventData);
+	check(IsValid(CurrentActiveEventData.GetEventInstance()));
+	check(CurrentActiveEventData.GetEventInstance()->IsA<UAlertScheduleEvent>());
 #endif
 
 	// Get the instance of the alert event
 	UAlertScheduleEvent* AlertEventInstance = CastChecked<UAlertScheduleEvent>(
-		ScheduleEventManagerComponent->GetCurrentActiveEventDataChecked().GetEventInstance());
+		CurrentActiveEventData.GetEventInstance());
 
 	// Set the wanted characters to the alert event instance
 	AlertEventInstance->SetWantedPlayers(WantedCharactersIDs);
