@@ -82,6 +82,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool HasAnyMeshControllingStateTags() const;
 
+	virtual void OnPreSaveObject() override;
+
 	virtual void PostLoad() override;
 
 	virtual FVector GetNavAgentLocation() const override;
