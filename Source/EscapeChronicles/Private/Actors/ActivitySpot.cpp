@@ -9,6 +9,7 @@
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -44,10 +45,7 @@ void AActivitySpot::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	const FTransform& CharacterTransformOnOccupySpot = CharacterTransformOnOccupySpotComponent->GetComponentTransform();
-
-	CharacterLocationOnOccupySpot = CharacterTransformOnOccupySpot.GetLocation();
-	CharacterRotationOnOccupySpot = CharacterTransformOnOccupySpot.GetRotation().Rotator();
+	CharacterTransformOnOccupySpot = CharacterTransformOnOccupySpotComponent->GetComponentTransform();
 }
 #endif
 
@@ -288,13 +286,23 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 		return;
 	}
 
-	CacheMeshData(CharacterMesh);
+	UEscapeChroniclesCharacterMoverComponent* CharacterMoverComponent = Character->GetCharacterMoverComponent();
 
-	CharacterMesh->SetUsingAbsoluteRotation(false);
+	if (!ensureAlways(IsValid(CharacterMoverComponent)))
+	{
+		return;
+	}
 
-	// Move the character
-	Character->SetActorLocation(CharacterLocationOnOccupySpot);
-	Character->SetActorRotation(CharacterRotationOnOccupySpot);
+	/**
+	 * Temporary and ugly solution. This function is a quick and dirty fix and should not exist in a properly designed
+	 * architecture. Eventually, the MeshControllingState system must be refactored to eliminate the need for this.
+	 */
+	CharacterMoverComponent->SetDefaultMovementMode();
+	Character->SetActorTransform(CharacterTransformOnOccupySpot);
+
+	CharacterMesh->SetSimulatePhysics(false);
+	CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CharacterMesh->SetRelativeTransform(AttachTransform);
 
 	// === Start async loading of assets ===
 
@@ -304,17 +312,6 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	{
 		LoadOccupyingEffect();
 	}
-}
-
-void AActivitySpot::CacheMeshData(const USkeletalMeshComponent* SkeletalMesh)
-{
-#if DO_CHECK
-	check(IsValid(SkeletalMesh));
-#endif
-
-	// Remember original mesh state for later restoration
-	CachedMeshAttachParent = SkeletalMesh->GetAttachParent();
-	CachedMeshTransform = SkeletalMesh->GetRelativeTransform();
 }
 
 void AActivitySpot::LoadOccupyingAnimMontage()
@@ -358,7 +355,7 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 		return;
 	}
 
-	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
+	const USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -370,9 +367,6 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 	if (ensureAlways(IsValid(AnimInstance)))
 	{
 		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
-
-		CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-			AttachSocketName);
 	}
 }
 
@@ -408,12 +402,15 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 
 	CancelOccupyingAnimation(CharacterMesh);
 
+	if (!CharacterMesh->BodyInstance.bSimulatePhysics)
+	{
+		ApplyInitialCharacterData(Character);
+	}
+
 	if (HasAuthority())
 	{
 		CancelOccupyingEffect(Character);
 	}
-
-	ApplyCachedMeshData(CharacterMesh);
 }
 
 void AActivitySpot::CancelOccupyingAnimation(const USkeletalMeshComponent* CharacterMesh)
@@ -463,15 +460,25 @@ void AActivitySpot::CancelOccupyingEffect(const AEscapeChroniclesCharacter* Char
 	}
 }
 
-void AActivitySpot::ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) const
+void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Character)
 {
 #if DO_CHECK
-	check(IsValid(SkeletalMesh));
-	check(CachedMeshAttachParent.IsValid());
+	check(IsValid(Character));
 #endif
 
+	USkeletalMeshComponent* SkeletalMesh = Character->GetMesh();
+	
+	if (!ensureAlways(IsValid(SkeletalMesh)))
+	{
+		return;
+	}
+
 	// Restore original mesh transform
-	SkeletalMesh->AttachToComponent(CachedMeshAttachParent.Get(), FAttachmentTransformRules::KeepWorldTransform);
-	SkeletalMesh->SetRelativeTransform(CachedMeshTransform);
+
+	SkeletalMesh->AttachToComponent(Character->GetInitialMeshAttachParent(),
+		FAttachmentTransformRules::KeepWorldTransform);
+
 	SkeletalMesh->SetUsingAbsoluteRotation(true);
+
+	SkeletalMesh->SetRelativeTransform(Character->GetInitialMeshTransform());
 }

@@ -12,6 +12,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/ActorComponents/CarryCharacterComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
@@ -50,6 +51,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetGenerateOverlapEvents(true);
 	MeshComponent->SetCanEverAffectNavigation(false);
 	MeshComponent->SetUsingAbsoluteRotation(true);
+
+	CarryCharacterComponent = CreateDefaultSubobject<UCarryCharacterComponent>(TEXT("Carry Character Component"));
 
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
@@ -166,7 +169,8 @@ void AEscapeChroniclesCharacter::BeginPlay()
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
 
-	InitialMeshRotation = MeshComponent->GetRelativeRotation();
+	InitialMeshTransform = MeshComponent->GetRelativeTransform();
+	InitialMeshAttachParent = MeshComponent->GetAttachParent();
 }
 
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
@@ -180,7 +184,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	const FRotator MeshRotation = MeshComponent->GetComponentRotation() - InitialMeshRotation;
+	const FRotator MeshRotation = MeshComponent->GetComponentRotation() - InitialMeshTransform.Rotator();
 	const FRotator ActorRotation = GetActorRotation();
 
 	ActorAndViewDelta = MeshRotation - ActorRotation;
@@ -201,7 +205,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 
 	FRotator NewMeshRotation = MeshRotation;
 
-	NewMeshRotation.Yaw = ActorRotation.Yaw + InitialMeshRotation.Yaw -
+	NewMeshRotation.Yaw = ActorRotation.Yaw + InitialMeshTransform.Rotator().Yaw -
 		FMath::FInterpTo(-ActorAndViewDelta.Yaw, 0, DeltaSeconds, TurningInterpSpeed);
 
 	MeshComponent->SetRelativeRotation(NewMeshRotation);
@@ -813,7 +817,7 @@ bool AEscapeChroniclesCharacter::HasAnyMeshControllingStateTags() const
 	return AbilitySystemComponent->HasAnyMatchingGameplayTags(MeshControllingStateTags);
 }
 
-void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const
+void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count)
 {
 	const FName MovementModeName = CharacterMoverComponent->GetMovementModeName();
 
@@ -828,7 +832,30 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 		CharacterMoverComponent->SetDefaultMovementMode();
 
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
+
+		MoveCapsuleToMesh();
 	}
+}
+
+void AEscapeChroniclesCharacter::MoveCapsuleToMesh()
+{
+	FVector NewCapsuleLocation = MeshComponent->GetComponentLocation();
+
+	const FVector TraceStart = NewCapsuleLocation;
+	FVector TraceEnd = NewCapsuleLocation;
+	TraceEnd.Z -= CapsuleComponent->GetScaledCapsuleHalfHeight() / 2;
+
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(this);
+
+	FHitResult OutHit;
+	if (GetWorld()->LineTraceSingleByChannel(OutHit, TraceStart, TraceEnd, ECC_Visibility, TraceParams))
+	{
+		NewCapsuleLocation = OutHit.Location;
+		NewCapsuleLocation.Z += CapsuleComponent->GetScaledCapsuleHalfHeight();
+	}
+
+	SetActorLocation(NewCapsuleLocation);
 }
 
 FGenericTeamId AEscapeChroniclesCharacter::GetGenericTeamId() const

@@ -12,6 +12,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UCarryCharacterComponent;
 class UInventoryManagerComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
@@ -56,6 +57,8 @@ public:
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
 
+	UCarryCharacterComponent* GetCarryCharacterComponent() const { return CarryCharacterComponent; }
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -63,6 +66,9 @@ public:
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+
+	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
+	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -273,6 +279,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -289,8 +298,11 @@ private:
 	// Whether the mesh is turning now
 	bool bTurning = false;
 
-	// Mesh rotation on BeginPlay
-	FRotator InitialMeshRotation;
+	// Mesh transform on BeginPlay
+	FTransform InitialMeshTransform;
+
+	//  Mesh attach parent on BeginPlay
+	TWeakObjectPtr<USceneComponent> InitialMeshAttachParent;
 
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
@@ -324,9 +336,11 @@ private:
 	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
-	
+
 	// Checks if has a tag that block movement and does so
-	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const;
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
+
+	void MoveCapsuleToMesh();
 
 	/**
 	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the

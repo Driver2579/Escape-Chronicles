@@ -112,35 +112,19 @@ private:
 	TObjectPtr<UCapsuleComponent> CharacterTransformOnOccupySpotComponent;
 #endif
 
-	// Character's location after unoccupy
+	// Character's transform after unoccupy
 	UPROPERTY()
-	FVector CharacterLocationOnOccupySpot;
+	FTransform CharacterTransformOnOccupySpot;
 
-	// Character's rotation after unoccupy
-	UPROPERTY()
-	FRotator CharacterRotationOnOccupySpot;
-
-	// Mesh socket name for character attachment during occupation
+	// Mesh transform for character attachment during occupation
 	UPROPERTY(EditAnywhere)
-	FName AttachSocketName;
+	FTransform AttachTransform;
 
 	/**
-	 * Saves character's mesh transform data for later restoration
-	 * @param SkeletalMesh The mesh component to cache
+	 * Restores character to cached state
+	 * @param SkeletalMesh The character component to restore
 	 */
-	void CacheMeshData(const USkeletalMeshComponent* SkeletalMesh);
-
-	/**
-	 * Restores character's mesh to cached transform
-	 * @param SkeletalMesh The mesh component to restore
-	 */
-	void ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) const;
-
-	// Original transform of character's mesh before occupation
-	FTransform CachedMeshTransform;
-
-	// Original parent of character's mesh before occupation
-	TWeakObjectPtr<USceneComponent> CachedMeshAttachParent;
+	static void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh);
 
 	// === Interaction ===
 
