@@ -35,11 +35,8 @@ protected:
 		}
 
 		CachedInventoryManager = InventoryManager;
-		
-		FOnInventoryContentChanged::FDelegate InventoryContentChangedDelegate;
-		InventoryContentChangedDelegate.BindUObject(this, &UInventoryMenuWidget::OnInventoryContentChanged);
-		
-		InventoryManager->AddInventoryContentChangedHandler(InventoryContentChangedDelegate);
+
+		InventoryManager->OnContentChanged.AddUObject(this, &ThisClass::OnInventoryContentChanged);
 
 		UpdateMainInventoryWidget();
 	}
@@ -66,13 +63,13 @@ private:
 		}
 
 		const FInventorySlotsTypedArrayContainer& InventorySlotsTypedArrayContainer =
-			CachedInventoryManager->GetTypedInventorySlotsLists();
-		
+			CachedInventoryManager->GetInventoryContent();
+
 		const int32 InventoryIndex = InventorySlotsTypedArrayContainer.IndexOfByTag(MainInventoryTypeTag);
 
-		check(InventoryIndex >= 0 && InventoryIndex < InventorySlotsTypedArrayContainer.GetArrays().Num());
+		check(InventoryIndex >= 0 && InventoryIndex < InventorySlotsTypedArrayContainer.GetItems().Num());
 		
-		MainInventoryWidget->SetInventorySlots(InventorySlotsTypedArrayContainer[InventoryIndex].Array.GetSlots());
+		MainInventoryWidget->SetInventorySlots(InventorySlotsTypedArrayContainer[InventoryIndex].Array.GetItems());
 		
 	}
 };

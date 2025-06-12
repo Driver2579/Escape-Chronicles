@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Objects/InventoryItemFragments/InventoryItemFragment.h"
+#include "Objects/InventoryItemFragment.h"
 #include "IconInventoryItemFragment.generated.h"
 
 // Adds a representation of an item to the UI

@@ -2,13 +2,13 @@
 
 #pragma once
 
-#include <Objects/InventoryItemInstance.h>
-
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Components/Image.h"
-#include "Objects/InventoryItemFragments/IconInventoryItemFragment.h"
+#include "Objects/InventoryItemInstance.h"
 #include "ItemSlotWidget.generated.h"
+
+class UItemSlotWidgetStyle;
 
 // TODO: do comments
 UCLASS()
@@ -21,7 +21,7 @@ public:
 
 protected:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	
+
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent,
 		UDragDropOperation*& OutOperation) override;
 
@@ -33,15 +33,9 @@ protected:
 private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UImage> ItemInstanceIcon;
-	
-	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UTexture2D> EmptySlotTexture;
 
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UTexture2D> InvalidItemInstanceIconTexture;
-
-	UPROPERTY(Transient)
-	TObjectPtr<UImage> DragVisualWidget;
+	TObjectPtr<UItemSlotWidgetStyle> Style;
 
 	TWeakObjectPtr<UInventoryItemInstance> CachedItemInstance;
 };

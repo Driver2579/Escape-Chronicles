@@ -67,9 +67,9 @@ public:
 	 * @param ToSlotsType Tag identifying the destination slot type
 	 */
 	bool SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
-		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType,
-		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
-	
+		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main,
+		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
+
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful

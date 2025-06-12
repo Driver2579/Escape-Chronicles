@@ -4,36 +4,39 @@
 
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
-#include "Characters/EscapeChroniclesCharacter.h"
-#include "Objects/InventoryManagerFragments/InventoryManagerFragmentLooting.h"
+#include "Common/DataAssets/ItemSlotWidgetStyle.h"
+#include "Objects/InventoryItemFragments/IconInventoryItemFragment.h"
 
 void UItemSlotWidget::SetItemInstance(UInventoryItemInstance* ItemInstance)
 {
 	CachedItemInstance = ItemInstance;
-	
+
 	// If nullptr is passed, then this slot is empty
-	if (ItemInstance == nullptr || !ensureAlways(IsValid(ItemInstance)))
+	if (ItemInstance == nullptr)
 	{
-		ItemInstanceIcon->SetBrushFromTexture(EmptySlotTexture);
+		ItemInstanceIcon->SetBrushFromTexture(Style->EmptySlotTexture);
 
 		return;
 	}
-		
-	const UIconInventoryItemFragment* IconFragment =
-		ItemInstance->GetFragmentByClass<UIconInventoryItemFragment>();
+
+#if DO_CHECK
+	check(IsValid(ItemInstance));
+#endif
+
+	const UIconInventoryItemFragment* IconFragment = ItemInstance->GetFragmentByClass<UIconInventoryItemFragment>();
 
 	// If an item doesn't have an icon, give it an invalid icon
 	ensureAlways(IsValid(IconFragment)) ?
 		ItemInstanceIcon->SetBrushFromTexture(IconFragment->GetIcon()):
-		ItemInstanceIcon->SetBrushFromTexture(InvalidItemInstanceIconTexture);
+		ItemInstanceIcon->SetBrushFromTexture(Style->InvalidItemInstanceIconTexture);
 }
 
 FReply UItemSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	// === This code is like UWidgetBlueprintLibrary::DetectDragIfPressed but optimized for the project's task ===
 
-	// Drag works either with LMB or with a finger (for phones)
-	if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton && !InMouseEvent.IsTouchEvent())
+	// Drag works either with DragAndDropKey or with a finger (for phones)
+	if (InMouseEvent.GetEffectingButton() != Style->DragAndDropKey && !InMouseEvent.IsTouchEvent())
 	{
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
@@ -46,7 +49,7 @@ FReply UItemSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, con
 	}
 
 	// Sends a message that a drag has started
-	return FEventReply().NativeReply.DetectDrag(SlateWidgetDetectingDrag.ToSharedRef(), EKeys::LeftMouseButton);
+	return FEventReply().NativeReply.DetectDrag(SlateWidgetDetectingDrag.ToSharedRef(), Style->DragAndDropKey);
 }
 
 void UItemSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent,
@@ -54,43 +57,23 @@ void UItemSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FP
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
-	const UClass* DragDropOperationClass = UDragDropOperation::StaticClass();
-	
-	if (!ensureAlways(DragDropOperationClass))
-	{
-		return;
-	}
-	
 	UDragDropOperation* DragDropOperation = NewObject<UDragDropOperation>(GetTransientPackage(),
-		DragDropOperationClass);
+		UDragDropOperation::StaticClass());
 
-	if (!ensureAlways(IsValid(DragDropOperation)))
-	{
-		return;
-	}
-
-	// Create DragVisualWidget once, so as not to create garbage widgets for GC
-	if (!IsValid(DragVisualWidget))
-	{
-		DragVisualWidget = NewObject<UImage>(this);
-	}
-
-	if (!ensureAlways(IsValid(DragVisualWidget)))
+	if (!ensureAlways(IsValid(DragDropOperation)) || !ensureAlways(IsValid(Style->DragVisualWidget)))
 	{
 		return;
 	}
 
 	// === Visualisation ===
-	
-	DragVisualWidget->SetBrush(ItemInstanceIcon->GetBrush());
-	
-	DragDropOperation->DefaultDragVisual = DragVisualWidget;
+	Style->DragVisualWidget->SetBrush(ItemInstanceIcon->GetBrush());
+	DragDropOperation->DefaultDragVisual = Style->DragVisualWidget;
 	DragDropOperation->Pivot = EDragPivot::CenterCenter;
-	
+
 	ItemInstanceIcon->SetVisibility(ESlateVisibility::Hidden);
 
 	// === Applying ===
-	
+
 	DragDropOperation->Payload = CachedItemInstance.Get();
 	OutOperation = DragDropOperation;
 }
@@ -108,7 +91,7 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 {
 	const bool DefaultResult = Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 	
-	UInventoryItemInstance* DroppedItemInstance = Cast<UInventoryItemInstance>(InOperation->Payload);
+	/*UInventoryItemInstance* DroppedItemInstance = Cast<UInventoryItemInstance>(InOperation->Payload);
 
 	if (!ensureAlways(IsValid(DroppedItemInstance)))
 	{
@@ -127,34 +110,8 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{
 		return DefaultResult;
-	}
+	}*/
 
-	UInventoryManagerFragmentLooting* LootingFragment =
-		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerFragmentLooting>();
 
-	if (!ensureAlways(IsValid(LootingFragment)))
-	{
-		return DefaultResult;
-	}
-
-	if (DroppedItemInstance->GetOuter() == InventoryManagerComponent)
-	{
-		FGameplayTag FromSlotsType;
-		int32 FromSlotIndex;
-
-		FGameplayTag ToSlotsType;
-		int32 ToSlotIndex;
-
-		bool basd = 
-			InventoryManagerComponent->GetItemInstanceLocation(DroppedItemInstance, FromSlotsType, FromSlotIndex) &&
-			InventoryManagerComponent->GetItemInstanceLocation(CachedItemInstance.Get(), ToSlotsType, ToSlotIndex);
-
-		
-
-		
-		
-		LootingFragment->Server_Swap(InventoryManagerComponent, FromSlotIndex, ToSlotIndex, FromSlotsType, ToSlotsType);
-	}
-	
-	return true;
+	return DefaultResult;
 }

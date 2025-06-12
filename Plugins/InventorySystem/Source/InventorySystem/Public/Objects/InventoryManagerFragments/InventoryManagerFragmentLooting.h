@@ -3,7 +3,7 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
-#include "InventoryManagerFragment.h"
+#include "Objects/InventoryManagerFragment.h"
 #include "InventoryManagerFragmentLooting.generated.h"
 
 class AInventoryPickupItem;
@@ -15,13 +15,15 @@ class INVENTORYSYSTEM_API UInventoryManagerFragmentLooting : public UInventoryMa
 	GENERATED_BODY()
 
 public:
+	/*
 	UFUNCTION(Server, Reliable)
 	void Server_Swap(UInventoryManagerComponent* Inventory, const int32 FromSlotIndex, const int32 ToSlotIndex,
-		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType,
-		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType);
+		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main,
+		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_Loot(UInventoryManagerComponent* Inventory, UInventoryItemInstance* ItemInstance);
+	*/
 
 private:
 	UPROPERTY(EditDefaultsOnly)
