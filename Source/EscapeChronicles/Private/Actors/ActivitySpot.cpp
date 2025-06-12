@@ -168,8 +168,6 @@ void AActivitySpot::OnOccupyingCharacterHealthChanged(const FOnAttributeChangeDa
 	// Unoccupy if health decreased
 	if (AttributeChangeData.OldValue > AttributeChangeData.NewValue)
 	{
-		AEscapeChroniclesCharacter* Character = GetOccupyingCharacter();
-
 		SetOccupyingCharacter(nullptr);
 	}
 }
@@ -269,7 +267,7 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 		return;
 	}
 
-	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
+	const USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -316,7 +314,10 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 
 	CancelOccupyingAnimation(CharacterMesh);
 
-	ApplyInitialCharacterData(Character);
+	if (!CharacterMesh->BodyInstance.bSimulatePhysics)
+	{
+		ApplyInitialCharacterData(Character);
+	}
 
 	if (HasAuthority())
 	{
@@ -371,7 +372,7 @@ void AActivitySpot::CancelOccupyingEffect(const AEscapeChroniclesCharacter* Char
 	}
 }
 
-void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Character) const
+void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Character)
 {
 #if DO_CHECK
 	check(IsValid(Character));
@@ -385,6 +386,7 @@ void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Charac
 	}
 
 	// Restore original mesh transform
+
 	SkeletalMesh->AttachToComponent(Character->GetInitialMeshAttachParent(),
 		FAttachmentTransformRules::KeepWorldTransform);
 

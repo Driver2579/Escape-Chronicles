@@ -114,7 +114,7 @@ private:
 	 * Restores character to cached state
 	 * @param SkeletalMesh The character component to restore
 	 */
-	void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh) const;
+	static void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh);
 
 	// === Interaction ===
 

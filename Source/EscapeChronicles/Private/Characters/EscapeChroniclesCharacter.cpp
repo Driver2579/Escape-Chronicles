@@ -819,11 +819,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 
 		MoveCapsuleToMesh();
-
-		/** TODO: 
-		 * MeshComponent->AttachToComponent(CapsuleComponent, FAttachmentTransformRules::KeepRelativeTransform);
-		 * MeshComponent->SetRelativeTransform(InitialMeshTransform);
-		 */
 	}
 }
 
