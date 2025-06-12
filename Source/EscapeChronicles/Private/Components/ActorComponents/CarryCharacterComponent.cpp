@@ -46,7 +46,7 @@ void UCarryCharacterComponent::SetCarriedCharacter(AEscapeChroniclesCharacter* I
 }
 
 void UCarryCharacterComponent::ReplaceCarriedCharacter(const AEscapeChroniclesCharacter* OldCarriedCharacter,
-                                                       const AEscapeChroniclesCharacter* NewCarriedCharacter)
+	const AEscapeChroniclesCharacter* NewCarriedCharacter)
 {
 	if (IsValid(OldCarriedCharacter))
 	{

@@ -800,7 +800,7 @@ bool AEscapeChroniclesCharacter::HasAnyMeshControllingStateTags() const
 	return AbilitySystemComponent->HasAnyMatchingGameplayTags(MeshControllingStateTags);
 }
 
-void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const
+void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count)
 {
 	const FName MovementModeName = CharacterMoverComponent->GetMovementModeName();
 
@@ -810,7 +810,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
-		CapsuleComponent->SetEnableGravity(false);
 	}
 	else if (MovementModeName == UEscapeChroniclesCharacterMoverComponent::NullModeName)
 	{
@@ -818,22 +817,23 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-		CapsuleComponent->SetEnableGravity(true);
-		
+
 		MoveCapsuleToMesh();
 
-		MeshComponent->AttachToComponent(CapsuleComponent, FAttachmentTransformRules::KeepRelativeTransform);
-		MeshComponent->SetRelativeTransform(InitialMeshTransform);
+		/** TODO: 
+		 * MeshComponent->AttachToComponent(CapsuleComponent, FAttachmentTransformRules::KeepRelativeTransform);
+		 * MeshComponent->SetRelativeTransform(InitialMeshTransform);
+		 */
 	}
 }
 
-void AEscapeChroniclesCharacter::MoveCapsuleToMesh() const
+void AEscapeChroniclesCharacter::MoveCapsuleToMesh()
 {
 	FVector NewCapsuleLocation = MeshComponent->GetComponentLocation();
 
 	const FVector TraceStart = NewCapsuleLocation;
 	FVector TraceEnd = NewCapsuleLocation;
-	TraceEnd.Z = CapsuleComponent->GetScaledCapsuleHalfHeight();
+	TraceEnd.Z -= CapsuleComponent->GetScaledCapsuleHalfHeight() / 2;
 
 	FCollisionQueryParams TraceParams;
 	TraceParams.AddIgnoredActor(this);
@@ -842,8 +842,8 @@ void AEscapeChroniclesCharacter::MoveCapsuleToMesh() const
 	if (GetWorld()->LineTraceSingleByChannel(OutHit, TraceStart, TraceEnd, ECC_Visibility, TraceParams))
 	{
 		NewCapsuleLocation = OutHit.Location;
-		NewCapsuleLocation.Z += TraceEnd.Z;
+		NewCapsuleLocation.Z += CapsuleComponent->GetScaledCapsuleHalfHeight();
 	}
 
-	CapsuleComponent->SetWorldLocation(NewCapsuleLocation);
+	SetActorLocation(NewCapsuleLocation);
 }

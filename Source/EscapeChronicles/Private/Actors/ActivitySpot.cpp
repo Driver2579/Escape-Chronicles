@@ -9,6 +9,7 @@
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
+#include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Net/UnrealNetwork.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
@@ -42,10 +43,7 @@ void AActivitySpot::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 
-	const FTransform& CharacterTransformOnOccupySpot = CharacterTransformOnOccupySpotComponent->GetComponentTransform();
-
-	CharacterLocationOnOccupySpot = CharacterTransformOnOccupySpot.GetLocation();
-	CharacterRotationOnOccupySpot = CharacterTransformOnOccupySpot.GetRotation().Rotator();
+	CharacterTransformOnOccupySpot = CharacterTransformOnOccupySpotComponent->GetComponentTransform();
 }
 #endif
 
@@ -170,6 +168,8 @@ void AActivitySpot::OnOccupyingCharacterHealthChanged(const FOnAttributeChangeDa
 	// Unoccupy if health decreased
 	if (AttributeChangeData.OldValue > AttributeChangeData.NewValue)
 	{
+		AEscapeChroniclesCharacter* Character = GetOccupyingCharacter();
+
 		SetOccupyingCharacter(nullptr);
 	}
 }
@@ -200,11 +200,23 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 		return;
 	}
 
-	// Move character itself
-	Character->SetActorLocation(CharacterLocationOnOccupySpot);
-	Character->SetActorRotation(CharacterRotationOnOccupySpot);
+	UEscapeChroniclesCharacterMoverComponent* CharacterMoverComponent = Character->GetCharacterMoverComponent();
 
-	CharacterMesh->SetUsingAbsoluteRotation(false);
+	if (!ensureAlways(IsValid(CharacterMoverComponent)))
+	{
+		return;
+	}
+
+	/**
+	 * Temporary and ugly solution. This function is a quick and dirty fix and should not exist in a properly designed
+	 * architecture. Eventually, the MeshControllingState system must be refactored to eliminate the need for this.
+	 */
+	CharacterMoverComponent->SetDefaultMovementMode();
+	Character->SetActorTransform(CharacterTransformOnOccupySpot);
+
+	CharacterMesh->SetSimulatePhysics(false);
+	CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+	CharacterMesh->SetRelativeTransform(AttachTransform);
 
 	// === Start async loading of assets ===
 
@@ -270,16 +282,6 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 	{
 		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 	}
-
-	CharacterMesh->SetSimulatePhysics(false);
-	CharacterMesh->SetUsingAbsoluteRotation(false);
-
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this, CharacterMesh]
-	{
-		CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale/*,AttachSocketName*/);
-
-		CharacterMesh->SetRelativeTransform(AttachTransform);
-	}));
 }
 
 void AActivitySpot::OnOccupyingEffectLoaded()
@@ -309,10 +311,6 @@ void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
 	{
 		return;
 	}
-
-	// Move character itself
-	Character->SetActorLocation(CharacterLocationOnOccupySpot);
-	Character->SetActorRotation(CharacterRotationOnOccupySpot);
 
 	// === Restore character to original state ===
 

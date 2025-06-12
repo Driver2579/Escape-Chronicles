@@ -102,17 +102,9 @@ private:
 	TObjectPtr<UCapsuleComponent> CharacterTransformOnOccupySpotComponent;
 #endif
 
-	// Character's location after unoccupy
+	// Character's transform after unoccupy
 	UPROPERTY()
-	FVector CharacterLocationOnOccupySpot;
-
-	// Character's rotation after unoccupy
-	UPROPERTY()
-	FRotator CharacterRotationOnOccupySpot;
-
-	/*// Mesh socket name for character attachment during occupation
-	UPROPERTY(EditAnywhere)
-	FName AttachSocketName;*/
+	FTransform CharacterTransformOnOccupySpot;
 
 	// Mesh transform for character attachment during occupation
 	UPROPERTY(EditAnywhere)
@@ -122,7 +114,7 @@ private:
 	 * Restores character to cached state
 	 * @param SkeletalMesh The character component to restore
 	 */
-	void ApplyInitialCharacterData(AEscapeChroniclesCharacter* Character) const;
+	void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh) const;
 
 	// === Interaction ===
 

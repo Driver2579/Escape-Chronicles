@@ -311,7 +311,7 @@ private:
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
 
 	// Checks if has a tag that block movement and does so
-	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const;
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
 
-	void MoveCapsuleToMesh() const;
+	void MoveCapsuleToMesh();
 };
