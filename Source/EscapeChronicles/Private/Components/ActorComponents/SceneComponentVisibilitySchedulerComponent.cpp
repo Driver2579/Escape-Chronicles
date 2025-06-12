@@ -20,18 +20,29 @@ void USceneComponentVisibilitySchedulerComponent::BeginPlay()
 		return;
 	}
 
-	// Cache the pointer to the target component based on the reference set in the editor
-	TargetComponent = CastChecked<USceneComponent>(TargetComponentReference.GetComponent(GetOwner()),
-		ECastCheckedType::NullAllowed);
-
 #if DO_ENSURE
-	ensureAlwaysMsgf(TargetComponent.IsValid(),
-		TEXT("No target component is set for visibility scheduling, this component will work for nothing! "
-			"Consider removing this component or setting the target component."));
+	ensureAlwaysMsgf(!TargetComponentsReferences.IsEmpty(),
+		TEXT("No target components are set for visibility scheduling, this component will work for nothing! "
+			"Consider removing this component or setting the target components."));
 #endif
 
-	// Initialize the visibility of the component based on the current game time
-	UpdateComponentVisibility(GameState->GetCurrentGameDateTime().Time, true);
+	// Reserve space for the target components based on the references set in the editor
+	TargetComponents.Reserve(TargetComponentsReferences.Num());
+
+	// Cache the pointers to the target components based on the references set in the editor
+	for (const FComponentReference& TargetComponentReference : TargetComponentsReferences)
+	{
+		USceneComponent* TargetComponent = CastChecked<USceneComponent>(
+			TargetComponentReference.GetComponent(GetOwner()), ECastCheckedType::NullAllowed);
+
+		if (ensureAlways(IsValid(TargetComponent)))
+		{
+			TargetComponents.Add(TargetComponent);
+		}
+	}
+
+	// Initialize the visibility of the components based on the current game time
+	UpdateComponentsVisibility(GameState->GetCurrentGameDateTime().Time, true);
 
 	// Listen for game date time changes
 	GameState->OnCurrentGameDateTimeUpdated.AddUObject(this, &ThisClass::OnCurrentGameDateTimeUpdated);
@@ -40,14 +51,14 @@ void USceneComponentVisibilitySchedulerComponent::BeginPlay()
 void USceneComponentVisibilitySchedulerComponent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime& OldDateTime,
 	const FGameplayDateTime& NewDateTime)
 {
-	// Update the visibility of the component based on the new game time
-	UpdateComponentVisibility(NewDateTime.Time);
+	// Update the visibility of the components based on the new game time
+	UpdateComponentsVisibility(NewDateTime.Time);
 }
 
-void USceneComponentVisibilitySchedulerComponent::UpdateComponentVisibility(
+void USceneComponentVisibilitySchedulerComponent::UpdateComponentsVisibility(
 	const FGameplayTime& CurrentGameTime, const bool bForceUpdate)
 {
-	// Whether the component should be visible. Depends on the current game time.
+	// Whether the components should be visible. Depends on the current game time.
 	bool bNewVisibility;
 
 	// Usual scenario. Example: 10:00-11:30.
@@ -67,10 +78,13 @@ void USceneComponentVisibilitySchedulerComponent::UpdateComponentVisibility(
 		return;
 	}
 
-	// Update the visibility of the target component and propagate the visibility change to children if needed
-	if (ensureAlways(TargetComponent.IsValid()))
+	// Update the visibility of the target components and propagate the visibility changes to children if needed
+	for (TWeakObjectPtr TargetComponent : TargetComponents)
 	{
-		TargetComponent->SetVisibility(bNewVisibility, bPropagateVisibilityToChildren);
+		if (ensureAlways(TargetComponent.IsValid()))
+		{
+			TargetComponent->SetVisibility(bNewVisibility, bPropagateVisibilityToChildren);
+		}
 	}
 
 	// Remember the new visibility state

@@ -7,7 +7,7 @@
 #include "Common/Structs/GameplayDateTime.h"
 #include "SceneComponentVisibilitySchedulerComponent.generated.h"
 
-// Changes the visibility of the selected scene component based on the current game time
+// Changes the visibility of the selected scene components based on the current game time
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ESCAPECHRONICLES_API USceneComponentVisibilitySchedulerComponent : public UActorComponent
 {
@@ -25,33 +25,33 @@ protected:
 		const FGameplayDateTime& NewDateTime);
 
 private:
-	// The time when the component should start being visible
+	// The time when the components should start being visible
 	UPROPERTY(EditAnywhere)
 	FGameplayTime ComponentVisibleStartTime;
 
-	// The time when the component should end being visible
+	// The time when the components should end being visible
 	UPROPERTY(EditAnywhere)
 	FGameplayTime ComponentVisibleEndTime;
 
-	// Component to change the visibility based on the current game time on
-	UPROPERTY(EditAnywhere, DisplayName="Target Component", meta=(UseComponentPicker, AllowedClasses="SceneComponent"))
-	FComponentReference TargetComponentReference;
+	// Components to change the visibility based on the current game time on
+	UPROPERTY(EditAnywhere, DisplayName="Target Components", meta=(UseComponentPicker, AllowedClasses="SceneComponent"))
+	TSet<FComponentReference> TargetComponentsReferences;
 
-	// An actual pointer to the target component. It is set in BeginPlay() based on TargetComponentReference.
-	TWeakObjectPtr<USceneComponent> TargetComponent;
+	// Actual pointers to the target components. They are set in BeginPlay() based on TargetComponentsReferences.
+	TSet<TWeakObjectPtr<USceneComponent>> TargetComponents;
 
-	// If true, the visibility change will be propagated to all children of the target component
+	// If true, the visibility change will be propagated to all children of the target components
 	UPROPERTY(EditAnywhere)
 	bool bPropagateVisibilityToChildren = false;
 
 	/**
-	 * Updates the visibility of the target component based on the current game time.
+	 * Updates the visibility of the target components based on the current game time.
 	 * @param CurrentGameTime Current game time to check the visibility against.
 	 * @param bForceUpdate If true, forces the visibility update even if the current visibility is the same as the new
 	 * visibility. Must be used for initial visibility update.
 	 */
-	void UpdateComponentVisibility(const FGameplayTime& CurrentGameTime, const bool bForceUpdate = false);
+	void UpdateComponentsVisibility(const FGameplayTime& CurrentGameTime, const bool bForceUpdate = false);
 
-	// Current visibility of the component. Used to avoid unnecessary visibility changes.
+	// Current visibility of the components. Used to avoid unnecessary visibility changes.
 	bool bCurrentVisibility = false;
 };
