@@ -15,15 +15,15 @@ struct FOnPunchHitStateTreeEventPayload
 	GENERATED_BODY()
 
 	// The Ability System Component of the actor who performed the punch
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(VisibleAnywhere, Transient)
 	TObjectPtr<UAbilitySystemComponent> Instigator;
 
 	// The Ability System Component of the actor who was hit by the punch
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(VisibleAnywhere, Transient)
 	TObjectPtr<UAbilitySystemComponent> Target;
 
 	// Handle of the gameplay effect applied to the target as a result of the punch
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(VisibleAnywhere, Transient)
 	FActiveGameplayEffectHandle TargetAppliedEffectHandle;
 
 	bool IsValid() const
