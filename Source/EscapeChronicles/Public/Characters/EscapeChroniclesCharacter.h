@@ -84,6 +84,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool HasAnyMeshControllingStateTags() const;
 
+	virtual void OnPreSaveObject() override;
+
 	virtual void PostLoad() override;
 
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,

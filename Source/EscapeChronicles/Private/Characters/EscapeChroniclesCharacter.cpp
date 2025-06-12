@@ -143,6 +143,16 @@ UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeCh
 		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
 }
 
+void AEscapeChroniclesCharacter::OnPreSaveObject()
+{
+	ISaveable::OnPreSaveObject();
+
+	if (MeshComponent->GetAttachParent() != CapsuleComponent)
+	{
+		MoveCapsuleToMesh();
+	}
+}
+
 void AEscapeChroniclesCharacter::PostLoad()
 {
 	Super::PostLoad();
