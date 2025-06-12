@@ -87,10 +87,6 @@ protected:
 	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
 
 private:
-	bool SetOccupyingCharacter1(AEscapeChroniclesCharacter* Character);
-
-	bool SetOccupyingCharacter2(AEscapeChroniclesCharacter* Character);
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UPlayerOwnershipComponent> PlayerOwnershipComponent;
 
