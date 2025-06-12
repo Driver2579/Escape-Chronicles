@@ -9,7 +9,7 @@
 class UInteractionManagerComponent;
 class UInteractableComponent;
 
-// You can interact with this item to pick it up in your inventory
+// Character can interact with this item to pick it up in the inventory
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesInventoryPickupItem : public AInventoryPickupItem
 {
@@ -22,8 +22,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
-	void InteractHandler (UInteractionManagerComponent* InteractionManagerComponent);
+	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
 };

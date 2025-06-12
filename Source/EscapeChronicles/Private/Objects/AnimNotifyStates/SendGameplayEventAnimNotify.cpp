@@ -6,7 +6,7 @@
 #include "AbilitySystemGlobals.h"
 
 void USendGameplayEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
-		const FAnimNotifyEventReference& EventReference)
+	const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
@@ -17,6 +17,7 @@ void USendGameplayEventAnimNotify::Notify(USkeletalMeshComponent* MeshComp, UAni
 	{
 		FGameplayEventData GameplayEventData;
 		GameplayEventData.Instigator = MeshComp->GetOwner();
+
 		InstigatorAbilitySystemComponent->HandleGameplayEvent(GameplayEventTag, &GameplayEventData);
 	}
 }

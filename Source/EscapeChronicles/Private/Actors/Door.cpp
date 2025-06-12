@@ -5,7 +5,6 @@
 #include "AbilitySystemComponent.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
-#include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Objects/InventoryItemFragments/DoorKeyInventoryItemFragment.h"
 #include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
@@ -13,18 +12,18 @@
 ADoor::ADoor()
 {
 	PrimaryActorTick.bCanEverTick = false;
-	
+
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	
+
 	EnterBox = CreateDefaultSubobject<UBoxComponent>(TEXT("EnterBox"));
 	EnterBox->SetupAttachment(RootComponent);
-	
+
 	ExitBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ExitBox"));
 	ExitBox->SetupAttachment(RootComponent);
-	
+
 	DoorwayBoxBlock = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxBlock"));
 	DoorwayBoxBlock->SetupAttachment(RootComponent);
-	
+
 	DoorwayBoxOverlap = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxOverlap"));
 	DoorwayBoxOverlap->SetupAttachment(RootComponent);
 }
@@ -32,7 +31,7 @@ ADoor::ADoor()
 void ADoor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	DoorwayBoxOverlap->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxOverlapBeginOverlap);
 	DoorwayBoxOverlap->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxOverlapEndOverlap);
 
@@ -45,40 +44,9 @@ void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedCompo
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character))
+	if (IsValid(Character))
 	{
-		return;
-	}
-
-	// Open the doors for character if it already has access to it
-	if (ConfirmedCharactersPool.Contains(Character))
-	{
-		SetLockDoorway(Character, false);
-
-		return;
-	}
-
-	// Determine whether character needs a key under the current conditions
-	const bool bRequiresKey = IsRequiresKey(Character);
-
-	// Unlock the door if the key is not required or the character has an access tag
-	if (!bRequiresKey || HasCharacterAccessTag(Character))
-	{
-		SetLockDoorway(Character, false);
-
-		ConfirmedCharactersPool.Add(Character);
-		
-		return;
-	}
-
-	// If character has the required key, use it
-	if (HasCharacterMatchingKey(Character))
-	{
-		UseKey(Character);
-
-		SetLockDoorway(Character, false);
-
-		ConfirmedCharactersPool.Add(Character);
+		TryAddCharacterToPool(Character);
 	}
 }
 
@@ -243,5 +211,60 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 	if (!bHasUnbreakableKey)
 	{
 		CachedDurabilityFragment->ReduceDurability(CachedItemInstance, 1);
+	}
+}
+
+void ADoor::UpdateConfirmedCharactersPool()
+{
+	TArray<AActor*> OverlappingActors;
+	DoorwayBoxOverlap->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(Actor);
+
+		if (IsValid(Character))
+		{
+			TryAddCharacterToPool(Character);
+		}
+	}
+	
+}
+
+void ADoor::TryAddCharacterToPool(AEscapeChroniclesCharacter* Character)
+{
+#if DO_ENSURE
+	check(IsValid(Character));
+#endif
+
+	// Open the doors for character if it already has access to it
+	if (ConfirmedCharactersPool.Contains(Character))
+	{
+		SetLockDoorway(Character, false);
+
+		return;
+	}
+
+	// Determine whether character needs a key in the current conditions
+	const bool bRequiresKey = IsRequiresKey(Character);
+
+	// Unlock the door if the key is not required or the character has an access tag
+	if (!bRequiresKey || HasCharacterAccessTag(Character))
+	{
+		SetLockDoorway(Character, false);
+
+		ConfirmedCharactersPool.Add(Character);
+		
+		return;
+	}
+
+	// If character has the required key, use it
+	if (HasCharacterMatchingKey(Character))
+	{
+		UseKey(Character);
+
+		SetLockDoorway(Character, false);
+
+		ConfirmedCharactersPool.Add(Character);
 	}
 }

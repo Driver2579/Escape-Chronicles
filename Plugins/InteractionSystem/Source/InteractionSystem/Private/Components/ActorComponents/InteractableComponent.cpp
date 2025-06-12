@@ -3,11 +3,21 @@
 #include "InteractionSystem/Public/Components/ActorComponents/InteractableComponent.h"
 
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Widgets/InteractPopupWidget.h"
 
 UInteractableComponent::UInteractableComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	SetIsReplicatedByDefault(true);
+}
+
+void UInteractableComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, bCanInteract);
 }
 
 void UInteractableComponent::BeginPlay()
@@ -64,14 +74,14 @@ void UInteractableComponent::InitializeHintWidget()
 	}
 }
 
-void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
+void UInteractableComponent::OnRep_CanInteract()
 {
-	InteractDelegate.Broadcast(InteractionManagerComponent);
+	SetInteractionHintVisibility(false);
 }
 
-void UInteractableComponent::AddInteractionHandler(const FInteractDelegate::FDelegate& Delegate)
+void UInteractableComponent::Interact(UInteractionManagerComponent* InteractionManagerComponent) const
 {
-	InteractDelegate.Add(Delegate);
+	OnInteract.Broadcast(InteractionManagerComponent);
 }
 
 void UInteractableComponent::SetInteractionHintVisibility(const bool bNewVisibility)

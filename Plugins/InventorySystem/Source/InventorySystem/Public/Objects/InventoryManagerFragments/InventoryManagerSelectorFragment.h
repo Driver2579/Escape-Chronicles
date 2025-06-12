@@ -3,43 +3,55 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
-#include "InventoryManagerFragment.h"
+#include "Objects/InventoryManagerFragment.h"
 #include "InventorySystemGameplayTags.h"
 #include "InventoryManagerSelectorFragment.generated.h"
 
 class AInventoryPickupItem;
 
-// Adds selector for a single typed array
+// Stores the slot selector in the inventory array and allows to offset it
 UCLASS()
 class INVENTORYSYSTEM_API UInventoryManagerSelectorFragment : public UInventoryManagerFragment
 {
 	GENERATED_BODY()
 
 public:
-	virtual void OnManagerInitialized(UInventoryManagerComponent* Inventory) override;
-	
-	FGameplayTag GetSelectableSlotsType() const { return SelectableSlotsType; }
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	virtual void OnManagerInitialized() override;
+
+	const FGameplayTag& GetSelectableSlotsTypeTag() const { return SelectableSlotsTypeTag; }
 	int32 GetCurrentSlotIndex() const { return CurrentSlotIndex; }
 
-	virtual bool IsSupportedForNetworking() const override { return true; }
-	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-	
+	// Offsets CurrentSlotIndex to the passed value within the inventory
 	UFUNCTION(Server, Reliable)
 	void Server_OffsetCurrentSlotIndex(const int32 Offset);
 
-protected:
-	void LogCurrentSlotIndex() const;
-	
-private:
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag SelectableSlotsType = InventorySystemGameplayTags::InventoryTag_MainSlotType;
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOffsetCurrentSlotIndexDelegate, int32 CurrentSlotIndex);
 
-	UPROPERTY(ReplicatedUsing="OnRep_SelectedSlotIndex")
+	// Called when CurrentSlotIndex is offset
+	FOnOffsetCurrentSlotIndexDelegate OnOffsetCurrentSlotIndex;
+
+protected:
+#if WITH_EDITORONLY_DATA && !NO_LOGGING
+	void LogCurrentSlotIndex() const;
+#endif
+
+private:
+	// The type of the slots array which you want to add a selector for
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag SelectableSlotsTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main;
+
+	// Index of the currently selected slot
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_SelectedSlotIndex")
 	int32 CurrentSlotIndex;
 
 	UFUNCTION()
 	void OnRep_SelectedSlotIndex();
-	
+
+#if WITH_EDITORONLY_DATA
+	// Whether to log the CurrentSlotIndex when it changes
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogCurrentSlotIndex = false;
+#endif
 };

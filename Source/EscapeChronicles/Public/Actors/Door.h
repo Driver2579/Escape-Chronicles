@@ -4,23 +4,28 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Components/BoxComponent.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/Saveable.h"
 #include "Door.generated.h"
 
 class AEscapeChroniclesCharacter;
 class UBoxComponent;
 class UPhysicsConstraintComponent;
 
+// Door actor with configurable access rules (keys/tags) and automatic collision handling
 UCLASS()
-class ESCAPECHRONICLES_API ADoor : public AActor
+class ESCAPECHRONICLES_API ADoor : public AActor, public ISaveable
 {
 	GENERATED_BODY()
-	
+
 public:	
 	ADoor();
 
-	bool IsEnterRequiresKey() const { return bEnterRequiresKey; };
-	bool IsExitRequiresKey() const { return bExitRequiresKey; };
+	const FGameplayTag& GetKeyAccessTag() const { return KeyAccessTag; }
+	const FGameplayTagContainer& GetCharacterAccessTags() const { return CharacterAccessTags; }
+	bool IsEnterRequiresKey() const { return bEnterRequiresKey; }
+	bool IsExitRequiresKey() const { return bExitRequiresKey; }
 	
 	// Returns true if the character has access tag to this door
 	bool HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) const;
@@ -30,42 +35,76 @@ public:
 
 	bool HasCharacterEnterAccess(const AEscapeChroniclesCharacter* Character) const
 	{
-		return HasCharacterAccessTag(Character) || !bEnterRequiresKey || HasCharacterMatchingKey(Character);
+		return !bEnterRequiresKey || HasCharacterAccessTag(Character) || HasCharacterMatchingKey(Character);
 	}
 	
 	bool HasCharacterExitAccess(const AEscapeChroniclesCharacter* Character) const
 	{
-		return HasCharacterAccessTag(Character) || !bExitRequiresKey || HasCharacterMatchingKey(Character);
+		return !bExitRequiresKey || HasCharacterAccessTag(Character) || HasCharacterMatchingKey(Character);
+	}
+
+	void SetEnterRequiresKey(const bool InEnterRequiresKey)
+	{
+		bEnterRequiresKey = InEnterRequiresKey;
+
+		UpdateConfirmedCharactersPool();
 	}
 	
+	void SetExitRequiresKey(const bool InExitRequiresKey)
+	{
+		bExitRequiresKey = InExitRequiresKey;
+
+		UpdateConfirmedCharactersPool();
+	}
+
+	virtual void OnPostLoadObject() override
+	{
+		UpdateConfirmedCharactersPool();
+	}
+
 protected:
 	virtual void BeginPlay() override;
 
 private:
+	/* 
+	 * Entrance trigger zone. Must be placed only on one door side and MUST NOT overlap with ExitBox.
+	 * Character presence in this zone means they're on the outside of the door.
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> EnterBox;
-	
+
+	/*
+	 * Exit trigger zone. Must be placed only on one door side and MUST NOT overlap with EnterBox.
+	 * Character presence in this zone means They're on the inside of the door
+	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> ExitBox;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
-
+	// Checks if the door needs to be unlocked. Must be between EnterBox and ExitBox.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> DoorwayBoxOverlap;
 
-	// Tag witch must have the key to open this door
+	/*
+	 * Physical door blocker collider. Blocks passage when active. Automatically disabled during valid access. Should
+	 * fully cover doorway and be inside the DoorwayBoxOverlap.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
+
+	// Tag that the key must have to open this door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTag KeyAccessTag;
 
 	// Characters who have one of these tags can pass freely through the door
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTagContainer CharacterAccessTags;
-	
-	UPROPERTY(EditAnywhere, Category="Access")
+
+	// Do character need to use a key to enter this door
+	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
 	bool bEnterRequiresKey = false;
 
-	UPROPERTY(EditAnywhere, Category="Access")
+	// Do character need to use a key to exit this door
+	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
 	bool bExitRequiresKey = false;
 
 	UFUNCTION()
@@ -88,6 +127,10 @@ private:
 	
 	// Removes 1 unit of durability if needed
 	void UseKey(const AEscapeChroniclesCharacter* Character) const;
+
+	void UpdateConfirmedCharactersPool();
+
+	void TryAddCharacterToPool(AEscapeChroniclesCharacter* Character);
 
 	// Characters who are in the process of going through the door
 	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ConfirmedCharactersPool;

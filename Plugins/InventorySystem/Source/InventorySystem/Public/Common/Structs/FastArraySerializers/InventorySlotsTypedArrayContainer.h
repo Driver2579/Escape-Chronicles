@@ -4,32 +4,32 @@
 
 #include "InventorySlotsArray.h"
 #include "Net/Serialization/FastArraySerializer.h"
-
 #include "InventorySlotsTypedArrayContainer.generated.h"
 
 class UInventoryItemInstance;
+
 struct FInventorySlotsArray;
 
-// Array of inventory slots with type
+// Typifies an array of slots with tag
 USTRUCT()
 struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY()
-	FGameplayTag Type;
-	
+	FGameplayTag TypeTag;
+
 	UPROPERTY()
 	FInventorySlotsArray Array;
 
-	bool operator==(const FGameplayTag& InType) const
+	bool operator==(const FGameplayTag& InTypeTag) const
 	{
-		return Type == InType;
+		return TypeTag == InTypeTag;
 	}
 
 	bool operator==(const FInventorySlotsTypedArray& Other) const
 	{
-		return Type == Other.Type;
+		return TypeTag == Other.TypeTag;
 	}
 };
 
@@ -37,17 +37,32 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 USTRUCT()
 struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
-	const TArray<FInventorySlotsTypedArray>& GetArrays() const
+	/**
+	 * Initializes inventory slots from configuration data.
+	 * @tparam KeyType Tag of the slot's type.
+	 * @tparam ValueType Number of slots.
+	 */
+	void Construct(const TMap<FGameplayTag, int32>& InitializationData)
 	{
-		return Arrays;
+		Arrays.Empty();
+
+		for (const TPair<FGameplayTag, int32>& Pair : InitializationData)
+		{
+			FInventorySlotsTypedArray InventorySlotsTypedArray = FInventorySlotsTypedArray();
+			InventorySlotsTypedArray.TypeTag = Pair.Key;
+			InventorySlotsTypedArray.Array.Construct(Pair.Value);
+			
+			Arrays.Add(InventorySlotsTypedArray);
+		}
+
+		MarkArrayDirty();
 	}
 
-	const FInventorySlotsTypedArray& operator[](const int32 Index) const
-	{
-		return Arrays[Index];
-	}
+	const TArray<FInventorySlotsTypedArray>& GetItems() const { return Arrays; }
+
+	const FInventorySlotsTypedArray& operator[](const int32 Index) const { return Arrays[Index]; }
 
 	UInventoryItemInstance* GetInstance(const int32 ArrayIndex, const int32 SlotIndex) const
 	{
@@ -60,47 +75,29 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 		MarkItemDirty(Arrays[ArrayIndex]);
 	}
 
-	int32 IndexOfByTag(const FGameplayTag Type) const
+	int32 IndexOfByTag(const FGameplayTag& TypeTag) const
 	{
-		return Arrays.IndexOfByPredicate(
-			[Type](const FInventorySlotsTypedArray& List)
+		return Arrays.IndexOfByPredicate([TypeTag](const FInventorySlotsTypedArray& List)
 			{
-				return List.Type == Type;
+				return List.TypeTag == TypeTag;
 			});
 	}
-	
-	/**
-	* @tparam FGameplayTag Inventory slots type;
-	* @tparam int32 Number of slots;
-	 */
-	void Initialize(const TMap<FGameplayTag, int32>& InitializationData)
-	{
-		for (const auto& Pair : InitializationData)
-		{
-			FInventorySlotsTypedArray InventorySlotsTypedArray = FInventorySlotsTypedArray();
-			InventorySlotsTypedArray.Type = Pair.Key;
-			InventorySlotsTypedArray.Array.Initialize(Pair.Value);
-			
-			Arrays.Add(InventorySlotsTypedArray);
-		}
 
-		MarkArrayDirty();
-	}
-	
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		return FastArrayDeltaSerialize<FInventorySlotsTypedArray,
-			FInventorySlotsTypedArrayContainer>(Arrays, DeltaParms, *this);
+		return FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>(Arrays,
+			DeltaParams, *this);
 	}
 
 private:
+	// Arrays of slots by their types
 	UPROPERTY()
 	TArray<FInventorySlotsTypedArray> Arrays;
 };
 
 template<>
-struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer>
-	: TStructOpsTypeTraitsBase2<FInventorySlotsTypedArrayContainer>
+struct TStructOpsTypeTraits<FInventorySlotsTypedArrayContainer> :
+	TStructOpsTypeTraitsBase2<FInventorySlotsTypedArrayContainer>
 {
 	enum 
 	{

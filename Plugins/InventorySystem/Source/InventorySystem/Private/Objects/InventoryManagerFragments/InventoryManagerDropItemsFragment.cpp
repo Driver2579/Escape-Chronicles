@@ -5,66 +5,53 @@
 #include "Actors/InventoryPickupItem.h"
 
 void UInventoryManagerDropItemsFragment::Server_DropItem_Implementation(const int32 SlotIndex,
-	const FGameplayTag SlotsType)
+	const FGameplayTag& SlotsType)
 {
+	// === Get the right item instance by the given parameters ===
+
 	UInventoryManagerComponent* Inventory = GetInventoryManager();
-	
+
 	if (!ensureAlways(IsValid(Inventory)))
 	{
 		return;
 	}
 
-	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(SlotIndex);
+	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(SlotIndex, SlotsType);
 
 	if (!IsValid(ItemInstance))
 	{
 		return;
 	}
-	
-	const AActor* OwnerActor = Inventory->GetOwner();
 
-	if (!IsValid(OwnerActor))
-	{
-		return;
-	}
-	
-	const FTransform OwnerActorTransform = OwnerActor->GetActorTransform();
-
-	// === Try to spawn actor ===
-	
+	// Spawn an item into the world to make it able to pick up later
 	AInventoryPickupItem* ItemActor = GetWorld()->SpawnActorDeferred<AInventoryPickupItem>(DropItemActorClass,
-		OwnerActorTransform);
-	
+		Inventory->GetOwner()->GetActorTransform());
+
 	if (!ensureAlways(IsValid(ItemActor)))
 	{
 		return;
 	}
-	
-	UInventoryItemInstance* ItemInstanceDuplicate = ItemInstance->Duplicate(ItemActor);
 
-	if (!ensureAlways(IsValid(ItemInstanceDuplicate)))
-	{
-		return;
-	}
-	
-	ItemActor->SetItemInstance(ItemInstanceDuplicate);
-	
-	if (!Inventory->DeleteItem(SlotIndex, SlotsType))
-	{
-		ItemActor->Destroy();
+	ItemActor->SetItemInstance(ItemInstance->Duplicate(ItemActor));
 
-		return;
-	}
-	
+#if DO_CHECK
+	check(IsValid(ItemActor->GetItemInstance()));
+#endif
+
+	// Remove an item from the slot because we dropped it
+	ensureAlways(Inventory->DeleteItem(SlotIndex, SlotsType));
+
+	const FTransform OwnerActorTransform = Inventory->GetOwner()->GetActorTransform();
+
 	ItemActor->FinishSpawning(OwnerActorTransform);
 
-	// === Add throw impulse ===
-	
-	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetStaticMeshComponent();
+	// === Add a throw impulse ===
+
+	UPrimitiveComponent* ItemActorMeshComponent = ItemActor->GetMesh();
 
 	if (ensureAlways(IsValid(ItemActorMeshComponent)))
 	{
-		const FVector RotatedImpulseVector = OwnerActorTransform.GetRotation().RotateVector(ThrowingDirection);
+		const FVector RotatedImpulseVector = OwnerActorTransform.GetRotation().RotateVector(ThrowingImpulse);
 		ItemActorMeshComponent->AddImpulse(RotatedImpulseVector + ItemActor->GetVelocity());
 	}
 }

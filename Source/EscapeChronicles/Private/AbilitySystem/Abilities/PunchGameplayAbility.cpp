@@ -4,11 +4,9 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
-#include "Components/SphereComponent.h"
+#include "Common/Structs/CombatEvents.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
-#include "Kismet/GameplayStatics.h"
-#include "Sound/SoundCue.h"
 
 void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
@@ -16,63 +14,57 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
+#if DO_CHECK
+	check(CurrentActorInfo);
+	check(CurrentActorInfo->AvatarActor.IsValid());
+	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
+#endif
 
-		return;
-	}
+	const bool bSuccess = CommitAbility(Handle, ActorInfo, ActivationInfo) && LoadAndPlayAnimMontage() &&
+		LoadGameplayEffects() && SetupDamageCollision();
 
-	if (!ensureAlways(MontagesQueue.IsValidIndex(CurrentConfigurationIndex) &&
-		IsValid(CurrentActorInfo->AvatarActor.Get()) && CurrentActorInfo->AbilitySystemComponent.IsValid()))
-	{
-		CancelAbility(Handle, ActorInfo, ActivationInfo, true);
-		
-		return;
-	}
-
-
-	// Load and play animation, setup collider, and load effects/sounds
-	SetupDamagingCollider();
-	LoadAndPlayAnimMontage();
-	LoadGameplayEffects();
-}
-
-void UPunchGameplayAbility::SetupDamagingCollider()
-{
-	TWeakObjectPtr<UShapeComponent>& DamagingCollider = MontagesQueue[CurrentConfigurationIndex].DamagingCollider;
-
-	// Search for a collider with the specified tag and assign it
-	if (!DamagingCollider.IsValid())
-	{
-		DamagingCollider = CurrentActorInfo->AvatarActor->FindComponentByTag<UShapeComponent>(
-			MontagesQueue[CurrentConfigurationIndex].DamagingColliderTag);
-	}
-
-	// If the collider was not specified and found the ability must be canceled
-	if (!ensureAlways(DamagingCollider.IsValid()))
+	if (!bSuccess)
 	{
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-		
-		return;
 	}
-	
-	DesiredDamagingCollider = DamagingCollider;
+}
 
-	BeginWaitGameplayEvents();
+bool UPunchGameplayAbility::SetupDamageCollision()
+{
+	TWeakObjectPtr<UPrimitiveComponent>& DamageCollision = MontagesQueue[CurrentConfigurationIndex].DamageCollision;
+
+	// Search for a collision with the specified tag and assign it
+	if (!DamageCollision.IsValid())
+	{
+		// TODO: Rework to support several collisions instead of getting just one
+		DamageCollision = CurrentActorInfo->AvatarActor->FindComponentByTag<UPrimitiveComponent>(
+			MontagesQueue[CurrentConfigurationIndex].DamageCollisionTag);
+	}
+
+	// If the collision was not specified and found the ability must be canceled
+	if (!ensureAlways(DamageCollision.IsValid()))
+	{
+		return false;
+	}
+
+	DesiredDamageCollision = DamageCollision;
+
+	RegisterPunchGameplayEvents();
+
+	return true;
 }
 
 
-void UPunchGameplayAbility::BeginWaitGameplayEvents()
+void UPunchGameplayAbility::RegisterPunchGameplayEvents()
 {
 	// === Start listening for the "StartDamageFrame" gameplay event ===
 	
 	const FGameplayEventTagMulticastDelegate::FDelegate OnStartDamageFrameEventTagDelegate =
-		FGameplayEventTagMulticastDelegate::FDelegate::CreateLambda([this](FGameplayTag GameplayTag,
-			const FGameplayEventData* GameplayEventData)
-		{
-			DesiredDamagingCollider->OnComponentBeginOverlap.AddDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
-		});
+		FGameplayEventTagMulticastDelegate::FDelegate::CreateWeakLambda(this,
+			[this](FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
+			{
+				DesiredDamageCollision->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+			});
 	
 	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
 		FGameplayTagContainer(StartDamageFrameEventTag), OnStartDamageFrameEventTagDelegate);
@@ -80,57 +72,67 @@ void UPunchGameplayAbility::BeginWaitGameplayEvents()
 	OnStartDamageFrameEventTagDelegateHandle = OnStartDamageFrameEventTagDelegate.GetHandle();
 
 	// === Start listening for the "EndDamageFrame" gameplay event ===
-	
+
 	const FGameplayEventTagMulticastDelegate::FDelegate OnEndDamageFrameEventTagDelegate =
-		FGameplayEventTagMulticastDelegate::FDelegate::CreateLambda([this](FGameplayTag GameplayTag,
-			const FGameplayEventData* GameplayEventData)
-		{
-			DesiredDamagingCollider->OnComponentBeginOverlap.RemoveDynamic(this,
-				&UPunchGameplayAbility::OnHitBoxBeginOverlap);
-		});
-	
+		FGameplayEventTagMulticastDelegate::FDelegate::CreateWeakLambda(this,
+			[this](FGameplayTag GameplayTag, const FGameplayEventData* GameplayEventData)
+			{
+				DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this,
+					&ThisClass::OnHitBoxBeginOverlap);
+			});
+
 	CurrentActorInfo->AbilitySystemComponent->AddGameplayEventTagContainerDelegate(
 		FGameplayTagContainer(EndDamageFrameEventTag), OnEndDamageFrameEventTagDelegate);
 
 	OnEndDamageFrameEventTagDelegateHandle = OnEndDamageFrameEventTagDelegate.GetHandle();
 }
 
-void UPunchGameplayAbility::LoadAndPlayAnimMontage()
+bool UPunchGameplayAbility::LoadAndPlayAnimMontage()
 {
-	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = MontagesQueue[CurrentConfigurationIndex].AnimMontage;
-	
-	if (!ensureAlways(!DesiredAnimMontage.IsNull()))
-	{      
-		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
+#if DO_CHECK
+	check(MontagesQueue.IsValidIndex(CurrentConfigurationIndex));
+#endif
 
-		return;
+	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = MontagesQueue[CurrentConfigurationIndex].AnimMontage;
+
+	if (!ensureAlways(!DesiredAnimMontage.IsNull()))
+	{
+		return false;
 	}
-	
+
 	LoadCurrentAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		DesiredAnimMontage.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
 			&ThisClass::OnAnimMontageLoaded));
+
+	return true;
 }
 
-void UPunchGameplayAbility::LoadGameplayEffects()
+bool UPunchGameplayAbility::LoadGameplayEffects()
 {
-	if (!ensureAlways(!SuccessfulPunchEffectClass.IsNull() && !UnsuccessfulPunchEffectClass.IsNull()))
-	{      
-		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
-
-		return;
+	if (!ensureAlways(!SuccessfulPunchGameplayEffectClass.IsNull()) || !ensureAlways(!UnsuccessfulPunchGameplayEffectClass.IsNull()))
+	{
+		return false;
 	}
 	
 	LoadSuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		SuccessfulPunchEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&UPunchGameplayAbility::OnGameplayEffectLoaded, SuccessfulPunchEffectClass));
+		SuccessfulPunchGameplayEffectClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded,
+			SuccessfulPunchGameplayEffectClass));
 
 	LoadUnsuccessfulPunchEffectHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		UnsuccessfulPunchEffectClass.ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
-			&UPunchGameplayAbility::OnGameplayEffectLoaded, UnsuccessfulPunchEffectClass));
+		UnsuccessfulPunchGameplayEffectClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnGameplayEffectLoaded,
+			UnsuccessfulPunchGameplayEffectClass));
+
+	return true;
 }
 
 void UPunchGameplayAbility::OnAnimMontageLoaded()
 {
+#if DO_CHECK
+	check(MontagesQueue.IsValidIndex(CurrentConfigurationIndex));
+#endif
+
 	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = MontagesQueue[CurrentConfigurationIndex].AnimMontage;
 	
 	if (!ensureAlways(DesiredAnimMontage.IsValid()))
@@ -154,7 +156,7 @@ void UPunchGameplayAbility::OnAnimMontageLoaded()
 	}
 	
 	FOnMontageBlendingOutStarted OnAnimMontageBlendingOutDelegate =
-		FOnMontageBlendingOutStarted::CreateUObject(this, &UPunchGameplayAbility::OnAnimMontageBlendingOut);
+		FOnMontageBlendingOutStarted::CreateUObject(this, &ThisClass::OnAnimMontageBlendingOut);
 
 	// We use “BlendingOut” rather than “End” because it gives the use of the MontagesQueue as a queue of combo punches
 	AnimInstance->Montage_SetBlendingOutDelegate(OnAnimMontageBlendingOutDelegate, DesiredAnimMontage.Get());
@@ -170,79 +172,93 @@ void UPunchGameplayAbility::OnAnimMontageBlendingOut(UAnimMontage* AnimMontage, 
 
 void UPunchGameplayAbility::OnGameplayEffectLoaded(const TSoftClassPtr<UGameplayEffect> LoadedEffect)
 {
-	// Apply effect if punch occurred but resource was not loaded by that time
-	if (IsPunchHappened && ensureAlways(DesiredToApplyGameplayEffectClass.IsValid()) &&
-		DesiredToApplyGameplayEffectClass == LoadedEffect)
+	if (!bPunchHappened)
 	{
-		ApplyDesiredGameplayEffect();
+		return;
+	}
+
+	const bool bDesiredEffectLoaded = ensureAlways(DesiredGameplayEffectClassToApply.IsValid()) &&
+		DesiredGameplayEffectClassToApply == LoadedEffect;
+	
+	// Apply effect if punch occurred but resource was not loaded by that time
+	if (bDesiredEffectLoaded)
+	{
+		ApplyDesiredGameplayEffectToTargetChecked();
 	}
 }
 
 void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+#if DO_CHECK
+	check(CurrentActorInfo);
+	check(CurrentActorInfo->AvatarActor.IsValid());
+	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
+#endif
+
 	// Ignore the overlaps on yourself
 	if (CurrentActorInfo->AvatarActor == OtherActor)
 	{
 		return;
 	}
 
-	UAbilitySystemComponent* InstigatorAbilitySystemComponent = GetAbilitySystemComponentFromActorInfo();
-
-	if (!ensureAlways(IsValid(InstigatorAbilitySystemComponent)))
-	{
-		return;
-	}
+	UAbilitySystemComponent* InstigatorAbilitySystemComponent = CurrentActorInfo->AbilitySystemComponent.Get();
 
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
-	DesiredDamagingCollider->OnComponentBeginOverlap.RemoveDynamic(this, &UPunchGameplayAbility::OnHitBoxBeginOverlap);
-	IsPunchHappened = true;
+	DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+	bPunchHappened = true;
 
-	// We can hit an object without ASC, but it will only cause visual effects
+	/**
+	 * The hit may not only be on the character (for example, a wall), so TargetAbilitySystemComponent may be nullptr.
+	 * In that case we only execute visual effects
+	 */
 	if (!TargetAbilitySystemComponent.IsValid())
 	{
 		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
-		
+
 		return;
 	}
 
 	// Determine if target has a blocking tag
-	if (!TargetAbilitySystemComponent->HasMatchingGameplayTag(BlockingPunchesTag))
+	if (!TargetAbilitySystemComponent->HasAnyMatchingGameplayTags(BlockingPunchesTags))
 	{
-		DesiredToApplyGameplayEffectClass = SuccessfulPunchEffectClass;
+		DesiredGameplayEffectClassToApply = SuccessfulPunchGameplayEffectClass;
 		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
 	}
 	else
 	{
-		DesiredToApplyGameplayEffectClass = UnsuccessfulPunchEffectClass;
-		InstigatorAbilitySystemComponent->ExecuteGameplayCue(SuccessfulPunchGameplayCueTag.GameplayCueTag);
+		DesiredGameplayEffectClassToApply = UnsuccessfulPunchGameplayEffectClass;
+		InstigatorAbilitySystemComponent->ExecuteGameplayCue(UnsuccessfulPunchGameplayCueTag.GameplayCueTag);
 	}
 
-	// == Whenever possible, we use desired asset ===
+	// === Whenever possible, we use a desired asset ===
 	
-	if (DesiredToApplyGameplayEffectClass.IsValid())
+	if (DesiredGameplayEffectClassToApply.IsValid())
 	{
-		ApplyDesiredGameplayEffect();
+		ApplyDesiredGameplayEffectToTargetChecked();
 	}
 }
 
-void UPunchGameplayAbility::ApplyDesiredGameplayEffect() const
+void UPunchGameplayAbility::ApplyDesiredGameplayEffectToTargetChecked() const
 {
-	if (!CurrentActorInfo->AbilitySystemComponent.IsValid() || !TargetAbilitySystemComponent.IsValid() ||
-		!DesiredToApplyGameplayEffectClass.IsValid())
-	{
-		return;
-	}
-	
-	const FGameplayEffectSpecHandle EffectSpecHandle = CurrentActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-		DesiredToApplyGameplayEffectClass.Get(), GetAbilityLevel(), FGameplayEffectContextHandle());
-	
-	CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(*EffectSpecHandle.Data.Get(),
-		TargetAbilitySystemComponent.Get());
+#if DO_CHECK
+	check(CurrentActorInfo);
+	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
+	check(TargetAbilitySystemComponent.IsValid());
+	check(DesiredGameplayEffectClassToApply.IsValid());
+#endif
+
+	const FActiveGameplayEffectHandle AppliedEffectHandle =
+		CurrentActorInfo->AbilitySystemComponent->ApplyGameplayEffectToTarget(
+			DesiredGameplayEffectClassToApply->GetDefaultObject<UGameplayEffect>(),
+			TargetAbilitySystemComponent.Get(), GetAbilityLevel());
+
+	FCombatEvents::OnPunchHit.Broadcast(CurrentActorInfo->AbilitySystemComponent.Get(),
+		TargetAbilitySystemComponent.Get(), AppliedEffectHandle);
 }
 
-void UPunchGameplayAbility::UnloadByHandle(TSharedPtr<FStreamableHandle>& Handle)
+void UPunchGameplayAbility::UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle)
 {
 	if (Handle.IsValid())
 	{
@@ -265,15 +281,15 @@ void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 			FGameplayTagContainer(EndDamageFrameEventTag), OnEndDamageFrameEventTagDelegateHandle);
 	}
 
-	// Unload all async handles
-	UnloadByHandle(LoadCurrentAnimMontageHandle);
-	UnloadByHandle(LoadSuccessfulPunchEffectHandle);
-	UnloadByHandle(LoadUnsuccessfulPunchEffectHandle);
+	// Unload all soft objects
+	UnloadSoftObject(LoadCurrentAnimMontageHandle);
+	UnloadSoftObject(LoadSuccessfulPunchEffectHandle);
+	UnloadSoftObject(LoadUnsuccessfulPunchEffectHandle);
 
 	// Clear references
 	TargetAbilitySystemComponent = nullptr;
-	IsPunchHappened = false;
-	DesiredToApplyGameplayEffectClass.Reset();
+	bPunchHappened = false;
+	DesiredGameplayEffectClassToApply.Reset();
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

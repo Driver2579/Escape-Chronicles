@@ -10,8 +10,8 @@
 USTRUCT()
 struct FInventorySlot : public FFastArraySerializerItem
 {
-	GENERATED_USTRUCT_BODY()
-	
+	GENERATED_BODY()
+
 	UPROPERTY()
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
 };
@@ -20,63 +20,60 @@ struct FInventorySlot : public FFastArraySerializerItem
 USTRUCT()
 struct FInventorySlotsArray : public FFastArraySerializer
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
-	const TArray<FInventorySlot>& GetSlots() const
+	// Creates the specified number of empty slots and replicates them
+	void Construct(const int32 InSlotsNumber)
 	{
-		return Slots;
-	}
-	
-	const FInventorySlot& operator[](const int32 Index) const
-	{
-		return Slots[Index];
+		Slots.Init(FInventorySlot(), InSlotsNumber);
+
+		MarkArrayDirty();
 	}
 
-	UInventoryItemInstance* GetInstance(const int32 Index) const
-	{
-		return Slots[Index].Instance;
-	}
-	
+	const TArray<FInventorySlot>& GetItems() const{ return Slots; }
+
+	const FInventorySlot& operator[](const int32 Index) const { return Slots[Index]; }
+
+	UInventoryItemInstance* GetInstance(const int32 Index) const { return Slots[Index].Instance; }
+
 	void SetInstance(UInventoryItemInstance* Instance, const int32 Index)
 	{
 		Slots[Index].Instance = Instance;
 		MarkItemDirty(Slots[Index]);
 	}
 
+	/**
+	 * Finds first available empty slot in inventory
+	 * @return Index of first empty slot, or INDEX_NONE if all slots are occupied
+	 */
 	int32 GetEmptySlotIndex() const
 	{
-		for (int32 i = 0; i < Slots.Num(); ++i)
+		for (int32 Index = 0; Index < Slots.Num(); ++Index)
 		{
-			if (IsEmptySlot(i))
+			if (IsSlotEmpty(Index))
 			{
-				return i;
+				return Index;
 			}
 		}
-		
-		return -1;
+
+		return INDEX_NONE;
 	}
 
 	bool IsValidSlotIndex(const int32 Index) const
 	{
-		return Index >= 0 && Index <= Slots.Num() - 1;
+		return Slots.IsValidIndex(Index);
 	}
-	
-	bool IsEmptySlot(const int32 Index) const
+
+	bool IsSlotEmpty(const int32 Index) const
 	{
 		return !IsValid(Slots[Index].Instance);
 	}
-	
-	void Initialize(const int32 InSlotsNumber)
+
+	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
-		Slots.Init(FInventorySlot(), InSlotsNumber);
-		MarkArrayDirty();
+		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParams, *this);
 	}
-	
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo & DeltaParms)
-	{
-		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParms, *this);
-	}
-	
+
 private:
 	UPROPERTY()
 	TArray<FInventorySlot> Slots;
@@ -85,7 +82,7 @@ private:
 template<>
 struct TStructOpsTypeTraits<FInventorySlotsArray> : TStructOpsTypeTraitsBase2<FInventorySlotsArray>
 {
-	enum 
+	enum
 	{
 		WithNetDeltaSerializer = true,
 	};
