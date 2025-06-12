@@ -72,10 +72,7 @@ void UEscapeChroniclesCharacterMoverComponent::DisableMovement()
 
 void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
 {
-	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]
-	{
-		QueueNextMode(StartingMovementMode);
-	}));
+	QueueNextMode(StartingMovementMode);
 
 #if DO_CHECK
 	check(IsValid(GetOwner()));
