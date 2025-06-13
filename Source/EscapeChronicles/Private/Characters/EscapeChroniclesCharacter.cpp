@@ -179,6 +179,11 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	if (MeshComponent->GetAttachParent() != CapsuleComponent)
+	{
+		return;
+	}
+
 	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (IsValid(AbilitySystemComponent) && AbilitySystemComponent->HasAnyMatchingGameplayTags(MeshControllingStateTags))
@@ -827,8 +832,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-
-		MoveCapsuleToMesh();
 	}
 }
 
