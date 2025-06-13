@@ -148,6 +148,8 @@ public:
 		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
 	}
 
+	bool IsFainted() const { return bFainted; }
+
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
 protected:
@@ -329,6 +331,8 @@ private:
 	 * disabled, and the mesh becomes a ragdoll)
 	 */
 	void UpdateFaintedState();
+
+	bool bFainted = false;
 
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;

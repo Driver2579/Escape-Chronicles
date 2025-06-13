@@ -753,7 +753,7 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		return;
 	}
 
-	const bool bFainted = VitalAttributeSet->GetHealth() <= 0;
+	bFainted = VitalAttributeSet->GetHealth() <= 0;
 
 	MeshComponent->SetSimulatePhysics(bFainted);
 	MeshComponent->bBlendPhysics = bFainted;
