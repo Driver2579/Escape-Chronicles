@@ -24,6 +24,7 @@ public class EscapeChronicles : ModuleRules
 			"InventorySystem",
 			"UMG",
 			"CommonUI",
+			"GeometryFramework",
 			"OnlineSubsystem",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
@@ -33,6 +34,7 @@ public class EscapeChronicles : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new[]
 		{
+			"GeometryScriptingCore",
 			"OnlineSubsystemUtils",
 			"GameplayBehaviorSmartObjectsModule"
 		});
