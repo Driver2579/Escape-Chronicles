@@ -75,4 +75,6 @@ namespace EscapeChroniclesGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_InForbiddenZone, "Status.InForbiddenZone",
 		"The prisoner is in a forbidden zone");
+
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Status_Fainted, "Status.Fainted", "The character has fainted");
 }

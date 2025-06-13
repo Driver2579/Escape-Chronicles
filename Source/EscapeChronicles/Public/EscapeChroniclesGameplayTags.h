@@ -57,4 +57,5 @@ namespace EscapeChroniclesGameplayTags
 	// === Other Status tags ===
 
 	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_InForbiddenZone);
+	ESCAPECHRONICLES_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Status_Fainted);
 }

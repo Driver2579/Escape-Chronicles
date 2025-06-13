@@ -2,6 +2,8 @@
 
 #include "StateTree/Tasks/AITasks/GetNearestFaintedCharacterStateTreeTask.h"
 
+#include "AbilitySystemComponent.h"
+#include "EscapeChroniclesGameplayTags.h"
 #include "StateTreeExecutionContext.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "GameFramework/GameStateBase.h"
@@ -37,8 +39,20 @@ EStateTreeRunStatus FGetNearestFaintedCharacterStateTreeTask::EnterState(FStateT
 
 		AEscapeChroniclesCharacter* Character = PlayerState->GetPawn<AEscapeChroniclesCharacter>();
 
-		// Skip the PlayerState if it doesn't have a valid character or if this character isn't fainted
-		if (!IsValid(Character) || !Character->IsFainted())
+		// Skip the PlayerState if it doesn't have a valid character
+		if (!IsValid(Character))
+		{
+			continue;
+		}
+
+		const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
+
+		// Check if the character has a valid ASC and has a fainted status tag
+		const bool bCharacterFainted = IsValid(AbilitySystemComponent) &&
+			AbilitySystemComponent->HasMatchingGameplayTag(EscapeChroniclesGameplayTags::Status_Fainted);
+
+		// Skip the character if he isn't fainted
+		if (!bCharacterFainted)
 		{
 			continue;
 		}
