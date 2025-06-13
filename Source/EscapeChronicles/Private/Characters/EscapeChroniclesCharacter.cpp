@@ -8,6 +8,7 @@
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
+#include "Common/Structs/CharacterStatusEvents.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/ArrowComponent.h"
@@ -762,20 +763,19 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		MeshComponent->WakeAllRigidBodies();
 
-		if (!ensureAlways(!FaintedGameplayEffectClass.IsNull()))
+		if (ensureAlways(!FaintedGameplayEffectClass.IsNull()))
 		{
-			return;
-		}
-
-		if (!LoadFaintedGameplayEffectClassHandle.IsValid())
-		{
-			LoadFaintedGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-				FaintedGameplayEffectClass.ToSoftObjectPath(),
-				FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnFaintedGameplayEffectClassLoaded));
-		}
-		else if (FaintedGameplayEffectClass.IsValid())
-		{
-			OnFaintedGameplayEffectClassLoaded(LoadFaintedGameplayEffectClassHandle);
+			if (!LoadFaintedGameplayEffectClassHandle.IsValid())
+			{
+				LoadFaintedGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+					FaintedGameplayEffectClass.ToSoftObjectPath(),
+					FStreamableDelegateWithHandle::CreateUObject(this,
+						&ThisClass::OnFaintedGameplayEffectClassLoaded));
+			}
+			else if (FaintedGameplayEffectClass.IsValid())
+			{
+				OnFaintedGameplayEffectClassLoaded(LoadFaintedGameplayEffectClassHandle);
+			}
 		}
 	}
 	else
@@ -789,6 +789,8 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 			FaintedGameplayEffectHandle.Invalidate();
 		}
 	}
+
+	FCharacterStatusEvents::OnFaintedStatusChanged.Broadcast(this, bFainted);
 }
 
 void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)

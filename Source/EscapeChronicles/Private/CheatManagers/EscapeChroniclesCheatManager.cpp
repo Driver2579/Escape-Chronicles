@@ -4,6 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AttributeSets/SharedRelationshipAttributeSet.h"
+#include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "GameInstances/EscapeChroniclesGameInstance.h"
@@ -173,5 +174,34 @@ void UEscapeChroniclesCheatManager::Cheat_SetSuspicionBaseAttributeValue(const f
 	{
 		AbilitySystemComponent->SetNumericAttributeBase(SharedRelationshipAttributeSet->GetSuspicionAttribute(),
 			NewBaseValue);
+	}
+}
+
+void UEscapeChroniclesCheatManager::Cheat_SetHealthBaseAttributeValue(const float NewBaseValue) const
+{
+	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
+		GetPlayerController());
+
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	// Try to get the UVitalAttributeSet from the AbilitySystemComponent to override its Suspicion base value
+	const UVitalAttributeSet* VitalAttributeSet =
+		CastChecked<UVitalAttributeSet>(AbilitySystemComponent->GetAttributeSet(UVitalAttributeSet::StaticClass()),
+			ECastCheckedType::NullAllowed);
+
+	// Override the base value of the attribute if the attribute set was found 
+	if (ensureAlways(IsValid(VitalAttributeSet)))
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(VitalAttributeSet->GetHealthAttribute(), NewBaseValue);
 	}
 }
