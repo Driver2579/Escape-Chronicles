@@ -242,6 +242,13 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 	{
 		return;
 	}
+	
+	if (OccupyingAnimMontageHandle.IsValid())
+	{
+		OnOccupyingAnimMontageLoaded();
+
+		return;
+	}
 
 	OccupyingAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		OccupyingAnimMontages[SelectedOccupyingAnimMontage].ToSoftObjectPath(),
@@ -252,6 +259,13 @@ void AActivitySpot::LoadOccupyingEffect()
 {
 	if (!ensureAlways(!OccupyingEffectClass.IsNull()))
 	{
+		return;
+	}
+
+	if (OccupyingEffectHandle.IsValid())
+	{
+		OnOccupyingEffectLoaded();
+
 		return;
 	}
 
