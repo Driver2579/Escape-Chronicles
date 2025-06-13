@@ -103,6 +103,8 @@ public:
 protected:
 	UEscapeChroniclesSaveGame* GetOrCreateSaveGameObjectChecked();
 
+	bool CanSaveOrLoadActor(const AActor* Actor) const;
+
 	// Saves all fields marked with "SaveGame" of the given object to the given byte array
 	static void SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData);
 
@@ -133,6 +135,15 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category="Slot Names")
 	FString SlotNameSeparator = TEXT("_");
+
+	/**
+	 * Actors with this tag will be saved even if they don't implement an ISaveable interface. Actors without this tag
+	 * must implement the ISaveable interface to be saved.
+	 * @remark This tag won't work on components. Components must implement the ISaveable interface to be saved.
+	 * TODO: Maybe add a tag for components too?
+	 */
+	UPROPERTY(EditDefaultsOnly)
+	FName SaveableActorTag = TEXT("Saveable");
 
 	/**
 	 * List of classes that are allowed to be saved even if they were dynamically spawned. Should be used for some
@@ -179,8 +190,8 @@ private:
 	 * object. If the player generates a UniquePlayerID for the given PlayerState if it doesn't have one.
 	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static bool LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-		AEscapeChroniclesPlayerState* PlayerState);
+	bool LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+		AEscapeChroniclesPlayerState* PlayerState) const;
 
 	/**
 	 * Loads the UniquePlayerID and associated save data for the given PlayerState from the given SaveGameObject. If
@@ -199,7 +210,7 @@ private:
 		FUniquePlayerID& InOutUniquePlayerID);
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
-	static void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData);
+	void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData) const;
 
 	/**
 	 * @return The PlatformUserIndex from the first found ULocalPlayer.

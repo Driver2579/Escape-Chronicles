@@ -58,6 +58,20 @@ UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked(
 	return CurrentSaveGameObject;
 }
 
+bool USaveGameSubsystem::CanSaveOrLoadActor(const AActor* Actor) const
+{
+	const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
+
+	// If the actor implements the ISaveable interface, then check if it can be saved or loaded using the interface
+	if (SaveableActor)
+	{
+		return SaveableActor->CanBeSavedOrLoaded();
+	}
+
+	// If the actor doesn't implement the ISaveable interface, then check if it has the SaveableActorTag
+	return Actor->ActorHasTag(SaveableActorTag);
+}
+
 bool USaveGameSubsystem::IsAllowedDynamicallySpawnedActor(const AActor* Actor) const
 {
 #if DO_CHECK
@@ -158,10 +172,8 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		check(IsValid(Actor));
 #endif
 
-		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
-
-		// Skip actors that don't implement an interface and actors that currently can't be saved
-		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
+		// Skip actors that can't be saved
+		if (!CanSaveOrLoadActor(Actor))
 		{
 			continue;
 		}
@@ -229,7 +241,6 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
@@ -263,8 +274,8 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 	SaveActorToSaveDataChecked(PlayerState, PlayerStateSaveData);
 	PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerState::StaticClass(), PlayerStateSaveData);
 
-	// Save the Pawn if it's valid and implements Saveable interface
-	if (Pawn->Implements<USaveable>())
+	// Save the Pawn if it's valid and implements ISaveable interface or if it has the SaveableActorTag
+	if (Pawn->Implements<USaveable>() || Pawn->ActorHasTag(SaveableActorTag))
 	{
 		FActorSaveData PawnSaveData;
 		SaveActorToSaveDataChecked(Pawn, PawnSaveData);
@@ -273,8 +284,12 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 
 	AController* Controller = PlayerState->GetOwningController();
 
-	// Save the Controller if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
+	// We can save the controller if it implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanSaveController = ensureAlways(IsValid(Controller)) &&
+		(Controller->Implements<USaveable>() || Controller->ActorHasTag(SaveableActorTag));
+
+	// Save the Controller if we can
+	if (bCanSaveController)
 	{
 		FActorSaveData ControllerSaveData;
 		SaveActorToSaveDataChecked(Controller, ControllerSaveData);
@@ -317,21 +332,20 @@ void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveDat
 {
 #if DO_CHECK
 	check(IsValid(Actor));
-	check(Actor->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
 	ensureAlways(Actor->HasAuthority());
+	ensureAlways(CanSaveOrLoadActor(Actor));
 #endif
 
-	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+	ISaveable* SaveableActor = Cast<ISaveable>(Actor);
 
-#if DO_ENSURE
-	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
-#endif
-
-	// Let the actor update its properties before saving it
-	SaveableActor->OnPreSaveObject();
+	// Let the actor update its properties before saving it if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPreSaveObject();
+	}
 
 	// Save actor's transform and all properties marked with "SaveGame"
 	OutActorSaveData.ActorSaveData.Transform = Actor->GetTransform();
@@ -374,8 +388,14 @@ void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveDat
 		OnGameSaved_Internal.AddRaw(SaveableComponent, &ISaveable::OnGameSaved);
 	}
 
-	// Subscribe an actor to the event to call OnGameSaved on it once the game is saved
-	OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
+	/**
+	 * Subscribe an actor to the event to call OnGameSaved on it once the game is saved if it implements the ISaveable
+	 * interface.
+	 */
+	if (SaveableActor)
+	{
+		OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
+	}
 }
 
 void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData)
@@ -509,10 +529,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		check(IsValid(Actor));
 #endif
 
-		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
-
-		// Skip actors that don't implement an interface and actors that currently can't be loaded
-		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
+		// Skip actors that can't be loaded
+		if (!CanSaveOrLoadActor(Actor))
 		{
 			continue;
 		}
@@ -587,12 +605,11 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 }
 
 bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-	AEscapeChroniclesPlayerState* PlayerState)
+	AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
@@ -618,8 +635,12 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 
 	APawn* PlayerPawn = PlayerState->GetPawn();
 
-	// Try to load the Pawn if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(PlayerPawn)) && PlayerPawn->Implements<USaveable>())
+	// We can load the Pawn if it's valid and implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanLoadPawn = ensureAlways(IsValid(PlayerPawn)) &&
+		(PlayerPawn->Implements<USaveable>() || PlayerPawn->ActorHasTag(SaveableActorTag));
+
+	// Try to load the Pawn if we can
+	if (bCanLoadPawn)
 	{
 		const FActorSaveData* PawnSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
 			APawn::StaticClass());
@@ -633,8 +654,12 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 
 	AController* Controller = PlayerState->GetOwningController();
 
-	// Try to load the Controller if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
+	// We can load the Controller if it's valid and implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanLoadController = ensureAlways(IsValid(Controller)) &&
+		(Controller->Implements<USaveable>() || Controller->ActorHasTag(SaveableActorTag));
+
+	// Try to load the Controller if we can
+	if (bCanLoadController)
 	{
 		const FActorSaveData* ControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
 			AController::StaticClass());
@@ -655,7 +680,6 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 	check(IsValid(PlayerState->GetPlayerController()));
 #endif
 
@@ -737,25 +761,24 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOfflinePlayerSaveDataAndPlayerID(
 	return nullptr;
 }
 
-void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
+void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData) const
 {
 #if DO_CHECK
 	check(IsValid(Actor));
-	check(Actor->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
 	ensureAlways(Actor->HasAuthority());
+	ensureAlways(CanSaveOrLoadActor(Actor));
 #endif
 
-	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+	ISaveable* SaveableActor = Cast<ISaveable>(Actor);
 
-#if DO_ENSURE
-	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
-#endif
-
-	// Notify the actor it's about to be loaded
-	SaveableActor->OnPreLoadObject();
+	// Notify the actor it's about to be loaded if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPreLoadObject();
+	}
 
 	// Load actor's transform and all properties marked with "SaveGame"
 	Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
@@ -801,8 +824,11 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 		SaveableComponent->OnPostLoadObject();
 	}
 
-	// Notify the actor it's loaded
-	SaveableActor->OnPostLoadObject();
+	// Notify the actor it's loaded if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPostLoadObject();
+	}
 }
 
 void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<uint8>& InByteData)
