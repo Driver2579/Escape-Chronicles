@@ -251,6 +251,20 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 			OnHealthAttributeValueChangeDelegate.AddUObject(this, &ThisClass::OnHealthChanged);
 		}
 
+		// === Broadcast a global event whenever the character faints or recovers from fainting ===
+
+		FOnGameplayEffectTagCountChanged& OnFaintedStatusChangedDelegate =
+			AbilitySystemComponent->RegisterGameplayTagEvent(EscapeChroniclesGameplayTags::Status_Fainted);
+
+		OnFaintedStatusChangedDelegate.AddWeakLambda(this,
+			[this](const FGameplayTag GameplayTag, int32 Count)
+			{
+				// If there is at least one fainted tag, the character is considered as fainted
+				FCharacterStatusEvents::OnFaintedStatusChanged.Broadcast(this, Count > 0);
+			});
+
+		// === Update character's initial "fainted" state ===
+
 		UpdateFaintedState();
 	}
 
@@ -789,8 +803,6 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 			FaintedGameplayEffectHandle.Invalidate();
 		}
 	}
-
-	FCharacterStatusEvents::OnFaintedStatusChanged.Broadcast(this, bFainted);
 }
 
 void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)
