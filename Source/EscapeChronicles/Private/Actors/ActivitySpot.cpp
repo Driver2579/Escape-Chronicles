@@ -301,6 +301,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	Character->SetActorTransform(CharacterTransformOnOccupySpot);
 
 	CharacterMesh->SetSimulatePhysics(false);
+	CharacterMesh->SetUsingAbsoluteRotation(false);
 	CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 	CharacterMesh->SetRelativeTransform(AttachTransform);
 
@@ -329,6 +330,13 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 	{
 		return;
 	}
+	
+	if (OccupyingAnimMontageHandle.IsValid())
+	{
+		OnOccupyingAnimMontageLoaded();
+
+		return;
+	}
 
 	OccupyingAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 		OccupyingAnimMontages[SelectedOccupyingAnimMontage].ToSoftObjectPath(),
@@ -339,6 +347,13 @@ void AActivitySpot::LoadOccupyingEffect()
 {
 	if (!ensureAlways(!OccupyingEffectClass.IsNull()))
 	{
+		return;
+	}
+
+	if (OccupyingEffectHandle.IsValid())
+	{
+		OnOccupyingEffectLoaded();
+
 		return;
 	}
 
