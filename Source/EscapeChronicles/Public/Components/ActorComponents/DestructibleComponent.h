@@ -44,6 +44,8 @@ class ESCAPECHRONICLES_API UDestructibleComponent : public UActorComponent, publ
 public:
 	UDestructibleComponent();
 
+	const TArray<FDynamicMeshHoleData>& GetHoles() const { return Holes; }
+
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
 
