@@ -904,7 +904,7 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 }
 
 void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
-	AEscapeChroniclesPlayerState* PlayerState)
+	AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
@@ -962,7 +962,7 @@ void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerO
 	}
 }
 
-void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
+void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData) const
 {
 #if DO_CHECK
 	check(IsValid(Actor));

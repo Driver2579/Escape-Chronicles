@@ -254,8 +254,8 @@ private:
 	 * Loads all player-specific actors (e.g., Pawn, PlayerState, PlayerController, etc.) from the given save data.
 	 * @remark All parameters here must be valid, and PlayerState must implement the ISaveable interface.
 	 */
-	static void LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
-		AEscapeChroniclesPlayerState* PlayerState);
+	void LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
+		AEscapeChroniclesPlayerState* PlayerState) const;
 
 	// Loads an actor from the given ActorSaveData and notifies it about the loading by calling interface methods
 	void LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData) const;
