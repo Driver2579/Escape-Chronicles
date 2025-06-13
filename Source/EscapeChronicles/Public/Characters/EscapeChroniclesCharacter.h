@@ -124,6 +124,8 @@ public:
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
 protected:
+	virtual void PostInitializeComponents() override;
+
 	virtual void BeginPlay() override;
 
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
