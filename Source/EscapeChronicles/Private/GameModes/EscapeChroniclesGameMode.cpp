@@ -432,10 +432,13 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlaye
 	check(IsValid(PlayerController));
 #endif
 
-	// If the controller already possesses a pawn, then we can already load the player
+	/**
+	 * If the controller already possesses a pawn, then we can already request to load the player once his pawn begins
+	 * play.
+	 */
 	if (IsValid(PlayerController->GetPawn()))
 	{
-		LoadAndInitPlayer(PlayerController);
+		LoadAndInitPlayerNowOrWhenPawnBeginsPlay(PlayerController);
 	}
 	// Otherwise, wait for the pawn to be possessed
 	else
@@ -462,7 +465,46 @@ void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn)
 	// Stop listening for the new pawn possessed event because we needed it only for the first pawn
 	PlayerController->GetOnNewPawnNotifier().RemoveAll(this);
 
-	LoadAndInitPlayer(PlayerController);
+	LoadAndInitPlayerNowOrWhenPawnBeginsPlay(PlayerController);
+}
+
+void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnBeginsPlay(const APlayerController* PlayerController)
+{
+#if DO_CHECK
+	check(IsValid(PlayerController));
+#endif
+
+	APawn* Pawn = PlayerController->GetPawn();
+
+#if DO_CHECK
+	check(IsValid(Pawn));
+#endif
+
+	// Load the player already if his pawn has already begun play
+	if (Pawn->HasActorBegunPlay())
+	{
+		LoadAndInitPlayer(PlayerController);
+	}
+	// Otherwise, load the player once the pawn begins play
+	else
+	{
+		OnPlayerToLoadPawnBegunPlayDelegateHandle = Pawn->OnPawnBeginPlay.AddUObject(this,
+			&ThisClass::OnPlayerToLoadPawnBegunPlay);
+	}
+}
+
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void AEscapeChroniclesGameMode::OnPlayerToLoadPawnBegunPlay(APawn* Pawn)
+{
+#if DO_CHECK
+	check(IsValid(Pawn));
+	check(IsValid(Pawn->GetController<APlayerController>()));
+#endif
+
+	Pawn->OnPawnBeginPlay.Remove(OnPlayerToLoadPawnBegunPlayDelegateHandle);
+
+	// Finally, load the player since his pawn has called BeginPlay
+	LoadAndInitPlayer(Pawn->GetController<APlayerController>());
 }
 
 bool AEscapeChroniclesGameMode::IsPlayerOrBotFullyInitialized(const FUniquePlayerID& UniquePlayerID,

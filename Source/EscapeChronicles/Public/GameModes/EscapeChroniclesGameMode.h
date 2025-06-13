@@ -140,6 +140,22 @@ private:
 	void OnPlayerToLoadPawnChanged(APawn* NewPawn);
 
 	/**
+	 * Attempts to load and initialize the player now if the pawn has already begin play. If the pawn hasn't begun play
+	 * yet, then he will be loaded and initialized once he begins play.
+	 * @remark You should never call this function before the pawn is possessed!
+	 */
+	void LoadAndInitPlayerNowOrWhenPawnBeginsPlay(const APlayerController* PlayerController);
+
+	FDelegateHandle OnPlayerToLoadPawnBegunPlayDelegateHandle;
+
+	/**
+	 * Called when the pawn of the player that we want to load has begun play in case we tried to load the player but
+	 * failed because his pawn hadn't begun play yet.
+	 * @remark This is never called before the pawn is possessed.
+	 */
+	void OnPlayerToLoadPawnBegunPlay(APawn* Pawn);
+
+	/**
 	 * Loads the player from the last save game object that was saved or loaded if any, or if failed to load, then
 	 * generates the new FUniquePlayerID for this player. After that, it calls PostLoadInitPlayerOrBot for the player.
 	 */
