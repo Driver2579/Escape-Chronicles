@@ -2,8 +2,12 @@
 
 #include "StateTree/Tasks/CommonTasks/GetAllCharactersOutsideTheirChambersStateTreeTask.h"
 
+#include "AbilitySystemComponent.h"
 #include "StateTreeExecutionContext.h"
 #include "Actors/Triggers/PrisonerChamberZone.h"
+#include "Characters/EscapeChroniclesCharacter.h"
+
+class UAbilitySystemComponent;
 
 FGetAllCharactersOutsideTheirChambersStateTreeTask::FGetAllCharactersOutsideTheirChambersStateTreeTask()
 {
@@ -29,6 +33,31 @@ EStateTreeRunStatus FGetAllCharactersOutsideTheirChambersStateTreeTask::EnterSta
 	if (CharactersOutsideTheirChambers.IsEmpty())
 	{
 		return EStateTreeRunStatus::Failed;
+	}
+
+	if (InstanceData.AllowedGameplayTags.IsValid())
+	{
+		for (int32 i = CharactersOutsideTheirChambers.Num() - 1; i >= 0; --i)
+		{
+			const UAbilitySystemComponent* AbilitySystemComponent =
+				CharactersOutsideTheirChambers[i]->GetAbilitySystemComponent();
+
+			// Check if the character is allowed to be outside his chamber by checking if he has any of the allowed tags
+			const bool bCharacterHasAllowedTag = IsValid(AbilitySystemComponent) &&
+				AbilitySystemComponent->HasAnyMatchingGameplayTags(InstanceData.AllowedGameplayTags);
+
+			// Remove the character from the output array if he has any of the allowed tags
+			if (bCharacterHasAllowedTag)
+			{
+				CharactersOutsideTheirChambers.RemoveAt(i, EAllowShrinking::No);
+			}
+		}
+
+		// If no characters have left, return Failed
+		if (CharactersOutsideTheirChambers.IsEmpty())
+		{
+			return EStateTreeRunStatus::Failed;
+		}
 	}
 
 	/**

@@ -14,6 +14,10 @@ struct FArrayContainsPrisonersOutsideTheirChambersStateTreeConditionInstanceData
 	// Actors to check for characters outside their chambers
 	UPROPERTY(EditAnywhere, Category="Input")
 	TArray<TObjectPtr<AActor>> ActorsToCheck;
+
+	// If the character has at least one of these tags, then he will not be considered as the one outside his chamber
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	FGameplayTagContainer AllowedGameplayTags;
 };
 
 /**

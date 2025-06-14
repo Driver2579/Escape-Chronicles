@@ -2,6 +2,7 @@
 
 #include "StateTree/Conditions/CommonConditions/ArrayContainsPrisonersOutsideTheirChambersStateTreeCondition.h"
 
+#include "AbilitySystemComponent.h"
 #include "StateTreeExecutionContext.h"
 #include "Actors/Triggers/PrisonerChamberZone.h"
 #include "Characters/EscapeChroniclesCharacter.h"
@@ -17,6 +18,18 @@ bool FArrayContainsPrisonersOutsideTheirChambersStateTreeCondition::TestConditio
 
 		// Check if an actor is a valid character
 		if (!IsValid(Character))
+		{
+			continue;
+		}
+
+		const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
+
+		// Check if the character is allowed to be outside his chamber by checking if he has any of the allowed tags
+		const bool bCharacterHasAllowedTag = IsValid(AbilitySystemComponent) &&
+			AbilitySystemComponent->HasAnyMatchingGameplayTags(InstanceData.AllowedGameplayTags);
+
+		// Skip the character if he has any of the allowed tags
+		if (bCharacterHasAllowedTag)
 		{
 			continue;
 		}

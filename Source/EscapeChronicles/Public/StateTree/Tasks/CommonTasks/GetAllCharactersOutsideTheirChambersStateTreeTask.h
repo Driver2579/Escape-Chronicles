@@ -16,6 +16,10 @@ struct FGetAllCharactersOutsideTheirChambersStateTreeTaskInstanceData
 	// Found characters that own any prisoner chambers and aren't currently in any of them
 	UPROPERTY(EditAnywhere, Category="Output")
 	TArray<TObjectPtr<AEscapeChroniclesCharacter>> OutCharactersOutsideTheirChambers;
+
+	// If the character has at least one of these tags, then he will not be considered as the one outside his chamber
+	UPROPERTY(EditAnywhere, Category="Parameter")
+	FGameplayTagContainer AllowedGameplayTags;
 };
 
 /**
