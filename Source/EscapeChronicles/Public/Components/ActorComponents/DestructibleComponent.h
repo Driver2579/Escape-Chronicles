@@ -53,7 +53,6 @@ public:
 	EDestructiveToolType GetDestructiveToolType() const { return DestructiveToolType; }
 
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
-	UFUNCTION(BlueprintCallable)
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
 
 	// Adds a hole of the given radius at the given relative location of the mesh
