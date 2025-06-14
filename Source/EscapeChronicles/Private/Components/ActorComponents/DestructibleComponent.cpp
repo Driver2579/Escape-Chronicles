@@ -7,6 +7,8 @@
 #include "GeometryScript/MeshBooleanFunctions.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
 #include "Net/UnrealNetwork.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 UDestructibleComponent::UDestructibleComponent()
 {
@@ -43,10 +45,36 @@ void UDestructibleComponent::BeginPlay()
 		OwningDynamicMeshActor->Tags.AddUnique(SaveableActorTag);
 	}
 
-	// Make the owner replicated if it was requested
-	if (bAutomaticallyMakeActorReplicated && OwningDynamicMeshActor->HasAuthority())
+	if (OwningDynamicMeshActor->HasAuthority())
 	{
-		OwningDynamicMeshActor->SetReplicates(true);
+		// Make the owner replicated if it was requested
+		if (bAutomaticallyMakeActorReplicated)
+		{
+			OwningDynamicMeshActor->SetReplicates(true);
+		}
+
+		/**
+		 * We should create an AIPerceptionStimuliSourceComponent if it was requested and if the owner doesn't already
+		 * have one.
+		 */
+		const bool bCreateAIPerceptionStimuliSourceComponent = bAutomaticallyAddAIPerceptionStimuliSourceComponent &&
+			!OwningDynamicMeshActor->FindComponentByClass<UAIPerceptionStimuliSourceComponent>();
+
+		// Create an AIPerceptionStimuliSourceComponent if we should and register it for the sight sense
+		if (bCreateAIPerceptionStimuliSourceComponent)
+		{
+			UAIPerceptionStimuliSourceComponent* AIPerceptionStimuliSourceComponent =
+				NewObject<UAIPerceptionStimuliSourceComponent>(OwningDynamicMeshActor.Get());
+
+#if DO_CHECK
+			check(IsValid(AIPerceptionStimuliSourceComponent));
+#endif
+
+			AIPerceptionStimuliSourceComponent->RegisterComponent();
+
+			AIPerceptionStimuliSourceComponent->RegisterWithPerceptionSystem();
+			AIPerceptionStimuliSourceComponent->RegisterForSense(UAISense_Sight::StaticClass());
+		}
 	}
 
 	// We have to use the complex collision to update collision based on the mesh changes
@@ -79,6 +107,16 @@ UDynamicMesh* UDestructibleComponent::AllocateDestructToolMeshChecked(const FVec
 		ToolTransform, Radius);
 
 	return DestructToolMesh;
+}
+
+void UDestructibleComponent::GetHoleWorldLocation(const FVector& HoleRelativeLocation, FVector& OutWorldLocation) const
+{
+	// Convert the relative location of the hole into a world location based on the mesh's world transform
+	if (ensureAlways(OwningDynamicMeshActor.IsValid()))
+	{
+		OutWorldLocation = OwningDynamicMeshActor->GetDynamicMeshComponent()->GetComponentTransform().TransformPosition(
+			HoleRelativeLocation);
+	}
 }
 
 void UDestructibleComponent::AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius)

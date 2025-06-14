@@ -52,6 +52,12 @@ public:
 
 	EDestructiveToolType GetDestructiveToolType() const { return DestructiveToolType; }
 
+	/**
+	 * Converts the given relative location of the hole in the mesh to a world location based on the mesh's world
+	 * transform.
+	 */
+	void GetHoleWorldLocation(const FVector& HoleRelativeLocation, FVector& OutWorldLocation) const;
+
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
 
@@ -85,6 +91,14 @@ private:
 	// Whether the component should automatically make the actor replicated at the beginning of the game
 	UPROPERTY(EditAnywhere, Category="Replication")
 	bool bAutomaticallyMakeActorReplicated = true;
+
+	/**
+	 * Whether the component should automatically add a UAIPerceptionStimuliSourceComponent to the actor at the
+	 * beginning of the game with a registered sight sense.
+	 * @remark The component will be added only if the actor has authority.
+	 */
+	UPROPERTY(EditAnywhere, Category="AI")
+	bool bAutomaticallyAddAIPerceptionStimuliSourceComponent = true;
 
 	/**
 	 * A type of tool that will be used to create holes in the mesh. This should be checked before creating holes. Other
