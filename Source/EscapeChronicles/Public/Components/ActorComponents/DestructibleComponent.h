@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Enums/DestructiveToolType.h"
 #include "DestructibleComponent.generated.h"
 
 class ADynamicMeshActor;
@@ -35,6 +36,7 @@ struct FDynamicMeshHoleData
  * A component that supports making holes in the DynamicMeshActor this component is added to by subtracting a sphere
  * with a specified radius from it in a specified place. This component also supports saving/loading the holes when the
  * game is saved/loaded.
+ * @remark All public functions of this component can be called only on the server. The client calls will be ignored.
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ESCAPECHRONICLES_API UDestructibleComponent : public UActorComponent, public ISaveable
@@ -44,7 +46,11 @@ class ESCAPECHRONICLES_API UDestructibleComponent : public UActorComponent, publ
 public:
 	UDestructibleComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const TArray<FDynamicMeshHoleData>& GetHoles() const { return Holes; }
+
+	EDestructiveToolType GetDestructiveToolType() const { return DestructiveToolType; }
 
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
@@ -76,6 +82,17 @@ private:
 	UPROPERTY(EditAnywhere, Category="Save Game", meta=(EditCondition="bAutomaticallyMakeActorSaveable"))
 	FName SaveableActorTag = TEXT("Saveable");
 
+	// Whether the component should automatically make the actor replicated at the beginning of the game
+	UPROPERTY(EditAnywhere, Category="Replication")
+	bool bAutomaticallyMakeActorReplicated = true;
+
+	/**
+	 * A type of tool that will be used to create holes in the mesh. This should be checked before creating holes. Other
+	 * types of tools than the selected one should not be used to create holes in an actor that uses this component.
+	 */
+	UPROPERTY(EditAnywhere)
+	EDestructiveToolType DestructiveToolType = EDestructiveToolType::Pickaxe;
+
 	/**
 	 * Allocates the tool mesh that will be used to create holes in the mesh. The mesh is a sphere with the specified
 	 * radius and the specified relative location.
@@ -84,8 +101,8 @@ private:
 	UDynamicMesh* AllocateDestructToolMeshChecked(const FVector& HoleRelativeLocation, const float Radius) const;
 
 	/**
-	 * An actual implementation of the AddHoleAtRelativeLocation function. Doesn't add the data to the Holes array and
-	 * doesn't check if the OwningDynamicMeshActor is valid.
+	 * An actual implementation of the AddHoleAtRelativeLocation function. Doesn't add the data to the Holes array,
+	 * doesn't check if the OwningDynamicMeshActor is valid, and doesn't check if the owner is an authority.
 	 */
 	void AddHoleAtRelativeLocation_Internal(const FVector& HoleRelativeLocation, const float HoleRadius) const;
 
@@ -94,10 +111,16 @@ private:
 	 * @remark You should call this function only for locations that were previously used to create holes.
 	 * @remark This function doesn't remove the given location from the HolesLocations array.
 	 * @remark The OwningDynamicMeshActor must be valid when calling this function.
+	 * @remark This function doesn't check if the owner is an authority.
 	 */
 	void RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const;
 
+	// TODO: Replace the next logic with a FastArraySerializer
+
 	// A list of holes in the mesh
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(Transient, SaveGame, ReplicatedUsing="OnRep_Holes")
 	TArray<FDynamicMeshHoleData> Holes;
+
+	UFUNCTION()
+	void OnRep_Holes(const TArray<FDynamicMeshHoleData>& OldHoles);
 };

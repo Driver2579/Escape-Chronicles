@@ -6,10 +6,20 @@
 #include "Components/DynamicMeshComponent.h"
 #include "GeometryScript/MeshBooleanFunctions.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
+#include "Net/UnrealNetwork.h"
 
 UDestructibleComponent::UDestructibleComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
+
+	SetIsReplicatedByDefault(true);
+}
+
+void UDestructibleComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, Holes);
 }
 
 void UDestructibleComponent::BeginPlay()
@@ -31,6 +41,12 @@ void UDestructibleComponent::BeginPlay()
 	if (bAutomaticallyMakeActorSaveable)
 	{
 		OwningDynamicMeshActor->Tags.AddUnique(SaveableActorTag);
+	}
+
+	// Make the owner replicated if it was requested
+	if (bAutomaticallyMakeActorReplicated && OwningDynamicMeshActor->HasAuthority())
+	{
+		OwningDynamicMeshActor->SetReplicates(true);
 	}
 
 	// We have to use the complex collision to update collision based on the mesh changes
@@ -67,7 +83,11 @@ UDynamicMesh* UDestructibleComponent::AllocateDestructToolMeshChecked(const FVec
 
 void UDestructibleComponent::AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius)
 {
-	if (!ensureAlways(OwningDynamicMeshActor.IsValid()))
+	/**
+	 * Don't run the logic if the owner isn't a valid DynamicMeshActor or if it doesn't have authority. The holes will
+	 * be automatically replicated on clients.
+	 */
+	if (!ensureAlways(OwningDynamicMeshActor.IsValid()) || !OwningDynamicMeshActor->HasAuthority())
 	{
 		return;
 	}
@@ -87,7 +107,11 @@ void UDestructibleComponent::AddHoleAtWorldLocation(const FVector& HoleWorldLoca
 
 void UDestructibleComponent::AddHoleAtRelativeLocation(const FVector& HoleRelativeLocation, const float HoleRadius)
 {
-	if (!ensureAlways(OwningDynamicMeshActor.IsValid()))
+	/**
+	 * Don't run the logic if the owner isn't a valid DynamicMeshActor or if it doesn't have authority. The holes will
+	 * be automatically replicated on clients.
+	 */
+	if (!ensureAlways(OwningDynamicMeshActor.IsValid()) || !OwningDynamicMeshActor->HasAuthority())
 	{
 		return;
 	}
@@ -125,7 +149,11 @@ void UDestructibleComponent::AddHoleAtRelativeLocation_Internal(const FVector& H
 
 void UDestructibleComponent::ClearAllHoles()
 {
-	if (!ensureAlways(OwningDynamicMeshActor.IsValid()))
+	/**
+	 * Don't run the logic if the owner isn't a valid DynamicMeshActor or if it doesn't have authority. The holes will
+	 * be automatically replicated on clients.
+	 */
+	if (!ensureAlways(OwningDynamicMeshActor.IsValid()) || !OwningDynamicMeshActor->HasAuthority())
 	{
 		return;
 	}
@@ -187,5 +215,31 @@ void UDestructibleComponent::OnPostLoadObject()
 	for (const FDynamicMeshHoleData& Hole : Holes)
 	{
 		AddHoleAtRelativeLocation_Internal(Hole.RelativeLocation, Hole.Radius);
+	}
+}
+
+void UDestructibleComponent::OnRep_Holes(const TArray<FDynamicMeshHoleData>& OldHoles)
+{
+	if (!ensureAlways(OwningDynamicMeshActor.IsValid()))
+	{
+		return;
+	}
+
+	// Remove all holes that were present in the old Holes list but not in the new one
+	for (const FDynamicMeshHoleData& OldHole : OldHoles)
+	{
+		if (!Holes.Contains(OldHole))
+		{
+			RemoveHoleAtRelativeLocation_Internal(OldHole);
+		}
+	}
+
+	// Add all new holes that were not present in the old Holes list
+	for (const FDynamicMeshHoleData& NewHole : Holes)
+	{
+		if (!OldHoles.Contains(NewHole))
+		{
+			AddHoleAtRelativeLocation_Internal(NewHole.RelativeLocation, NewHole.Radius);
+		}
 	}
 }
