@@ -16,7 +16,9 @@ class UGameplayEffect;
 /**
  * An event that marks specific players as "wanted" with gameplay effect applied. "Wanted player" means that the guards
  * should hunt him. The medics should remove the "wanted" mark once they cared the wanted player to the hospital after
- * he passes out. Once there are no wanted players left, the event will end automatically.
+ * he passes out. Once there are no wanted players left, the event will end automatically. At the end of the event, if
+ * it was ended normally, all destructed holes in DestructibleComponents that are owned by DynamicMeshActors will be
+ * cleared, if any.
  * @remark When this event is started, you MUST call the AddWantedPlayer function or SetWantedPlayers function for each
  * player you want to mark as wanted after the event is started.
  */

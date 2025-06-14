@@ -2,6 +2,9 @@
 
 #include "Objects/ScheduleEvents/AlertScheduleEvent.h"
 
+#include "DynamicMeshActor.h"
+#include "EngineUtils.h"
+#include "Components/ActorComponents/DestructibleComponent.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -435,13 +438,33 @@ void UAlertScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
 	WantedPlayers.Empty();
 	WantedPlayersInGame.Empty();
 
-	AEscapeChroniclesGameMode* GameMode = GetWorld()->GetAuthGameMode<AEscapeChroniclesGameMode>();
+	const UWorld* World = GetWorld();
+
+	AEscapeChroniclesGameMode* GameMode = World->GetAuthGameMode<AEscapeChroniclesGameMode>();
 
 	// Unsubscribe from GameMode events
 	if (IsValid(GameMode))
 	{
 		GameMode->OnPlayerOrBotInitialized.Remove(OnPlayerOrBotInitializedDelegateHandle);
 		GameMode->OnPlayerOrBotLogout.Remove(OnPlayerOrBotLogoutDelegateHandle);
+	}
+
+	// Clear all holes in the destructible meshes if the event ended normally
+	if (EndReason == EScheduleEventEndReason::Normal)
+	{
+		for (TActorIterator<ADynamicMeshActor> It(World); It; ++It)
+		{
+#if DO_CHECK
+			check(IsValid(*It));
+#endif
+
+			UDestructibleComponent* DestructibleComponent = It->FindComponentByClass<UDestructibleComponent>();
+
+			if (IsValid(DestructibleComponent))
+			{
+				DestructibleComponent->ClearAllHoles();
+			}
+		}
 	}
 
 	Super::OnEventEnded(EndReason);
