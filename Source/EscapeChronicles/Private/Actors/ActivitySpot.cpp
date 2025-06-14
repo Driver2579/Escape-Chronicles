@@ -19,15 +19,18 @@ AActivitySpot::AActivitySpot()
 
 	bReplicates = true;
 
+	SetRootComponent(CreateDefaultSubobject<USceneComponent>("Root"));
+
 	PlayerOwnershipComponent = CreateDefaultSubobject<UPlayerOwnershipComponent>(TEXT("Player Ownership"));
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("Interactable"));
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetupAttachment(RootComponent);
 	MeshComponent->ComponentTags.Add(InteractableComponent->GetHintMeshTag());
+	MeshComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
-#if WITH_EDITORONLY_DATA && WITH_EDITOR
-	CharacterTransformOnOccupySpotComponent = CreateDefaultSubobject<UCapsuleComponent>(
+#if WITH_EDITORONLY_DATA
+	CharacterTransformOnOccupySpotComponent = CreateEditorOnlyDefaultSubobject<UCapsuleComponent>(
 		TEXT("Character Transform On Occupy Spot"));
 
 	CharacterTransformOnOccupySpotComponent->SetupAttachment(MeshComponent);
@@ -65,30 +68,22 @@ UAbilitySystemComponent* AActivitySpot::GetAbilitySystemComponent() const
 	return UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerComponent)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 
-	if (!ensureAlways(IsValid(Character)) || CachedOccupyingCharacter != nullptr)
+	if (ensureAlways(IsValid(Character)) && !IsOccupied())
 	{
-		return;
+		SetOccupyingCharacter(Character);
 	}
-
-	AEscapeChroniclesPlayerState* PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
-
-	if (!ensureAlways(IsValid(PlayerState)))
-	{
-		return;
-	}
-
-	SetOccupyingCharacter(Character);
-	PlayerState->SetOccupyingActivitySpot(this);
 }
 
 bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 {
 	/**
+	 * Initial Validation:
 	 * - Server-only.
 	 * - Must not be trying to reassign the same character.
 	 * - Allows unoccupying (if Character == nullptr).
@@ -102,26 +97,37 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		return false;
 	}
 
-	/**
-	 * Get the appropriate ability system component:
-	 * - When unoccupying (Character == nullptr), use the currently occupying character.
-	 * - When occupying, use the character that is trying to occupy the spot.
-	 */
-	UAbilitySystemComponent* AbilitySystemComponent = Character == nullptr ?
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter) :
-		UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+	// === Actor State Preparation ===
 
-	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	AEscapeChroniclesPlayerState* PlayerState;
+	UAbilitySystemComponent* AbilitySystemComponent;
+
+	// Branch for unoccupying (Character == nullptr)
+	if (Character == nullptr)
+	{
+		PlayerState = CachedOccupyingCharacter->GetPlayerState<AEscapeChroniclesPlayerState>();
+		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
+	}
+	// Branch for new occupation
+	else
+	{
+		PlayerState = Character->GetPlayerState<AEscapeChroniclesPlayerState>();
+		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
+	}
+
+	if (!ensureAlways(IsValid(PlayerState)) || !ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return false;
 	}
 
 	const UVitalAttributeSet* VitalAttributeSet = AbilitySystemComponent->GetSet<UVitalAttributeSet>();
 
-	if (!ensureAlways(IsValid(VitalAttributeSet)))
+	if (!ensureAlways(VitalAttributeSet))
 	{
 		return false;
 	}
+
+	// ===== Occupation State Change =====
 
 	if (Character == nullptr)
 	{
@@ -130,29 +136,31 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 
 		UnoccupySpot(CachedOccupyingCharacter);
+		PlayerState->SetOccupyingActivitySpot(nullptr);
 
 		InteractableComponent->SetCanInteract(true);
 	}
-	else
+	// Check for blocking tags
+	else if (!AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
 	{
-		// Check for blocking tags
-		if (AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
-		{
-			return false;
-		}
-
 		OccupySpot(Character);
+		PlayerState->SetOccupyingActivitySpot(this);
 
 		InteractableComponent->SetCanInteract(false);
 
 		// Setup health monitoring
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
-			.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
+		UnoccupyIfAttributeHasDecreasedDelegateHandle =
+			AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
+				.AddUObject(this, &ThisClass::OnOccupyingCharacterHealthChanged);
+	}
+	else
+	{
+		return false;
 	}
 
 	CachedOccupyingCharacter = Character;
 
-	OnOccupyingCharacterChanged.Broadcast(Character);
+	OnOccupyingStateChanged.Broadcast(Character);
 
 	return true;
 }
@@ -185,7 +193,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	check(IsValid(Character));
 #endif
 
-	const USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
+	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
 
 	if (!ensureAlways(IsValid(CharacterMesh)))
 	{
@@ -193,6 +201,8 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	}
 
 	CacheMeshData(CharacterMesh);
+
+	CharacterMesh->SetUsingAbsoluteRotation(false);
 
 	// Move the character
 	Character->SetActorLocation(CharacterLocationOnOccupySpot);
@@ -223,8 +233,6 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 {
 	if (!ensureAlways(OccupyingAnimMontages.Num() > 0))
 	{
-		AttachOccupyingCharacterMesh();
-		
 		return;
 	}
 
@@ -234,8 +242,6 @@ void AActivitySpot::LoadOccupyingAnimMontage()
 
 	if (!ensureAlways(!OccupyingAnimMontages[SelectedOccupyingAnimMontage].IsNull()))
 	{
-		AttachOccupyingCharacterMesh();
-
 		return;
 	}
 
@@ -273,38 +279,12 @@ void AActivitySpot::OnOccupyingAnimMontageLoaded()
 
 	UAnimInstance* AnimInstance = CharacterMesh->GetAnimInstance();
 
-	if (!ensureAlways(IsValid(AnimInstance)))
+	if (ensureAlways(IsValid(AnimInstance)))
 	{
-		return;
-	}
+		AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
 
-	AnimInstance->Montage_Play(OccupyingAnimMontages[SelectedOccupyingAnimMontage].Get());
-
-	AttachSkeletalMesh(CharacterMesh);
-}
-
-void AActivitySpot::AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const
-{
-	// Set this false to make the mesh rotate when attach it
-	SkeletalMesh->SetUsingAbsoluteRotation(false);
-
-	// Attach only the mesh to the desired location
-	SkeletalMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
-		AttachSocketName);
-}
-
-void AActivitySpot::AttachOccupyingCharacterMesh() const
-{
-	if (!ensureAlways(IsValid(CachedOccupyingCharacter)))
-	{
-		return;
-	}
-
-	USkeletalMeshComponent* CharacterMesh = CachedOccupyingCharacter->GetMesh();
-
-	if (ensureAlways(IsValid(CharacterMesh)))
-	{
-		AttachSkeletalMesh(CharacterMesh);
+		CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			AttachSocketName);
 	}
 }
 
@@ -407,4 +387,3 @@ void AActivitySpot::ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) co
 	SkeletalMesh->SetRelativeTransform(CachedMeshTransform);
 	SkeletalMesh->SetUsingAbsoluteRotation(true);
 }
-

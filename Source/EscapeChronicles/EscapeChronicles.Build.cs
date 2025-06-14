@@ -24,11 +24,13 @@ public class EscapeChronicles : ModuleRules
 			"InventorySystem",
 			"UMG",
 			"CommonUI",
+			"GeometryFramework",
 			"OnlineSubsystem"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
+			"GeometryScriptingCore",
 			"OnlineSubsystemUtils"
 		});
 	}

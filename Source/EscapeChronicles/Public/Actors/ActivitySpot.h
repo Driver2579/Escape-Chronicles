@@ -36,9 +36,16 @@ public:
 	virtual void OnConstruction(const FTransform& Transform) override;
 #endif
 
-	int32 GetEffectLevel() const { return EffectLevel; }
+	bool IsOccupied() const { return  CachedOccupyingCharacter != nullptr; }
 
-	void SetEffectLevel(const int32 InEffectLevel) { EffectLevel = InEffectLevel; }
+	int32 GetGameplayEffectLevel() const { return EffectLevel; }
+	void SetGameplayEffectLevel(const int32 InEffectLevel) { EffectLevel = InEffectLevel; }
+
+	// Resets the gameplay effect level to the default value defined in the class defaults
+	void ResetGameplayEffectLevel()
+	{
+		SetGameplayEffectLevel(GetClass()->GetDefaultObject<AActivitySpot>()->GetGameplayEffectLevel());
+	}
 
 	/**
 	 * Sets the occupying character for this activity spot. If the spot is already occupied by another character, the
@@ -59,8 +66,8 @@ public:
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* NewCharacter);
 
-	// Broadcast when occupation state changes (both occupy and unoccupy)
-	FOnOccupyingCharacterChanged OnOccupyingCharacterChanged;
+	// Called when occupation state changes (both occupy and unoccupy)
+	FOnOccupyingCharacterChanged OnOccupyingStateChanged;
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,14 +125,6 @@ private:
 	 * @param SkeletalMesh The mesh component to restore
 	 */
 	void ApplyCachedMeshData(USkeletalMeshComponent* SkeletalMesh) const;
-
-	/**
-	 * Attach character's mesh to MeshComponent
-	 * @param SkeletalMesh The mesh component to attach
-	 */
-	void AttachSkeletalMesh(USkeletalMeshComponent* SkeletalMesh) const;
-
-	void AttachOccupyingCharacterMesh() const;
 
 	// Original transform of character's mesh before occupation
 	FTransform CachedMeshTransform;

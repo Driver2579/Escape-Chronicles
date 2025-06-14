@@ -219,12 +219,15 @@ bool UInteractionManagerComponent::TryInteract(UInteractableComponent* Interacta
 
 void UInteractionManagerComponent::Server_TryInteract_Implementation(UInteractableComponent* InteractableComponent)
 {
-	InteractableComponent->Interact(this);
+	if (InteractableComponent->CanInteract())
+	{
+		InteractableComponent->Interact(this);
+	}
 }
 
 bool UInteractionManagerComponent::Server_TryInteract_Validate(UInteractableComponent* InteractableComponent)
 {
-	if (!IsValid(InteractableComponent) || !InteractableComponent->CanInteract())
+	if (!IsValid(InteractableComponent))
 	{
 		return false;
 	}
