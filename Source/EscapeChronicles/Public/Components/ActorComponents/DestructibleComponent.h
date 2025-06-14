@@ -35,6 +35,7 @@ struct FDynamicMeshHoleData
  * A component that supports making holes in the DynamicMeshActor this component is added to by subtracting a sphere
  * with a specified radius from it in a specified place. This component also supports saving/loading the holes when the
  * game is saved/loaded.
+ * @remark All public functions of this component can be called only on the server. The client calls will be ignored.
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ESCAPECHRONICLES_API UDestructibleComponent : public UActorComponent, public ISaveable
@@ -44,9 +45,12 @@ class ESCAPECHRONICLES_API UDestructibleComponent : public UActorComponent, publ
 public:
 	UDestructibleComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const TArray<FDynamicMeshHoleData>& GetHoles() const { return Holes; }
 
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
+	UFUNCTION(BlueprintCallable)
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
 
 	// Adds a hole of the given radius at the given relative location of the mesh
@@ -76,6 +80,10 @@ private:
 	UPROPERTY(EditAnywhere, Category="Save Game", meta=(EditCondition="bAutomaticallyMakeActorSaveable"))
 	FName SaveableActorTag = TEXT("Saveable");
 
+	// Whether the component should automatically make the actor replicated at the beginning of the game
+	UPROPERTY(EditAnywhere, Category="Replication")
+	bool bAutomaticallyMakeActorReplicated = true;
+
 	/**
 	 * Allocates the tool mesh that will be used to create holes in the mesh. The mesh is a sphere with the specified
 	 * radius and the specified relative location.
@@ -84,8 +92,8 @@ private:
 	UDynamicMesh* AllocateDestructToolMeshChecked(const FVector& HoleRelativeLocation, const float Radius) const;
 
 	/**
-	 * An actual implementation of the AddHoleAtRelativeLocation function. Doesn't add the data to the Holes array and
-	 * doesn't check if the OwningDynamicMeshActor is valid.
+	 * An actual implementation of the AddHoleAtRelativeLocation function. Doesn't add the data to the Holes array,
+	 * doesn't check if the OwningDynamicMeshActor is valid, and doesn't check if the owner is an authority.
 	 */
 	void AddHoleAtRelativeLocation_Internal(const FVector& HoleRelativeLocation, const float HoleRadius) const;
 
@@ -94,10 +102,16 @@ private:
 	 * @remark You should call this function only for locations that were previously used to create holes.
 	 * @remark This function doesn't remove the given location from the HolesLocations array.
 	 * @remark The OwningDynamicMeshActor must be valid when calling this function.
+	 * @remark This function doesn't check if the owner is an authority.
 	 */
 	void RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const;
 
+	// TODO: Replace the next logic with a FastArraySerializer
+
 	// A list of holes in the mesh
-	UPROPERTY(Transient, SaveGame)
+	UPROPERTY(Transient, SaveGame, ReplicatedUsing="OnRep_Holes")
 	TArray<FDynamicMeshHoleData> Holes;
+
+	UFUNCTION()
+	void OnRep_Holes(const TArray<FDynamicMeshHoleData>& OldHoles);
 };
