@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Interfaces/Saveable.h"
+#include "Common/Enums/DestructiveToolType.h"
 #include "DestructibleComponent.generated.h"
 
 class ADynamicMeshActor;
@@ -49,6 +50,8 @@ public:
 
 	const TArray<FDynamicMeshHoleData>& GetHoles() const { return Holes; }
 
+	EDestructiveToolType GetDestructiveToolType() const { return DestructiveToolType; }
+
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
 	UFUNCTION(BlueprintCallable)
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
@@ -83,6 +86,13 @@ private:
 	// Whether the component should automatically make the actor replicated at the beginning of the game
 	UPROPERTY(EditAnywhere, Category="Replication")
 	bool bAutomaticallyMakeActorReplicated = true;
+
+	/**
+	 * A type of tool that will be used to create holes in the mesh. This should be checked before creating holes. Other
+	 * types of tools than the selected one should not be used to create holes in an actor that uses this component.
+	 */
+	UPROPERTY(EditAnywhere)
+	EDestructiveToolType DestructiveToolType = EDestructiveToolType::Pickaxe;
 
 	/**
 	 * Allocates the tool mesh that will be used to create holes in the mesh. The mesh is a sphere with the specified
