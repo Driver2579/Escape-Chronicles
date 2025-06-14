@@ -7,6 +7,7 @@
 #include "Common/Structs/FastArraySerializers/InstanceStats.h"
 #include "InventoryItemInstance.generated.h"
 
+class UInventoryManagerComponent;
 class UInventoryItemDefinition;
 class UInventoryItemFragment;
 
@@ -39,10 +40,19 @@ public:
 
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
 	FInstanceStats& GetInstanceStats_Mutable() { return InstanceStats; }
-	
+
+	// Gathers all fragments of the specified class type and writes them into the provided array.
+	UInventoryItemFragment* GetFragmentByClass(const TSubclassOf<UInventoryItemFragment>& FragmentClass) const;
+
 	// Gathers all fragments of the specified class type and writes them into the provided array.
 	template<typename T>
-	T* GetFragmentByClass() const;
+	T* GetFragmentByClass() const
+	{
+		static_assert(
+			TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
+
+		return CastChecked<T>(GetFragmentByClass(T::StaticClass()), ECastCheckedType::NullAllowed);
+	}
 
 	// Gathers all fragments of the specified class type and writes them into the provided array.
 	template<typename T>
@@ -73,31 +83,6 @@ private:
 	// True if the item has been properly initialized and is ready for use
 	bool bInitialized = false;
 };
-
-template<typename T>
-T* UInventoryItemInstance::GetFragmentByClass() const
-{
-	static_assert(TIsDerivedFrom<T, UInventoryItemFragment>::Value, "T must be inherited from UInventoryItemFragment!");
-
-	if (!Definition)
-	{
-		return nullptr;
-	}
-
-	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
-
-	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
-	{
-		T* CastedFragment = Cast<T>(Fragment);
-
-		if (IsValid(CastedFragment))
-		{
-			return CastedFragment;
-		}
-	}
-
-	return nullptr;
-}
 
 template<typename T>
 void UInventoryItemInstance::GetFragmentsByClass(TArray<T*>& OutFragments) const

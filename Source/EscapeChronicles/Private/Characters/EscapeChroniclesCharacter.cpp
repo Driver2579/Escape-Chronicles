@@ -20,6 +20,7 @@
 #include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "Navigation/CrowdManager.h"
+#include "Net/UnrealNetwork.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -127,6 +128,13 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("Inventory Manager Component"));
 }
 
+void AEscapeChroniclesCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, CurrentMesh);
+}
+
 UAbilitySystemComponent* AEscapeChroniclesCharacter::GetAbilitySystemComponent() const
 {
 	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
@@ -172,6 +180,8 @@ void AEscapeChroniclesCharacter::PostInitializeComponents()
 
 	InitialMeshTransform = MeshComponent->GetRelativeTransform();
 	InitialMeshAttachParent = MeshComponent->GetAttachParent();
+
+	CurrentMesh = MeshComponent->GetSkeletalMeshAsset();
 }
 
 void AEscapeChroniclesCharacter::BeginPlay()
@@ -888,6 +898,42 @@ void AEscapeChroniclesCharacter::MoveCapsuleToMesh()
 	}
 
 	SetActorLocation(NewCapsuleLocation);
+}
+
+void AEscapeChroniclesCharacter::OnRep_CurrentMesh() const
+{
+	// Update the mesh with a new one but don't reset the animation
+	MeshComponent->SetSkeletalMesh(CurrentMesh, false);
+}
+
+void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
+{
+	// Don't allow overriding the mesh if it was already overriden
+	if (OriginalMesh)
+	{
+		return;
+	}
+
+	// Remember the original mesh to reset it later
+	OriginalMesh = MeshComponent->GetSkeletalMeshAsset();
+
+	// Set the new mesh but don't reset the animation
+	MeshComponent->SetSkeletalMesh(NewMesh, false);
+	CurrentMesh = NewMesh;
+}
+
+void AEscapeChroniclesCharacter::ResetMesh()
+{
+	// Don't allow resetting the mesh if it wasn't overriden
+	if (!OriginalMesh)
+	{
+		return;
+	}
+
+	// Reset the mesh to the original one and forget the pointer to it
+	MeshComponent->SetSkeletalMesh(OriginalMesh);
+	CurrentMesh = OriginalMesh;
+	OriginalMesh = nullptr;
 }
 
 FGenericTeamId AEscapeChroniclesCharacter::GetGenericTeamId() const

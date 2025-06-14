@@ -37,6 +37,8 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 public:
 	AEscapeChroniclesCharacter();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
@@ -87,6 +89,8 @@ public:
 	virtual void OnPreSaveObject() override;
 
 	virtual void PostLoad() override;
+
+	virtual void PostInitializeComponents() override;
 
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,
 		APlayerState* OldPlayerState)
@@ -147,6 +151,19 @@ public:
 	{
 		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
 	}
+
+	/**
+	 * Replaces the skeletal mesh of the character with a new one.
+	 * @remark This function won't work if the character already has an overriden mesh. You should call the ResetMesh
+	 * first.
+	 */
+	void SetMesh(USkeletalMesh* NewMesh);
+
+	/**
+	 * Resets the skeletal mesh of the character to the original one.
+	 * @remark This function won't work if the character doesn't have an overriden mesh.
+	 */
+	void ResetMesh();
 
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
@@ -345,6 +362,17 @@ private:
 	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
 
 	void MoveCapsuleToMesh();
+
+	// The current mesh that is set to the character
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_CurrentMesh")
+	TObjectPtr<USkeletalMesh> CurrentMesh;
+
+	UFUNCTION()
+	void OnRep_CurrentMesh() const;
+
+	// Original mesh that was set before it was changed if it was changed
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMesh> OriginalMesh;
 
 	/**
 	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the

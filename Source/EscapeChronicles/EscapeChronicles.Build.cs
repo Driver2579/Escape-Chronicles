@@ -24,6 +24,8 @@ public class EscapeChronicles : ModuleRules
 			"InventorySystem",
 			"UMG",
 			"CommonUI",
+			"Slate",
+			"SlateCore",
 			"GeometryFramework",
 			"OnlineSubsystem",
 			"StateTreeModule",
