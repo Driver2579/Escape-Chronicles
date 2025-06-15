@@ -180,6 +180,19 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
+#if DO_CHECK
+	check(IsValid(ItemInstanceDuplicate->GetDefinition()));
+#endif
+
+	const UInventoryItemDefinition* ItemDefinitionCDO = ItemInstanceDuplicate->GetDefinition()->GetDefaultObject<
+		UInventoryItemDefinition>();
+
+	// Notify all fragments that the item was added to the slot
+	for (const UInventoryItemFragment* ItemFragment : ItemDefinitionCDO->GetFragments())
+	{
+		ItemFragment->OnItemAddedToSlot(ItemInstanceDuplicate, this, SlotTypeTag, SlotIndex);
+	}
+
 	OnContentChanged.Broadcast();
 
 	return true;
@@ -229,8 +242,65 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	// Clear the slot by setting its instance to null
 	InventoryContent.SetInstance(nullptr, SlotsArrayIndex, SlotIndex);
 
+#if DO_CHECK
+	check(IsValid(ItemInstance->GetDefinition()));
+#endif
+
+	const UInventoryItemDefinition* ItemDefinitionCDO = ItemInstance->GetDefinition()->GetDefaultObject<
+		UInventoryItemDefinition>();
+
+	// Notify all fragments that the item was removed from the slot
+	for (const UInventoryItemFragment* ItemFragment : ItemDefinitionCDO->GetFragments())
+	{
+		ItemFragment->OnItemRemovedFromSlot(ItemInstance, this, SlotTypeTag, SlotIndex);
+	}
+
 	OnContentChanged.Broadcast();
 
+	return true;
+}
+
+bool UInventoryManagerComponent::SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
+	const FGameplayTag& FromSlotsType, const FGameplayTag& ToSlotsType)
+{
+#if DO_ENSURE
+	ensureAlways(GetOwner()->HasAuthority());
+#endif
+
+	// Get indexes of slot arrays by their tags
+	const int32 FromSlotsArrayIndex = InventoryContent.IndexOfByTag(FromSlotsType);
+	const int32 ToSlotsArrayIndex = InventoryContent.IndexOfByTag(ToSlotsType);
+
+	// Arrays must exist
+	if (!ensureAlwaysMsgf(FromSlotsArrayIndex != INDEX_NONE && ToSlotsArrayIndex != INDEX_NONE,
+		TEXT("Array not found by tag")))
+	{
+		return false;
+	}
+
+	// Get the slot arrays themselves
+	const FInventorySlotsArray& FromSlotsArray = InventoryContent[FromSlotsArrayIndex].Array;
+	const FInventorySlotsArray& ToSlotsArray = InventoryContent[ToSlotsArrayIndex].Array;
+
+	// Check validity of indexes in slot arrays
+	if (!ensureAlwaysMsgf(FromSlotsArray.IsValidSlotIndex(FromSlotIndex), TEXT("Unavailable from slot index")) ||
+		!ensureAlwaysMsgf(ToSlotsArray.IsValidSlotIndex(ToSlotIndex), TEXT("Unavailable to slot index"))) 
+	{
+		return false;
+	}
+
+	// Save a temporary reference to the item from the original slot
+	UInventoryItemInstance* TempFromItemInstance = FromSlotsArray.GetItems()[FromSlotIndex].Instance;
+
+	// Move the item from the target slot to the source slot
+	InventoryContent.SetInstance(ToSlotsArray.GetItems()[ToSlotIndex].Instance, FromSlotsArrayIndex,
+		FromSlotIndex);
+
+	// Move the item from the source slot to the target slot
+	InventoryContent.SetInstance(TempFromItemInstance, ToSlotsArrayIndex,
+		ToSlotIndex);
+
+	OnContentChanged.Broadcast();
 	return true;
 }
 

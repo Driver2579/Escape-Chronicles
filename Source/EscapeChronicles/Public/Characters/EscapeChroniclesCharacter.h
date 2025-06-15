@@ -35,6 +35,8 @@ class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInter
 public:
 	AEscapeChroniclesCharacter();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
 
@@ -86,6 +88,8 @@ public:
 
 	virtual void PostLoad() override;
 
+	virtual void PostInitializeComponents() override;
+
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void UpdateNavigationRelevance() override;
@@ -122,6 +126,19 @@ public:
 	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
+
+	/**
+	 * Replaces the skeletal mesh of the character with a new one.
+	 * @remark This function won't work if the character already has an overriden mesh. You should call the ResetMesh
+	 * first.
+	 */
+	void SetMesh(USkeletalMesh* NewMesh);
+
+	/**
+	 * Resets the skeletal mesh of the character to the original one.
+	 * @remark This function won't work if the character doesn't have an overriden mesh.
+	 */
+	void ResetMesh();
 
 protected:
 	virtual void PostInitializeComponents() override;
@@ -318,4 +335,15 @@ private:
 	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
 
 	void MoveCapsuleToMesh();
+
+	// The current mesh that is set to the character
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_CurrentMesh")
+	TObjectPtr<USkeletalMesh> CurrentMesh;
+
+	UFUNCTION()
+	void OnRep_CurrentMesh() const;
+
+	// Original mesh that was set before it was changed if it was changed
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMesh> OriginalMesh;
 };

@@ -23,7 +23,9 @@ public class EscapeChronicles : ModuleRules
 			"InteractionSystem",
 			"InventorySystem",
 			"UMG",
-			"CommonUI"
+			"CommonUI",
+			"Slate",
+			"SlateCore"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
