@@ -13,7 +13,7 @@ void UInteractionManagerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	const APawn* OwningPawn = GetOwner<APawn>();
+	APawn* OwningPawn = GetOwner<APawn>();
 
 	if (!ensureAlways(IsValid(OwningPawn)))
 	{
@@ -22,12 +22,14 @@ void UInteractionManagerComponent::BeginPlay()
 
 	bIsLocallyControlled = OwningPawn->IsLocallyControlled();
 
-	if (!bIsLocallyControlled)
+	// This component can work only on server or locally
+	if (!bIsLocallyControlled && !OwningPawn->HasAuthority())
 	{
 		return;
 	}
-		
-	OwnerController = OwningPawn->GetController<APlayerController>();
+
+	// Try to initialize the owning controller now
+	OwningController = OwningPawn->GetController();
 
 	bool bWasThereCollisionBinding = false;
 	
@@ -51,6 +53,33 @@ void UInteractionManagerComponent::BeginPlay()
 #endif
 }
 
+AController* UInteractionManagerComponent::GetOrInitOwningController()
+{
+	if (OwningController.IsValid())
+	{
+		return OwningController.Get();
+	}
+
+	const APawn* OwningPawn = GetOwner<APawn>();
+
+	if (!ensureAlways(IsValid(OwningPawn)))
+	{
+		return nullptr;
+	}
+
+	// This component can work only on server or locally
+	if (!bIsLocallyControlled && !OwningPawn->HasAuthority())
+	{
+		return nullptr;
+	}
+
+	// Try to initialize the owning controller
+	OwningController = OwningPawn->GetController();
+
+	// Return the result
+	return OwningController.Get();
+}
+
 // ReSharper disable once CppParameterMayBeConst
 void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
@@ -61,6 +90,20 @@ void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	{
 		SelectInteractableComponent();
 	}
+}
+
+UInteractableComponent* UInteractionManagerComponent::GetSelectedInteractableComponent()
+{
+	/**
+	 * Try to select the interactable component if it is not selected yet (usually it isn't selected on non-local
+	 * components).
+	 */
+	if (!SelectedInteractableComponent.IsValid())
+	{
+		SelectInteractableComponent();
+	}
+
+	return SelectedInteractableComponent.Get();
 }
 
 void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent,
@@ -133,15 +176,19 @@ bool UInteractionManagerComponent::IsPathObstructed(const UInteractableComponent
 
 void UInteractionManagerComponent::SelectInteractableComponent()
 {
-	if (!ensureAlways(OwnerController.IsValid()) || InteractableComponentsPool.IsEmpty())
+	if (InteractableComponentsPool.IsEmpty() || !ensureAlways(GetOrInitOwningController()))
 	{
 		return;
 	}
 
+#if DO_CHECK
+	check(OwningController.IsValid());
+#endif
+
 	// Find the view location and view rotation
 	FVector ViewLocation;
 	FRotator ViewRotation;
-	OwnerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
+	OwningController->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
 	// Convert the rotation value to the direction
 	const FVector ViewDirection = ViewRotation.Vector();

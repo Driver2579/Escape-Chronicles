@@ -618,7 +618,7 @@ void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode Gro
 }
 
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
-                                                       const FName& NewMovementModeName)
+	const FName& NewMovementModeName)
 {
 	/**
 	 * Even though the movement mode is changed, we need to wait for the next tick because gameplay tags in the
