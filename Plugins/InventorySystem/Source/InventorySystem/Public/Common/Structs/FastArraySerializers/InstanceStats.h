@@ -61,6 +61,11 @@ struct INVENTORYSYSTEM_API FInstanceStats : public FFastArraySerializer
 		return Array.FindByKey(InTag);
 	}
 
+	bool HasStat(const FGameplayTag& InTag) const
+	{
+		return GetStat(InTag) != nullptr;
+	}
+
 	void SetStat(const FInstanceStatsItem& InStat)
 	{
 		FInstanceStatsItem* Stat = Array.FindByKey(InStat.Tag);
@@ -95,9 +100,12 @@ struct INVENTORYSYSTEM_API FInstanceStats : public FFastArraySerializer
 		}
 	}
 
-	bool HasStat(const FGameplayTag& InTag) const
+	FInstanceStats& operator=(const FInstanceStats& Other)
 	{
-		return GetStat(InTag) != nullptr;
+		Array = Other.Array;
+		MarkArrayDirty();
+
+		return *this;
 	}
 
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)

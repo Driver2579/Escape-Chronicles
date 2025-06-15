@@ -152,9 +152,9 @@ void USaveInventoryPickupItemsSubsystem::OnPickupItemClassLoaded(TSharedPtr<FStr
 	// Construct a new item instance to fill it with the loaded data
 	UInventoryItemInstance* ItemInstance = NewObject<UInventoryItemInstance>(this);
 
-	// Set the loaded stats and definition class to the item instance
-	ItemInstance->GetInstanceStats_Mutable() = ItemInstanceSaveData.InstanceStats;
+	// Set the loaded definition class and stats to the item instance
 	ItemInstance->Initialize(ItemInstanceSaveData.DefinitionClass.LoadSynchronous());
+	ItemInstance->GetInstanceStats_Mutable() = ItemInstanceSaveData.InstanceStats;
 
 	// Set the item instance we created using the loaded data to the pickup item actor
 	InventoryPickupItem->SetItemInstance(ItemInstance);

@@ -63,9 +63,9 @@ void UEscapeChroniclesInventoryManagerComponent::OnPostLoadObject()
 			// Construct a new item instance to fill it with the loaded data
 			UInventoryItemInstance* ItemInstance = NewObject<UInventoryItemInstance>(this);
 
-			// Set the loaded stats and definition class to the item instance
-			ItemInstance->GetInstanceStats_Mutable() = TypedSlot.InstanceStats;
+			// Set the loaded definition class and stats to the item instance
 			ItemInstance->Initialize(TypedSlot.DefinitionClass.LoadSynchronous());
+			ItemInstance->GetInstanceStats_Mutable() = TypedSlot.InstanceStats;
 
 			// Add the item instance to the inventory
 			AddItem(ItemInstance, i, Pair.Key);
