@@ -51,7 +51,8 @@ void AActivitySpot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, CachedOccupyingCharacter)
+	DOREPLIFETIME(ThisClass, CachedOccupyingCharacter);
+	DOREPLIFETIME(ThisClass, CurrentOccupyingActorClass);
 }
 
 void AActivitySpot::BeginPlay()
@@ -133,7 +134,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(VitalAttributeSet->GetHealthAttribute())
 			.Remove(UnoccupyIfAttributeHasDecreasedDelegateHandle);
 
-		UnoccupySpot(CachedOccupyingCharacter);
+		UnoccupySpotWithCharacter(CachedOccupyingCharacter);
 		PlayerState->SetOccupyingActivitySpot(nullptr);
 
 		InteractableComponent->SetCanInteract(true);
@@ -141,7 +142,7 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	// Check for blocking tags
 	else if (!AbilitySystemComponent->HasAnyMatchingGameplayTags(OccupyingBlockedTags))
 	{
-		OccupySpot(Character);
+		OccupySpotWithCharacter(Character);
 		PlayerState->SetOccupyingActivitySpot(this);
 
 		InteractableComponent->SetCanInteract(false);
@@ -177,15 +178,15 @@ void AActivitySpot::OnRep_CachedOccupyingCharacter(AEscapeChroniclesCharacter* O
 	// Handle occupation change on clients
 	if (CachedOccupyingCharacter == nullptr)
 	{
-		UnoccupySpot(OldValue);
+		UnoccupySpotWithCharacter(OldValue);
 	}
 	else
 	{
-		OccupySpot(CachedOccupyingCharacter);
+		OccupySpotWithCharacter(CachedOccupyingCharacter);
 	}
 }
 
-void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
+void AActivitySpot::OccupySpotWithCharacter(AEscapeChroniclesCharacter* Character)
 {
 #if DO_CHECK
 	check(IsValid(Character));
@@ -205,6 +206,9 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 		return;
 	}
 
+	// Destroy a currently occupying actor if any
+	DestroyOccupyingActor();
+
 	/**
 	 * Temporary and ugly solution. This function is a quick and dirty fix and should not exist in a properly designed
 	 * architecture. Eventually, the MeshControllingState system must be refactored to eliminate the need for this.
@@ -215,7 +219,7 @@ void AActivitySpot::OccupySpot(AEscapeChroniclesCharacter* Character)
 	CharacterMesh->SetSimulatePhysics(false);
 	CharacterMesh->SetUsingAbsoluteRotation(false);
 	CharacterMesh->AttachToComponent(MeshComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-	CharacterMesh->SetRelativeTransform(AttachTransform);
+	CharacterMesh->SetRelativeTransform(CharacterAttachTransform);
 
 	// === Start async loading of assets ===
 
@@ -312,7 +316,7 @@ void AActivitySpot::OnOccupyingEffectLoaded()
 	OccupyingEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
 }
 
-void AActivitySpot::UnoccupySpot(AEscapeChroniclesCharacter* Character)
+void AActivitySpot::UnoccupySpotWithCharacter(AEscapeChroniclesCharacter* Character)
 {
 #if DO_CHECK
 	check(IsValid(Character));
@@ -408,4 +412,116 @@ void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Charac
 	SkeletalMesh->SetUsingAbsoluteRotation(true);
 
 	SkeletalMesh->SetRelativeTransform(Character->GetInitialMeshTransform());
+}
+
+void AActivitySpot::GetOccupyingActorClass(TSoftClassPtr<AActor>& OutOccupyingActorClass) const
+{
+	if (CachedOccupyingCharacter)
+	{
+		OutOccupyingActorClass = CachedOccupyingCharacter->GetClass();
+	}
+	else if (!CurrentOccupyingActorClass.IsNull())
+	{
+		OutOccupyingActorClass = CurrentOccupyingActorClass;
+	}
+	else
+	{
+		OutOccupyingActorClass.Reset();
+	}
+}
+
+bool AActivitySpot::SpawnOccupyingActor(const TSoftClassPtr<AActor>& OccupyingActorClass,
+	const FTransform* ActorTransformOnOccupy)
+{
+	if (!ensureAlways(!OccupyingActorClass.IsNull()) || !HasAuthority() || IsOccupied())
+	{
+		return false;
+	}
+
+	/**
+	 * Remember the class of the actor that occupies the spot. It isn't spawned yet, but we can already consider the
+	 * spot as occupied by this actor.
+	 */
+	CurrentOccupyingActorClass = OccupyingActorClass;
+
+	// Spawn an actor at the given transform or at the transform that was set for the character if none was provided
+	SpawnedOccupyingActorTransform = FTransform(
+		ActorTransformOnOccupy ? *ActorTransformOnOccupy : CharacterTransformOnOccupySpot);
+
+	// Asynchronously load the class of the actor to spawn it at the spot and at the needed transform
+	LoadOccupyingActorClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		CurrentOccupyingActorClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnOccupyingActorClassLoaded,
+			SpawnedOccupyingActorTransform));
+
+	return true;
+}
+
+// ReSharper disable once CppPassValueParameterByConstReference
+void AActivitySpot::OnOccupyingActorClassLoaded(const FTransform SpawnTransform)
+{
+	// === Spawn an actor with a zero transform without checking for collisions ===
+
+#if DO_CHECK
+	check(CurrentOccupyingActorClass.IsValid());
+#endif
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	SpawnedOccupyingActor = GetWorld()->SpawnActor(CurrentOccupyingActorClass.Get(), nullptr,
+		SpawnParameters);
+
+#if DO_CHECK
+	check(SpawnedOccupyingActor.IsValid());
+#endif
+
+	// === Attach an actor to the spot and set the given transform ===
+
+	SpawnedOccupyingActor->AttachToComponent(MeshComponent,
+		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+	SpawnedOccupyingActor->SetActorRelativeTransform(SpawnTransform, false, nullptr,
+		ETeleportType::TeleportPhysics);
+}
+
+void AActivitySpot::DestroyOccupyingActor()
+{
+	// Destroy an actor if it's valid
+	if (SpawnedOccupyingActor.IsValid())
+	{
+		SpawnedOccupyingActor->Destroy();
+		SpawnedOccupyingActor.Reset();
+	}
+
+	// Unload the class of the actor or cancel its loading if it's still in progress
+	if (LoadOccupyingActorClassHandle.IsValid())
+	{
+		LoadOccupyingActorClassHandle->CancelHandle();
+	}
+
+	// Reset the handle just in case
+	LoadOccupyingActorClassHandle.Reset();
+
+	// Forget the class of the actor
+	CurrentOccupyingActorClass.Reset();
+}
+
+void AActivitySpot::OnPostLoadObject()
+{
+	// Always destroy an occupying actor if it exists. We will spawn a new one if needed.
+	DestroyOccupyingActor();
+
+	// Spawn an occupying actor if it was loaded
+	if (!CurrentOccupyingActorClass.IsNull())
+	{
+		/**
+		 * Set the occupying character to nullptr because we can't be sure the character was already loaded and
+		 * unoccupied the spot itself.
+		 */
+		SetOccupyingCharacter(nullptr);
+
+		// Spawn an actor at the loaded transform
+		SpawnOccupyingActor(CurrentOccupyingActorClass.Get(), &SpawnedOccupyingActorTransform);
+	}
 }
