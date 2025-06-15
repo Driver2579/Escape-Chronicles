@@ -41,6 +41,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	AController* GetOrInitOwningController();
+
 private:
 	/**
 	 * Checks if there are obstacles between this component and target interactable
@@ -76,7 +78,7 @@ private:
 	float MaxInteractionDistance = 500.0f;
 
 	// Controller that owns this interaction component 
-	TWeakObjectPtr<AController> OwnerController;
+	TWeakObjectPtr<AController> OwningController;
 
 	// Pool of all interactable components currently in detection range 
 	TArray<TWeakObjectPtr<UInteractableComponent>> InteractableComponentsPool;
