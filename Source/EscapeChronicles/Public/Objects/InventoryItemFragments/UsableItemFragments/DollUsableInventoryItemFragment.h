@@ -6,6 +6,7 @@
 #include "UsableItemInventoryItemFragment.h"
 #include "DollUsableInventoryItemFragment.generated.h"
 
+class ADollOccupyingActivitySpot;
 class AActivitySpot;
 
 /**
@@ -30,9 +31,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSet<TSoftClassPtr<AActivitySpot>> AllowedActivitySpotClasses;
 
-	// An actor class that will be spawned when the doll is used in the activity spot
+	// A class of the doll that will be spawned when the doll is used in the activity spot
 	UPROPERTY(EditAnywhere)
-	TSoftClassPtr<AActor> DollActorClass;
+	TSoftClassPtr<ADollOccupyingActivitySpot> DollActorClass;
 
 	// If true, the DollActorClass will be spawned at the custom transform specified in DollActorSpawnTransform
 	UPROPERTY(EditAnywhere)

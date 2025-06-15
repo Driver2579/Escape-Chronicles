@@ -4,6 +4,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
+#include "ActorComponents/InventoryManagerComponent.h"
+#include "Actors/DollOccupyingActivitySpot.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ActorComponents/InteractableComponent.h"
@@ -12,6 +14,7 @@
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Net/UnrealNetwork.h"
+#include "Objects/InventoryItemInstance.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AActivitySpot::AActivitySpot()
@@ -52,7 +55,7 @@ void AActivitySpot::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLif
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, CachedOccupyingCharacter);
-	DOREPLIFETIME(ThisClass, CurrentOccupyingActorClass);
+	DOREPLIFETIME(ThisClass, CurrentOccupyingDollClass);
 }
 
 void AActivitySpot::BeginPlay()
@@ -73,9 +76,60 @@ void AActivitySpot::OnInteract(UInteractionManagerComponent* InteractionManagerC
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(
 		InteractionManagerComponent->GetOwner());
 
-	if (ensureAlways(IsValid(Character)) && !IsOccupied())
+	if (!ensureAlways(IsValid(Character)))
+	{
+		return;
+	}
+
+	/**
+	 * If the spot is already occupied and if it's occupied by a doll, then try to move this doll into the character's
+	 * inventory first. If it will be successfully moved, then the character would be able to occupy the spot after the
+	 * second interaction.
+	 */
+	if (IsOccupied())
+	{
+		MoveOccupyingDollToCharacterInventory(Character);
+	}
+	// Otherwise, if the spot isn't occupying by anyone and anything, then try to occupy it with the character
+	else
 	{
 		SetOccupyingCharacter(Character);
+	}
+}
+
+void AActivitySpot::MoveOccupyingDollToCharacterInventory(const AEscapeChroniclesCharacter* Character)
+{
+	// Return if the spot isn't occupied by a doll
+	if (CurrentOccupyingDollClass.IsNull())
+	{
+		return;
+	}
+
+#if DO_CHECK
+	check(IsValid(Character));
+#endif
+
+	// If the class for the doll is still loading, then load it synchronously because we need it right now
+	if (!CurrentOccupyingDollClass.IsValid())
+	{
+		CurrentOccupyingDollClass.LoadSynchronous();
+	}
+
+#if DO_CHECK
+	// Since we finished loading the doll class, it's spawned actor must be valid at this stage
+	check(SpawnedOccupyingDoll.IsValid());
+#endif
+
+	const UInventoryItemInstance* ItemInstance = SpawnedOccupyingDoll->GetItemInstance();
+
+	/**
+	 * We can't move the doll to the inventory if it doesn't have an item instance set. If an ItemInstance is valid,
+	 * then try to add it to the first empty slot in the character's inventory. If it succeeds, then destroy the doll
+	 * from this spot.
+	 */
+	if (ensureAlways(IsValid(ItemInstance)) && Character->GetInventoryManagerComponent()->AddItem(ItemInstance))
+	{
+		DestroyOccupyingDoll();
 	}
 }
 
@@ -213,7 +267,7 @@ void AActivitySpot::OccupySpotWithCharacter(AEscapeChroniclesCharacter* Characte
 	}
 
 	// Destroy a currently occupying actor if any
-	DestroyOccupyingActor();
+	DestroyOccupyingDoll();
 
 	/**
 	 * Temporary and ugly solution. This function is a quick and dirty fix and should not exist in a properly designed
@@ -420,123 +474,119 @@ void AActivitySpot::ApplyInitialCharacterData(AEscapeChroniclesCharacter* Charac
 	SkeletalMesh->SetRelativeTransform(Character->GetInitialMeshTransform());
 }
 
-void AActivitySpot::GetOccupyingActorClass(TSoftClassPtr<AActor>& OutOccupyingActorClass) const
+void AActivitySpot::GetOccupyingDollClass(TSoftClassPtr<ADollOccupyingActivitySpot>& OutOccupyingDollClass) const
 {
-	if (CachedOccupyingCharacter)
+	if (!CurrentOccupyingDollClass.IsNull())
 	{
-		OutOccupyingActorClass = CachedOccupyingCharacter->GetClass();
-	}
-	else if (!CurrentOccupyingActorClass.IsNull())
-	{
-		OutOccupyingActorClass = CurrentOccupyingActorClass;
+		OutOccupyingDollClass = CurrentOccupyingDollClass;
 	}
 	else
 	{
-		OutOccupyingActorClass.Reset();
+		OutOccupyingDollClass.Reset();
 	}
 }
 
-bool AActivitySpot::SpawnOccupyingActor(const TSoftClassPtr<AActor>& OccupyingActorClass,
-	const FTransform* ActorTransformOnOccupy)
+bool AActivitySpot::SpawnOccupyingDoll(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+	const FTransform* DollTransformOnOccupy)
 {
-	if (ensureAlways(!OccupyingActorClass.IsNull()) && HasAuthority() && !IsOccupied())
+	if (ensureAlways(!OccupyingDollClass.IsNull()) && HasAuthority() && !IsOccupied())
 	{
-		return SpawnOccupyingActorChecked(OccupyingActorClass, ActorTransformOnOccupy);
+		return SpawnOccupyingDollChecked(OccupyingDollClass, DollTransformOnOccupy);
 	}
 
 	return false;
 }
 
-bool AActivitySpot::SpawnOccupyingActorChecked(const TSoftClassPtr<AActor>& OccupyingActorClass,
-	const FTransform* ActorTransformOnOccupy)
+bool AActivitySpot::SpawnOccupyingDollChecked(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+	const FTransform* DollTransformOnOccupy)
 {
 #if DO_ENSURE
-	ensureAlways(!OccupyingActorClass.IsNull());
+	ensureAlways(!OccupyingDollClass.IsNull());
 	ensureAlways(HasAuthority());
 #endif
 
 	/**
-	 * Remember the class of the actor that occupies the spot. It isn't spawned yet, but we can already consider the
-	 * spot as occupied by this actor.
+	 * Remember the class of the doll that occupies the spot. It isn't spawned yet, but we can already consider the
+	 * spot as occupied by this doll.
 	 */
-	CurrentOccupyingActorClass = OccupyingActorClass;
+	CurrentOccupyingDollClass = OccupyingDollClass;
 
-	// Spawn an actor at the given transform or at the transform that was set for the character if none was provided
-	SpawnedOccupyingActorTransform = FTransform(
-		ActorTransformOnOccupy ? *ActorTransformOnOccupy : CharacterAttachTransform);
+	// Spawn a doll at the given transform or at the transform that was set for the character if none was provided
+	CurrentOccupyingDollTransform = FTransform(
+		DollTransformOnOccupy ? *DollTransformOnOccupy : CharacterAttachTransform);
 
-	// Asynchronously load the class of the actor to spawn it at the spot and at the needed transform
-	LoadOccupyingActorClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
-		CurrentOccupyingActorClass.ToSoftObjectPath(),
-		FStreamableDelegate::CreateUObject(this, &ThisClass::OnOccupyingActorClassLoaded,
-			SpawnedOccupyingActorTransform));
+	// Asynchronously load the class of the doll to spawn it at the spot and at the needed transform
+	LoadOccupyingDollClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+		CurrentOccupyingDollClass.ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &ThisClass::OnOccupyingDollClassLoaded,
+			CurrentOccupyingDollTransform));
 
 	return true;
 }
 
 // ReSharper disable once CppPassValueParameterByConstReference
-void AActivitySpot::OnOccupyingActorClassLoaded(const FTransform SpawnTransform)
+void AActivitySpot::OnOccupyingDollClassLoaded(const FTransform SpawnTransform)
 {
-	// === Spawn an actor with a zero transform without checking for collisions ===
+	// === Spawn a doll with a zero transform without checking for collisions ===
 
 #if DO_CHECK
-	check(CurrentOccupyingActorClass.IsValid());
+	check(CurrentOccupyingDollClass.IsValid());
 #endif
 
 	FActorSpawnParameters SpawnParameters;
 	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	SpawnedOccupyingActor = GetWorld()->SpawnActor(CurrentOccupyingActorClass.Get(), nullptr,
+	SpawnedOccupyingDoll = GetWorld()->SpawnActor<ADollOccupyingActivitySpot>(CurrentOccupyingDollClass.Get(),
 		SpawnParameters);
 
 #if DO_CHECK
-	check(SpawnedOccupyingActor.IsValid());
+	check(SpawnedOccupyingDoll.IsValid());
 #endif
 
-	// === Attach an actor to the spot and set the given transform ===
+	// === Attach a doll to the spot and set the given transform ===
 
-	SpawnedOccupyingActor->AttachToComponent(MeshComponent,
+	SpawnedOccupyingDoll->AttachToComponent(MeshComponent,
 		FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
-	SpawnedOccupyingActor->SetActorRelativeTransform(SpawnTransform, false, nullptr,
+	SpawnedOccupyingDoll->SetActorRelativeTransform(SpawnTransform, false, nullptr,
 		ETeleportType::TeleportPhysics);
 }
 
-void AActivitySpot::DestroyOccupyingActor()
+void AActivitySpot::DestroyOccupyingDoll()
 {
-	// Destroy an actor if it's valid
-	if (SpawnedOccupyingActor.IsValid())
+	// Destroy a doll if it's valid
+	if (SpawnedOccupyingDoll.IsValid())
 	{
-		SpawnedOccupyingActor->Destroy();
-		SpawnedOccupyingActor.Reset();
+		SpawnedOccupyingDoll->Destroy();
+		SpawnedOccupyingDoll.Reset();
 	}
 
-	// Unload the class of the actor or cancel its loading if it's still in progress
-	if (LoadOccupyingActorClassHandle.IsValid())
+	// Unload the class of the doll or cancel its loading if it's still in progress
+	if (LoadOccupyingDollClassHandle.IsValid())
 	{
-		LoadOccupyingActorClassHandle->CancelHandle();
+		LoadOccupyingDollClassHandle->CancelHandle();
 	}
 
 	// Reset the handle just in case
-	LoadOccupyingActorClassHandle.Reset();
+	LoadOccupyingDollClassHandle.Reset();
 
-	// Forget the class of the actor
-	CurrentOccupyingActorClass.Reset();
+	// Forget the class of the doll
+	CurrentOccupyingDollClass.Reset();
 
-	// Reset the transform of the spawned actor
-	SpawnedOccupyingActorTransform = FTransform::Identity;
+	// Reset the transform of the spawned doll
+	CurrentOccupyingDollTransform = FTransform::Identity;
 }
 
 void AActivitySpot::OnPreLoadObject()
 {
-	// Always destroy an occupying actor if it exists. We will spawn a new one after the game is loaded if needed.
-	DestroyOccupyingActor();
+	// Always destroy an occupying doll if it exists. We will spawn a new one after the game is loaded if needed.
+	DestroyOccupyingDoll();
 }
 
 void AActivitySpot::OnPostLoadObject()
 {
-	// Spawn an occupying actor if it was loaded
-	if (!CurrentOccupyingActorClass.IsNull())
+	// Spawn an occupying doll if it was loaded
+	if (!CurrentOccupyingDollClass.IsNull())
 	{
 		/**
 		 * Set the occupying character to nullptr because we can't be sure the character was already loaded and
@@ -544,7 +594,7 @@ void AActivitySpot::OnPostLoadObject()
 		 */
 		SetOccupyingCharacter(nullptr);
 
-		// Spawn an actor at the loaded transform
-		SpawnOccupyingActorChecked(CurrentOccupyingActorClass, &SpawnedOccupyingActorTransform);
+		// Spawn a doll at the loaded transform
+		SpawnOccupyingDollChecked(CurrentOccupyingDollClass, &CurrentOccupyingDollTransform);
 	}
 }

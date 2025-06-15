@@ -7,5 +7,5 @@
 namespace InventorySystemGameplayTags
 {
 	// SlotTypes
-	UE_DECLARE_GAMEPLAY_TAG_EXTERN(Inventory_Slot_Type_Main);
+	INVENTORYSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Inventory_Slot_Type_Main);
 }

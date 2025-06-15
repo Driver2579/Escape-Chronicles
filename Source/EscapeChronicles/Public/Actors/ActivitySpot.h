@@ -9,6 +9,7 @@
 #include "Interfaces/Saveable.h"
 #include "ActivitySpot.generated.h"
 
+class ADollOccupyingActivitySpot;
 struct FOnAttributeChangeData;
 class UInteractionManagerComponent;
 class UCapsuleComponent;
@@ -38,11 +39,11 @@ public:
 #endif
 
 	/**
-	 * @return True if the spot is currently occupied either by a character or another actor. False otherwise.
+	 * @return True if the spot is currently occupied either by a character or a doll. False otherwise.
 	 */
 	bool IsOccupied() const
 	{
-		return CachedOccupyingCharacter || !CurrentOccupyingActorClass.IsNull();
+		return CachedOccupyingCharacter || !CurrentOccupyingDollClass.IsNull();
 	}
 
 	int32 GetGameplayEffectLevel() const { return EffectLevel; }
@@ -56,7 +57,7 @@ public:
 
 	/**
 	 * Sets the occupying character for this activity spot. If the spot is already occupied by another character, the
-	 * operation will fail. If the spot is occupied by an actor other than a character, it will be destroyed.
+	 * operation will fail. If the spot is occupied by a doll, it will be destroyed.
 	 * @param Character The character to occupy the spot (nullptr to clear occupation).
 	 * @return True if the occupation state was changed (occupied or unoccupied), false if the spot is already occupied
 	 * by another character or no change is needed.
@@ -73,32 +74,29 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 	/**
-	 * Returns a class of the actor that occupies the spot. Could either be a class of the character, another spawned
-	 * actor, or null if the spot is not occupied.
-	 * @remark A class isn't guaranteed to be valid and loaded.
+	 * Returns a class of the doll that currently occupies the spot, if any.
+	 * @remark A class isn't guaranteed to be loaded.
 	 */
-	void GetOccupyingActorClass(TSoftClassPtr<AActor>& OutOccupyingActorClass) const;
+	void GetOccupyingDollClass(TSoftClassPtr<ADollOccupyingActivitySpot>& OutOccupyingDollClass) const;
 
 	/**
-	 * Spawns an actor of the given class and sets it as an occupying actor.
-	 * @param OccupyingActorClass A class of the actor to spawn and set as an occupying actor.
-	 * @param ActorTransformOnOccupy A relative transform that will be applied to the spawned actor after an attachment.
+	 * Spawns a doll of the given class and sets it as an occupying doll.
+	 * @param OccupyingDollClass A class of the doll to spawn and set as an occupying doll.
+	 * @param DollTransformOnOccupy A relative transform that will be applied to the spawned doll after an attachment.
 	 * If nullptr, then the transform for the character attachment will be used.
 	 * @return Whether an occupation was successful. If the spot is already occupied, the function will return false.
 	 * @return False if the function was called on a client.
 	 * @remark This function will not work if the spot is already occupied by anything.
-	 * @remark The given actor should be replicated. It will be spawned only on server. Clients' calls of this function
-	 * will be ignored.
 	 */
-	bool SpawnOccupyingActor(const TSoftClassPtr<AActor>& OccupyingActorClass,
-		const FTransform* ActorTransformOnOccupy = nullptr);
+	bool SpawnOccupyingDoll(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+		const FTransform* DollTransformOnOccupy = nullptr);
 
 	/**
-	 * Destroys an occupying actor unless it's a character.
+	 * Destroys an occupying doll if any.
 	 * @remark This function will work only on server. Clients' calls won't take any effect and will only waste
 	 * performance.
 	 */
-	void DestroyOccupyingActor();
+	void DestroyOccupyingDoll();
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* NewCharacter);
 
@@ -156,38 +154,35 @@ private:
 	static void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh);
 
 	/**
-	 * An actual implementation of the SpawnOccupyingActor function. This version doesn't check if the class is valid,
+	 * An actual implementation of the SpawnOccupyingDoll function. This version doesn't check if the class is valid,
 	 * the spot isn't occupied, or if the function is called on a client.
 	 */
-	bool SpawnOccupyingActorChecked(const TSoftClassPtr<AActor>& OccupyingActorClass,
-		const FTransform* ActorTransformOnOccupy = nullptr);
+	bool SpawnOccupyingDollChecked(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+		const FTransform* DollTransformOnOccupy = nullptr);
 
 	/**
-	 * A class of the actor that currently occupies the spot, if any. Doesn't point to a character's class, only points
-	 * to a class of an actor given via the SpawnOccupyingActor function.\n
+	 * A class of the doll that currently occupies the spot, if any. Doesn't point to a character's class, only points
+	 * to a class of a doll given via the SpawnOccupyingDoll function.\n
 	 * This class pointer is replicated to support IsOccupied function on clients.\n
-	 * This class pointer is saved, and an actor of this class, if it was loaded, will be spawned after it's loaded. 
+	 * This class pointer is saved, and a doll of this class, if it was loaded, will be spawned after it's loaded. 
 	 */
 	UPROPERTY(Transient, Replicated, SaveGame)
-	TSoftClassPtr<AActor> CurrentOccupyingActorClass;
+	TSoftClassPtr<ADollOccupyingActivitySpot> CurrentOccupyingDollClass;
 
 	/**
-	 * This property only exists to be able to spawn an actor occupying the spot at the same transform as it was before
+	 * This property only exists to be able to spawn a doll occupying the spot at the same transform as it was before
 	 * it was saved.
 	 */
 	UPROPERTY(Transient, SaveGame)
-	FTransform SpawnedOccupyingActorTransform;
+	FTransform CurrentOccupyingDollTransform;
 
-	TSharedPtr<FStreamableHandle> LoadOccupyingActorClassHandle;
+	TSharedPtr<FStreamableHandle> LoadOccupyingDollClassHandle;
 
-	// Spawns an actor attached to the spot at the given transform
-	void OnOccupyingActorClassLoaded(const FTransform SpawnTransform);
+	// Spawns a doll attached to the spot at the given transform
+	void OnOccupyingDollClassLoaded(const FTransform SpawnTransform);
 
-	/**
-	 * An actor that currently occupies the spot. Doesn't point to a character, only points to an actor spawned via the
-	 * SpawnOccupyingActor function.
-	 */
-	TWeakObjectPtr<AActor> SpawnedOccupyingActor;
+	// A doll that currently occupies the spot
+	TWeakObjectPtr<ADollOccupyingActivitySpot> SpawnedOccupyingDoll;
 
 	// === Interaction ===
 
@@ -195,6 +190,12 @@ private:
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
 	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
+
+	/**
+	 * Tries to unoccupy the spot from the currently occupying doll if it occupies the spot by putting it into the
+	 * first available inventory slot of the character. If succeeded, the doll will be destroyed from this spot.
+	 */
+	void MoveOccupyingDollToCharacterInventory(const AEscapeChroniclesCharacter* Character);
 
 	// === Effect ===
 

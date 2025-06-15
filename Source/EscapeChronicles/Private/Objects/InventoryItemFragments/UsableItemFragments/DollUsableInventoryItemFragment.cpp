@@ -81,9 +81,9 @@ bool UDollUsableInventoryItemFragment::OnTriedToUseItem(UInventoryManagerCompone
 	// Spawn the doll with the specified transform if it was requested and return the result
 	if (bUseCustomSpawnTransform)
 	{
-		return SelectedActivitySpot->SpawnOccupyingActor(DollActorClass, &DollActorSpawnTransform);
+		return SelectedActivitySpot->SpawnOccupyingDoll(DollActorClass, &DollActorSpawnTransform);
 	}
 
 	// Otherwise, spawn the doll with a default transform and return the result
-	return SelectedActivitySpot->SpawnOccupyingActor(DollActorClass);
+	return SelectedActivitySpot->SpawnOccupyingDoll(DollActorClass);
 }
