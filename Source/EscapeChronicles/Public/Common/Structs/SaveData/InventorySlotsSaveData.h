@@ -11,6 +11,7 @@ class UInventoryItemDefinition;
 /**
  * Represents the save data for one inventory slot, which contains information about the item placed in that slot but
  * doesn't contain information about the type of the slot itself.
+ * @remark This struct can also be used to save just an item instance outside the inventory.
  */
 USTRUCT()
 struct FInventoryTypedSlotSaveData
