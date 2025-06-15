@@ -17,6 +17,8 @@ class ESCAPECHRONICLES_API UItemSlotsWidget : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
+	const FGameplayTag& GetAssociatedSlotTypeTag() const { return AssociatedSlotTypeTag; }
+	
 	void SetInventorySlots(const TArray<FInventorySlot>& InventorySlots)
 	{
 		const int32 InventorySlotsNumber = InventorySlots.Num();
@@ -34,7 +36,7 @@ public:
 
 			UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
 
-			ItemSlotWidget->SetItemInstance(InventorySlots[Index].Instance);
+			ItemSlotWidget->SetAssociate(&InventorySlots[Index], Index);
 		}
 	}
 
@@ -42,21 +44,22 @@ protected:
 	virtual void ConstructSlots(const TArray<FInventorySlot>& InventorySlots)
 	{
 		SlotsContainer->ClearChildren();
-		
-		for (const FInventorySlot& InventorySlot : InventorySlots)
+
+		for (int32 Index = 0; Index < InventorySlots.Num(); ++Index)
 		{
 			UItemSlotWidget* NewSlotWidget = CreateWidget<UItemSlotWidget>(this, SlotClass);
 
 			SlotsContainer->AddChildToStackBox(NewSlotWidget);
-
-			NewSlotWidget->SetItemInstance(InventorySlot.Instance);
+			NewSlotWidget->SetAssociate(&InventorySlots[Index], Index);
 		}
 	}
-	
+
 private:
-	UPROPERTY(meta = (BindWidget))
-	UStackBox* SlotsContainer;
+	UPROPERTY(Transient, meta = (BindWidget))
+	TObjectPtr<UStackBox> SlotsContainer;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemSlotWidget> SlotClass;
+
+	FGameplayTag AssociatedSlotTypeTag;
 };

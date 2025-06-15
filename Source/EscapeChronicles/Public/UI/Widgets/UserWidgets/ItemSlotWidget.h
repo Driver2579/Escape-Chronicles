@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "Common/DataAssets/ItemSlotWidgetData.h"
 #include "Components/Image.h"
-#include "Objects/InventoryItemInstance.h"
+#include "Components/PanelWidget.h"
 #include "ItemSlotWidget.generated.h"
 
-class UItemSlotWidgetStyle;
+struct FInventorySlot;
+class UItemSlotWidgetData;
 
 // TODO: do comments
 UCLASS()
@@ -17,7 +19,15 @@ class ESCAPECHRONICLES_API UItemSlotWidget : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
-	void SetItemInstance(UInventoryItemInstance* ItemInstance);
+	//const FGameplayTag& GetAssociatedSlotTypeTag() const { return OuterItemSlotsWidget->GetAssociatedSlotTypeTag(); }
+
+	int32 GetAssociatedSlotIndex() const { return AssociatedSlotIndex; }
+	const FInventorySlot* GetAssociatedInventorySlot() const { return AssociatedInventorySlot; }
+
+	void SetAssociate(const FInventorySlot* InventorySlot, const int32 InAssociatedSlotIndex);
+
+	virtual void ApplyDragVisualStyle() { ItemInstanceIcon->SetOpacity(Data->DragIconOpacity); }
+	virtual void ResetDragVisualStyle() { ItemInstanceIcon->SetOpacity(1); }
 
 protected:
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
@@ -35,7 +45,8 @@ private:
 	TObjectPtr<UImage> ItemInstanceIcon;
 
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UItemSlotWidgetStyle> Style;
+	TObjectPtr<UItemSlotWidgetData> Data;
 
-	TWeakObjectPtr<UInventoryItemInstance> CachedItemInstance;
+	int32 AssociatedSlotIndex;
+	const FInventorySlot* AssociatedInventorySlot;
 };
