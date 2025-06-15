@@ -463,7 +463,7 @@ bool AActivitySpot::SpawnOccupyingActorChecked(const TSoftClassPtr<AActor>& Occu
 
 	// Spawn an actor at the given transform or at the transform that was set for the character if none was provided
 	SpawnedOccupyingActorTransform = FTransform(
-		ActorTransformOnOccupy ? *ActorTransformOnOccupy : CharacterTransformOnOccupySpot);
+		ActorTransformOnOccupy ? *ActorTransformOnOccupy : CharacterAttachTransform);
 
 	// Asynchronously load the class of the actor to spawn it at the spot and at the needed transform
 	LoadOccupyingActorClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
@@ -522,6 +522,9 @@ void AActivitySpot::DestroyOccupyingActor()
 
 	// Forget the class of the actor
 	CurrentOccupyingActorClass.Reset();
+
+	// Reset the transform of the spawned actor
+	SpawnedOccupyingActorTransform = FTransform::Identity;
 }
 
 void AActivitySpot::OnPreLoadObject()
