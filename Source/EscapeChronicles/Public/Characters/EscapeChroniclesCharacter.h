@@ -10,6 +10,7 @@
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UEscapeChroniclesInventoryManagerComponent;
 class UCarryCharacterComponent;
 class UInventoryManagerComponent;
 class UBoxComponent;
@@ -65,7 +66,12 @@ public:
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
-	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const;
+
+	UEscapeChroniclesInventoryManagerComponent* GetEscapeChroniclesInventoryManagerComponent() const
+	{
+		return InventoryManagerComponent;
+	}
 
 	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
 	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
@@ -269,7 +275,7 @@ private:
 	TObjectPtr<UNavMoverComponent> NavMoverComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
+	TObjectPtr<UEscapeChroniclesInventoryManagerComponent> InventoryManagerComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;

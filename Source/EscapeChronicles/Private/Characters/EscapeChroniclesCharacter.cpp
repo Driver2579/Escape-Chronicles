@@ -4,7 +4,6 @@
 
 #include "AbilitySystemComponent.h"
 #include "EscapeChroniclesGameplayTags.h"
-#include "ActorComponents/InventoryManagerComponent.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
 #include "Camera/CameraComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -15,6 +14,7 @@
 #include "Components/ActorComponents/CarryCharacterComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
+#include "Components/InventoryManagerComponents/EscapeChroniclesInventoryManagerComponent.h"
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
@@ -113,7 +113,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 
 	// === Inventory ===
 
-	InventoryManagerComponent = CreateDefaultSubobject<UInventoryManagerComponent>(TEXT("Inventory Manager Component"));
+	InventoryManagerComponent = CreateDefaultSubobject<UEscapeChroniclesInventoryManagerComponent>(
+		TEXT("Inventory Manager Component"));
 }
 
 void AEscapeChroniclesCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -138,6 +139,11 @@ UEscapeChroniclesAbilitySystemComponent* AEscapeChroniclesCharacter::GetEscapeCh
 
 	return IsValid(EscapeChroniclesPlayerState) ?
 		EscapeChroniclesPlayerState->GetEscapeChroniclesAbilitySystemComponent() : nullptr;
+}
+
+UInventoryManagerComponent* AEscapeChroniclesCharacter::GetInventoryManagerComponent() const
+{
+	return InventoryManagerComponent;
 }
 
 void AEscapeChroniclesCharacter::OnPreSaveObject()
