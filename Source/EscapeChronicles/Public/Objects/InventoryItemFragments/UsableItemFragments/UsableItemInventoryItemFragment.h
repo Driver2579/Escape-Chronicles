@@ -7,7 +7,7 @@
 #include "UsableItemInventoryItemFragment.generated.h"
 
 // Base class for items' fragments that allow an item to be used by the player
-UCLASS(Abstract, Hidden)
+UCLASS(Abstract, meta=(Hidden))
 class ESCAPECHRONICLES_API UUsableItemInventoryItemFragment : public UInventoryItemFragment
 {
 	GENERATED_BODY()

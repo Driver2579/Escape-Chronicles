@@ -19,14 +19,11 @@ class INTERACTIONSYSTEM_API UInteractionManagerComponent : public USceneComponen
 
 public:
 	UInteractionManagerComponent();
-	
-	UInteractableComponent* GetSelectedInteractableComponent() const
-	{
-		return SelectedInteractableComponent.Get();
-	}
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
+	
+	UInteractableComponent* GetSelectedInteractableComponent();
 
 	/**
 	 * Attempts interaction with currently selected interactable

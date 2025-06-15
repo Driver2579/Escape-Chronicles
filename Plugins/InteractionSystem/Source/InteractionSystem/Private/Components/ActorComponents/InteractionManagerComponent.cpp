@@ -63,6 +63,20 @@ void UInteractionManagerComponent::TickComponent(float DeltaTime, ELevelTick Tic
 	}
 }
 
+UInteractableComponent* UInteractionManagerComponent::GetSelectedInteractableComponent()
+{
+	/**
+	 * Try to select the interactable component if it is not selected yet (usually it isn't selected on non-local
+	 * components).
+	 */
+	if (!SelectedInteractableComponent.IsValid())
+	{
+		SelectInteractableComponent();
+	}
+
+	return SelectedInteractableComponent.Get();
+}
+
 void UInteractionManagerComponent::OnAddToInteractableComponentsPool(UPrimitiveComponent* OverlappedComponent,
 	AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
