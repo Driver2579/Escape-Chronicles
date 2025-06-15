@@ -104,6 +104,12 @@ bool AActivitySpot::SetOccupyingCharacter(AEscapeChroniclesCharacter* Character)
 	// Branch for unoccupying (Character == nullptr)
 	if (Character == nullptr)
 	{
+		// Return true if there is no cached character to unoccupy because it means the spot is already unoccupied
+		if (!CachedOccupyingCharacter)
+		{
+			return true;
+		}
+
 		PlayerState = CachedOccupyingCharacter->GetPlayerState<AEscapeChroniclesPlayerState>();
 		AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(CachedOccupyingCharacter);
 	}
@@ -433,10 +439,21 @@ void AActivitySpot::GetOccupyingActorClass(TSoftClassPtr<AActor>& OutOccupyingAc
 bool AActivitySpot::SpawnOccupyingActor(const TSoftClassPtr<AActor>& OccupyingActorClass,
 	const FTransform* ActorTransformOnOccupy)
 {
-	if (!ensureAlways(!OccupyingActorClass.IsNull()) || !HasAuthority() || IsOccupied())
+	if (ensureAlways(!OccupyingActorClass.IsNull()) && HasAuthority() && !IsOccupied())
 	{
-		return false;
+		return SpawnOccupyingActorChecked(OccupyingActorClass, ActorTransformOnOccupy);
 	}
+
+	return false;
+}
+
+bool AActivitySpot::SpawnOccupyingActorChecked(const TSoftClassPtr<AActor>& OccupyingActorClass,
+	const FTransform* ActorTransformOnOccupy)
+{
+#if DO_ENSURE
+	ensureAlways(!OccupyingActorClass.IsNull());
+	ensureAlways(HasAuthority());
+#endif
 
 	/**
 	 * Remember the class of the actor that occupies the spot. It isn't spawned yet, but we can already consider the
@@ -507,11 +524,14 @@ void AActivitySpot::DestroyOccupyingActor()
 	CurrentOccupyingActorClass.Reset();
 }
 
+void AActivitySpot::OnPreLoadObject()
+{
+	// Always destroy an occupying actor if it exists. We will spawn a new one after the game is loaded if needed.
+	DestroyOccupyingActor();
+}
+
 void AActivitySpot::OnPostLoadObject()
 {
-	// Always destroy an occupying actor if it exists. We will spawn a new one if needed.
-	DestroyOccupyingActor();
-
 	// Spawn an occupying actor if it was loaded
 	if (!CurrentOccupyingActorClass.IsNull())
 	{
@@ -522,6 +542,6 @@ void AActivitySpot::OnPostLoadObject()
 		SetOccupyingCharacter(nullptr);
 
 		// Spawn an actor at the loaded transform
-		SpawnOccupyingActor(CurrentOccupyingActorClass.Get(), &SpawnedOccupyingActorTransform);
+		SpawnOccupyingActorChecked(CurrentOccupyingActorClass, &SpawnedOccupyingActorTransform);
 	}
 }

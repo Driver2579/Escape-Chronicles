@@ -105,6 +105,7 @@ public:
 	// Called when occupation state changes (both occupy and unoccupy)
 	FOnOccupyingCharacterChanged OnOccupyingStateChanged;
 
+	virtual void OnPreLoadObject() override;
 	virtual void OnPostLoadObject() override;
 
 protected:
@@ -155,13 +156,27 @@ private:
 	static void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh);
 
 	/**
-	 * A class of the actor that currently occupies the spot if any. Doesn't point to a character's class, only points
+	 * An actual implementation of the SpawnOccupyingActor function. This version doesn't check if the class is valid,
+	 * the spot isn't occupied, or if the function is called on a client.
+	 */
+	bool SpawnOccupyingActorChecked(const TSoftClassPtr<AActor>& OccupyingActorClass,
+		const FTransform* ActorTransformOnOccupy = nullptr);
+
+	/**
+	 * A class of the actor that currently occupies the spot, if any. Doesn't point to a character's class, only points
 	 * to a class of an actor given via the SpawnOccupyingActor function.\n
 	 * This class pointer is replicated to support IsOccupied function on clients.\n
 	 * This class pointer is saved, and an actor of this class, if it was loaded, will be spawned after it's loaded. 
 	 */
 	UPROPERTY(Transient, Replicated, SaveGame)
 	TSoftClassPtr<AActor> CurrentOccupyingActorClass;
+
+	/**
+	 * This property only exists to be able to spawn an actor occupying the spot at the same transform as it was before
+	 * it was saved.
+	 */
+	UPROPERTY(Transient, SaveGame)
+	FTransform SpawnedOccupyingActorTransform;
 
 	TSharedPtr<FStreamableHandle> LoadOccupyingActorClassHandle;
 
@@ -173,13 +188,6 @@ private:
 	 * SpawnOccupyingActor function.
 	 */
 	TWeakObjectPtr<AActor> SpawnedOccupyingActor;
-
-	/**
-	 * This property only exists to be able to spawn an actor occupying the spot at the same transform as it was before
-	 * it was saved.
-	 */
-	UPROPERTY(Transient, SaveGame)
-	FTransform SpawnedOccupyingActorTransform;
 
 	// === Interaction ===
 
