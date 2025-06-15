@@ -304,6 +304,18 @@ bool UInventoryManagerComponent::SwapItems(const int32 FromSlotIndex, const int3
 	return true;
 }
 
+void UInventoryManagerComponent::ClearInventory()
+{
+	// Remove all items
+	for (const FInventorySlotsTypedArray& Slots : GetInventoryContent().GetItems())
+	{
+		for (int32 i = 0; i < Slots.Array.GetItems().Num(); ++i)
+		{
+			DeleteItem(i, Slots.TypeTag);
+		}
+	}
+}
+
 void UInventoryManagerComponent::OnRep_InventoryContent() const
 {
 	OnContentChanged.Broadcast();

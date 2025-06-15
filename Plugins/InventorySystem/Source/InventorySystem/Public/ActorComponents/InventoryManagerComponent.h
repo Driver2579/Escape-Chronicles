@@ -70,6 +70,9 @@ public:
 		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main,
 		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
+	// Removes all items from the inventory
+	void ClearInventory();
+
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful
