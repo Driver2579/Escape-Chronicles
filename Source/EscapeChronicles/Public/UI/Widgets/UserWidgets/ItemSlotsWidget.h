@@ -58,7 +58,7 @@ protected:
 	}
 
 private:
-	UPROPERTY(Transient, meta = (BindWidget))
+	UPROPERTY(Transient, meta=(BindWidget))
 	TObjectPtr<UStackBox> SlotsContainer;
 
 	UPROPERTY(EditDefaultsOnly)

@@ -26,6 +26,11 @@ struct FInventorySlot : public FFastArraySerializerItem
 	UPROPERTY(Transient)
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
 
+	void SetInventorySlotsArray(const FInventorySlotsArray* InInventorySlotsArray)
+	{
+		InventorySlotsArray = InInventorySlotsArray;
+	}
+
 private:
 	const FInventorySlotsArray* InventorySlotsArray;
 };
@@ -98,6 +103,16 @@ struct FInventorySlotsArray : public FFastArraySerializer
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
 		return FastArrayDeltaSerialize<FInventorySlot, FInventorySlotsArray>(Slots, DeltaParams, *this);
+	}
+
+	void UpdateOwningRefs(const FInventorySlotsTypedArray* InInventorySlotsTypedArray)
+	{
+		InventorySlotsTypedArray = InInventorySlotsTypedArray;
+
+		for (FInventorySlot& Slot : Slots)
+		{
+			Slot.SetInventorySlotsArray(this);
+		}
 	}
 
 private:

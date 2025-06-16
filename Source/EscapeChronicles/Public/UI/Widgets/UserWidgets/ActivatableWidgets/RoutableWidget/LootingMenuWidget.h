@@ -31,11 +31,11 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag LootingMainInventoryTypeTag;
-	
+
 	TWeakObjectPtr<UInventoryManagerComponent> OwningInventoryManager;
 	TWeakObjectPtr<UInventoryManagerComponent> LootingInventoryManager;
 
-	/*void OnOwningInventoryContentChanged() const
+	void OnOwningInventoryContentChanged() const
 	{
 		UpdateOwningInventoryWidget(OwningMainInventoryTypeTag);
 	}
@@ -43,8 +43,8 @@ private:
 	void OnLootingInventoryContentChanged() const
 	{
 		UpdateLootingInventoryWidget(LootingMainInventoryTypeTag);
-	}*/
+	}
 
-	//static void UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag);
-	//static void UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag);
+	void UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
+	void UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
 };

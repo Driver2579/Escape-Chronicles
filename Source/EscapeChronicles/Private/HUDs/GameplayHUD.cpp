@@ -37,5 +37,5 @@ void AGameplayHUD::BeginPlay()
 
 void AGameplayHUD::OnLootInventoryChanged(UInventoryManagerComponent* InInventory)
 {
-	
+	GoTo(LootInventoryRouteTag);
 }

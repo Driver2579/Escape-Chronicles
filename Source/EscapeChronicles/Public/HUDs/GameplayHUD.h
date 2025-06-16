@@ -17,5 +17,8 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	UPROPERTY(EditAnywhere)
+	FGameplayTag LootInventoryRouteTag;
+
 	void OnLootInventoryChanged(UInventoryManagerComponent* InInventory);
 };
