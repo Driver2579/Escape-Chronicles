@@ -23,4 +23,10 @@ public:
 	{
 		return GetTypedOuter<UInventoryManagerComponent>();
 	}
+
+	virtual bool CanEquipItemInSlot(const UInventoryItemInstance* Item, const FGameplayTag& SlotTypeTag,
+		const int32 SlotIndex) const
+	{
+		return true;
+	}
 };

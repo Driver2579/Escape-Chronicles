@@ -2,6 +2,10 @@
 
 #include "CheatManagers/EscapeChroniclesCheatManager.h"
 
+#include "AbilitySystemComponent.h"
+#include "AbilitySystem/AttributeSets/SharedRelationshipAttributeSet.h"
+#include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
+#include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "GameInstances/EscapeChroniclesGameInstance.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -137,4 +141,67 @@ void UEscapeChroniclesCheatManager::EndHosting() const
 
 	// Destroy the session and travel to the main menu
 	GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
+}
+
+void UEscapeChroniclesCheatManager::Cheat_SetSuspicionBaseAttributeValue(const float NewBaseValue) const
+{
+	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
+		GetPlayerController());
+
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	/**
+	 * Try to get the USharedRelationshipAttributeSet from the AbilitySystemComponent to override its Suspicion base
+	 * value.
+	 */
+	const USharedRelationshipAttributeSet* SharedRelationshipAttributeSet =
+		CastChecked<USharedRelationshipAttributeSet>(
+			AbilitySystemComponent->GetAttributeSet(USharedRelationshipAttributeSet::StaticClass()),
+			ECastCheckedType::NullAllowed);
+
+	// Override the base value of the attribute if the attribute set was found 
+	if (ensureAlways(IsValid(SharedRelationshipAttributeSet)))
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(SharedRelationshipAttributeSet->GetSuspicionAttribute(),
+			NewBaseValue);
+	}
+}
+
+void UEscapeChroniclesCheatManager::Cheat_SetHealthBaseAttributeValue(const float NewBaseValue) const
+{
+	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
+		GetPlayerController());
+
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	// Try to get the UVitalAttributeSet from the AbilitySystemComponent to override its Suspicion base value
+	const UVitalAttributeSet* VitalAttributeSet =
+		CastChecked<UVitalAttributeSet>(AbilitySystemComponent->GetAttributeSet(UVitalAttributeSet::StaticClass()),
+			ECastCheckedType::NullAllowed);
+
+	// Override the base value of the attribute if the attribute set was found 
+	if (ensureAlways(IsValid(VitalAttributeSet)))
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(VitalAttributeSet->GetHealthAttribute(), NewBaseValue);
+	}
 }

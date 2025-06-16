@@ -91,6 +91,6 @@ private:
 	FDelegateHandle OnPlayerOrBotInitializedDelegateHandle;
 	FDelegateHandle OnPlayerOrBotLogoutDelegateHandle;
 
-	void OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState);
+	void OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded);
 	void OnPlayerOrBotLogout(AEscapeChroniclesPlayerState* PlayerState);
 };

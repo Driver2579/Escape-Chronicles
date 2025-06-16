@@ -2,11 +2,15 @@
 
 #include "EscapeChronicles/Public/GameModes/EscapeChroniclesGameMode.h"
 
+#include "EngineUtils.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
+#include "Actors/PlayerStarts/EscapeChroniclesPlayerStart.h"
+#include "Components/ActorComponents/BotSpawnerComponent.h"
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
 #include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
+#include "Engine/PlayerStartPIE.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
 #include "GameState/EscapeChroniclesGameState.h"
 #include "HUDs/EscapeChroniclesHUD.h"
@@ -20,6 +24,8 @@ AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
 	HUDClass = AEscapeChroniclesHUD::StaticClass();
+
+	BotSpawnerComponent = CreateDefaultSubobject<UBotSpawnerComponent>(TEXT("Bot Spawner"));
 
 	ScheduleEventManagerComponent = CreateDefaultSubobject<UScheduleEventManagerComponent>(
 		TEXT("Schedule Event Manager"));
@@ -46,6 +52,213 @@ void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& 
 	SaveGameSubsystem->LoadGameAndInitializeUniquePlayerIDs();
 }
 
+AActor* AEscapeChroniclesGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+#if DO_CHECK
+	check(IsValid(Player));
+#endif
+
+	/**
+	 * The code below is based on the default implementation of ChoosePlayerStart in AGameModeBase. It was mostly copied
+	 * with some small modifications. The main difference here is that we check if we can spawn
+	 * EscapeChroniclesPlayerStart.
+	 */
+
+	APlayerStart* FoundPlayerStart = nullptr;
+
+	// Try to get the pawn from the controller
+	const APawn* PawnToFit = Player->GetPawn();
+
+	// If no pawn was found, they use the default pawn
+	if (!IsValid(PawnToFit))
+	{
+		const UClass* PawnClass = GetDefaultPawnClassForController(Player);
+		PawnToFit = IsValid(PawnClass) ? PawnClass->GetDefaultObject<APawn>() : nullptr;
+	}
+
+	const AEscapeChroniclesPlayerState* PlayerState = Cast<AEscapeChroniclesPlayerState>(Player->PlayerState);
+
+	TArray<APlayerStart*> UnOccupiedStartPoints;
+	TArray<APlayerStart*> OccupiedStartPoints;
+
+	UWorld* World = GetWorld();
+
+	for (TActorIterator<APlayerStart> It(World); It; ++It)
+	{
+		APlayerStart* PlayerStart = *It;
+
+		// Always prefer the first "Play from Here" PlayerStart if we find one while in PIE mode
+		if (PlayerStart->IsA<APlayerStartPIE>())
+		{
+			FoundPlayerStart = PlayerStart;
+
+			break;
+		}
+
+		const AEscapeChroniclesPlayerStart* EscapeChroniclesPlayerStart = Cast<AEscapeChroniclesPlayerStart>(
+			PlayerStart);
+
+		/**
+		 * Don't spawn the player at this PlayerStart if it's an AEscapeChroniclesPlayerStart and it doesn't allow to
+		 * spawn a pawn for the given controller here.
+		 */
+		if (EscapeChroniclesPlayerStart && !EscapeChroniclesPlayerStart->CanSpawnPawn(PlayerState))
+		{
+			continue;
+		}
+
+		FVector ActorLocation = PlayerStart->GetActorLocation();
+		const FRotator ActorRotation = PlayerStart->GetActorRotation();
+
+		if (!World->EncroachingBlockingGeometry(PawnToFit, ActorLocation, ActorRotation))
+		{
+			UnOccupiedStartPoints.Add(PlayerStart);
+		}
+		else if (World->FindTeleportSpot(PawnToFit, ActorLocation, ActorRotation))
+		{
+			OccupiedStartPoints.Add(PlayerStart);
+		}
+	}
+
+	if (!FoundPlayerStart)
+	{
+		if (UnOccupiedStartPoints.Num() > 0)
+		{
+			FoundPlayerStart = UnOccupiedStartPoints[FMath::RandRange(0, UnOccupiedStartPoints.Num() - 1)];
+		}
+		else if (OccupiedStartPoints.Num() > 0)
+		{
+			FoundPlayerStart = OccupiedStartPoints[FMath::RandRange(0, OccupiedStartPoints.Num() - 1)];
+		}
+	}
+
+	return FoundPlayerStart;
+}
+
+void AEscapeChroniclesGameMode::RestartPlayerAtPlayerStart(AController* NewPlayer, AActor* StartSpot)
+{
+	/**
+	 * The code below is based on the default implementation of RestartPlayerAtPlayerStart in AGameModeBase. It was
+	 * mostly copied with some small modifications. The main difference here is that we reset the pawn's location and
+	 * rotation here at the ones of the StartSpot even if there is already a pawn existing, which the default
+	 * implementation doesn't do in this case.
+	 */
+
+	if (!NewPlayer || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+	if (!StartSpot)
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Warning, TEXT("RestartPlayerAtPlayerStart: Player start not found"));
+#endif
+
+		return;
+	}
+
+#if !NO_LOGGING
+	UE_LOG(LogGameMode, Verbose, TEXT("RestartPlayerAtPlayerStart %s"),
+		(NewPlayer && NewPlayer->PlayerState) ? *NewPlayer->PlayerState->GetPlayerName() : TEXT("Unknown"));
+#endif
+
+	if (MustSpectate(Cast<APlayerController>(NewPlayer)))
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Verbose,
+			TEXT("RestartPlayerAtPlayerStart: Tried to restart a spectator-only player!"));
+#endif
+
+		return;
+	}
+
+	// Try to create a pawn to use of the default class for this player if it doesn't already have one
+	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer))
+	{
+		APawn* NewPawn = SpawnDefaultPawnFor(NewPlayer, StartSpot);
+
+		if (IsValid(NewPawn))
+		{
+			NewPlayer->SetPawn(NewPawn);
+		}
+	}
+
+	if (!IsValid(NewPlayer->GetPawn()))
+	{
+		FailedToRestartPlayer(NewPlayer);
+	}
+	else
+	{
+		// Tell the start spot it was used
+		InitStartSpot(StartSpot, NewPlayer);
+
+		const FRotator SpawnRotation = StartSpot->GetActorRotation();
+
+		// Reset the pawn's location and rotation to the StartSpot's ones
+		NewPlayer->GetPawn()->SetActorLocation(StartSpot->GetActorLocation());
+		NewPlayer->GetPawn()->SetActorRotation(SpawnRotation);
+
+		FinishRestartPlayer(NewPlayer, SpawnRotation);
+	}
+}
+
+void AEscapeChroniclesGameMode::RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform)
+{
+	/**
+	 * The code below is based on the default implementation of RestartPlayerAtPlayerStart in AGameModeBase. It was
+	 * mostly copied with some small modifications. The main difference here is that we reset the pawn's location and
+	 * rotation here at the ones of the SpawnTransform even if there is already a pawn existing, which the default
+	 * implementation doesn't do in this case.
+	 */
+
+	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+#if !NO_LOGGING
+	UE_LOG(LogGameMode, Verbose, TEXT("RestartPlayerAtTransform %s"),
+		(NewPlayer && NewPlayer->PlayerState) ? *NewPlayer->PlayerState->GetPlayerName() : TEXT("Unknown"));
+#endif
+
+	if (MustSpectate(Cast<APlayerController>(NewPlayer)))
+	{
+#if !NO_LOGGING
+		UE_LOG(LogGameMode, Verbose,
+			TEXT("RestartPlayerAtTransform: Tried to restart a spectator-only player!"));
+#endif
+
+		return;
+	}
+
+	// Try to create a pawn to use of the default class for this player if it doesn't already have one
+	if (!NewPlayer->GetPawn() && GetDefaultPawnClassForController(NewPlayer) != nullptr)
+	{
+		// Try to create a pawn to use of the default class for this player
+		APawn* NewPawn = SpawnDefaultPawnAtTransform(NewPlayer, SpawnTransform);
+
+		if (IsValid(NewPawn))
+		{
+			NewPlayer->SetPawn(NewPawn);
+		}
+	}
+
+	if (!IsValid(NewPlayer->GetPawn()))
+	{
+		FailedToRestartPlayer(NewPlayer);
+	}
+	else
+	{
+		const FRotator SpawnRotation = SpawnTransform.GetRotation().Rotator();
+
+		// Reset the pawn's location and rotation to the SpawnTransform's ones
+		NewPlayer->GetPawn()->SetActorLocation(SpawnTransform.GetLocation());
+		NewPlayer->GetPawn()->SetActorRotation(SpawnRotation);
+
+		FinishRestartPlayer(NewPlayer, SpawnRotation);
+	}
+}
 void AEscapeChroniclesGameMode::OnLoadGameCalled()
 {
 	bInitialGameLoadFinishedOrFailed = false;
@@ -70,6 +283,53 @@ void AEscapeChroniclesGameMode::OnLoadGameCalled()
 		OnFailedToLoadGameDelegateHandle = SaveGameSubsystem->OnFailedToLoadGame.AddUObject(this,
 			&ThisClass::OnInitialGameLoadFinishedOrFailed);
 	}
+}
+
+void AEscapeChroniclesGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+#if DO_CHECK
+	check(IsValid(NewPlayer));
+	check(IsValid(NewPlayer->GetPawn()));
+#endif
+
+	/**
+	 * The code below is based on the default implementation of FinishRestartPlayer in AGameModeBase. It was mostly
+	 * copied with some small modifications. The main difference here is that we don't possess the pawn if the same pawn
+	 * is already possessed by the controller to avoid it being repossessed.
+	 */
+
+	AController* OldController = NewPlayer->GetPawn()->GetController();
+
+	// Possess the pawn only if the controller has changed
+	if (OldController != NewPlayer)
+	{
+		// Unpossess the pawn from the old controller if it was set
+		if (OldController)
+		{
+			OldController->UnPossess();
+		}
+
+		NewPlayer->Possess(NewPlayer->GetPawn());
+
+		// If the Pawn is destroyed as part of possession, we have to abort
+		if (!IsValid(NewPlayer->GetPawn()))
+		{
+			FailedToRestartPlayer(NewPlayer);
+
+			return;
+		}
+	}
+
+	// Set initial control rotation to starting rotation
+	NewPlayer->ClientSetRotation(NewPlayer->GetPawn()->GetActorRotation(), true);
+
+	FRotator NewControllerRot = StartRotation;
+	NewControllerRot.Roll = 0.f;
+	NewPlayer->SetControlRotation(NewControllerRot);
+
+	SetPlayerDefaults(NewPlayer->GetPawn());
+
+	K2_OnRestartPlayer(NewPlayer);
 }
 
 FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerController,
@@ -121,10 +381,29 @@ FString AEscapeChroniclesGameMode::InitNewPlayer(APlayerController* NewPlayerCon
 	return ParentResult;
 }
 
+void AEscapeChroniclesGameMode::LoadAndInitBot(AEscapeChroniclesPlayerState* PlayerState)
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+	// If the game has already finished or failed the loading, then we can load and initialize the bot immediately
+	if (bInitialGameLoadFinishedOrFailed)
+	{
+		LoadAndInitBot_Implementation(PlayerState);
+	}
+	// Otherwise, add the bot to the list of bots to be initialized when the game finishes or fails the loading
+	else
+	{
+		BotsWaitingToBeLoadedAndInitialized.Add(PlayerState);
+	}
+}
+
 void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 {
 	bInitialGameLoadFinishedOrFailed = true;
 
+	// Load and initialize all players that were waiting for the game to finish loading
 	for (const TWeakObjectPtr<APlayerController>& PlayerController : PlayersWaitingToBeLoadedAndInitialized)
 	{
 		if (PlayerController.IsValid())
@@ -132,6 +411,19 @@ void AEscapeChroniclesGameMode::OnInitialGameLoadFinishedOrFailed()
 			LoadAndInitPlayerNowOrWhenPawnIsPossessed(PlayerController.Get());
 		}
 	}
+
+	// Load and initialize all bots that were waiting for the game to finish loading
+	for (const TWeakObjectPtr<AEscapeChroniclesPlayerState>& PlayerState : BotsWaitingToBeLoadedAndInitialized)
+	{
+		if (PlayerState.IsValid())
+		{
+			LoadAndInitBot_Implementation(PlayerState.Get());
+		}
+	}
+
+	// Clear the arrays as we don't need them anymore
+	PlayersWaitingToBeLoadedAndInitialized.Empty();
+	BotsWaitingToBeLoadedAndInitialized.Empty();
 }
 
 void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlayerController* PlayerController)
@@ -140,10 +432,13 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnIsPossessed(APlaye
 	check(IsValid(PlayerController));
 #endif
 
-	// If the controller already possesses a pawn, then we can already load the player
+	/**
+	 * If the controller already possesses a pawn, then we can already request to load the player once his pawn begins
+	 * play.
+	 */
 	if (IsValid(PlayerController->GetPawn()))
 	{
-		LoadAndInitPlayer(PlayerController);
+		LoadAndInitPlayerNowOrWhenPawnBeginsPlay(PlayerController);
 	}
 	// Otherwise, wait for the pawn to be possessed
 	else
@@ -170,7 +465,70 @@ void AEscapeChroniclesGameMode::OnPlayerToLoadPawnChanged(APawn* NewPawn)
 	// Stop listening for the new pawn possessed event because we needed it only for the first pawn
 	PlayerController->GetOnNewPawnNotifier().RemoveAll(this);
 
-	LoadAndInitPlayer(PlayerController);
+	LoadAndInitPlayerNowOrWhenPawnBeginsPlay(PlayerController);
+}
+
+void AEscapeChroniclesGameMode::LoadAndInitPlayerNowOrWhenPawnBeginsPlay(const APlayerController* PlayerController)
+{
+#if DO_CHECK
+	check(IsValid(PlayerController));
+#endif
+
+	APawn* Pawn = PlayerController->GetPawn();
+
+#if DO_CHECK
+	check(IsValid(Pawn));
+#endif
+
+	// Load the player already if his pawn has already begun play
+	if (Pawn->HasActorBegunPlay())
+	{
+		LoadAndInitPlayer(PlayerController);
+	}
+	// Otherwise, load the player once the pawn begins play
+	else
+	{
+		OnPlayerToLoadPawnBegunPlayDelegateHandle = Pawn->OnPawnBeginPlay.AddUObject(this,
+			&ThisClass::OnPlayerToLoadPawnBegunPlay);
+	}
+}
+
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void AEscapeChroniclesGameMode::OnPlayerToLoadPawnBegunPlay(APawn* Pawn)
+{
+#if DO_CHECK
+	check(IsValid(Pawn));
+	check(IsValid(Pawn->GetController<APlayerController>()));
+#endif
+
+	Pawn->OnPawnBeginPlay.Remove(OnPlayerToLoadPawnBegunPlayDelegateHandle);
+
+	// Finally, load the player since his pawn has called BeginPlay
+	LoadAndInitPlayer(Pawn->GetController<APlayerController>());
+}
+
+bool AEscapeChroniclesGameMode::IsPlayerOrBotFullyInitialized(const FUniquePlayerID& UniquePlayerID,
+	bool& bOutLoaded) const
+{
+	// Try to find the given FUniquePlayerID in the list of fully initialized players or bots
+	const bool* bLoadedPtr = FullyInitializedPlayersOrBots.Find(UniquePlayerID);
+
+	/**
+	 * If the FUniquePlayerID was found, then return whether it was loaded or not and true to indicate that the player
+	 * or bot was fully initialized.
+	 */
+	if (bLoadedPtr)
+	{
+		bOutLoaded = *bLoadedPtr;
+
+		return true;
+	}
+
+	// === Otherwise, return false for both values to indicate that the player or bot wasn't fully initialized ===
+
+	bOutLoaded = false;
+
+	return false;
 }
 
 void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* PlayerController)
@@ -190,20 +548,68 @@ void AEscapeChroniclesGameMode::LoadAndInitPlayer(const APlayerController* Playe
 	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(
 		PlayerController->PlayerState);
 
+	bool bLoaded = false;
+
 	if (ensureAlways(IsValid(SaveGameSubsystem)))
 	{
-		SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerId(PlayerState);
+		bLoaded = SaveGameSubsystem->LoadPlayerOrGenerateUniquePlayerID(PlayerState);
 	}
 
-	PostLoadInitPlayerOrBot(PlayerState);
+	PostLoadInitPlayerOrBot(PlayerState, bLoaded);
 }
 
-void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState)
+void AEscapeChroniclesGameMode::LoadAndInitBot_Implementation(AEscapeChroniclesPlayerState* PlayerState)
 {
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(bInitialGameLoadFinishedOrFailed);
+#endif
+
+	const USaveGameSubsystem* SaveGameSubsystem = GetWorld()->GetSubsystem<USaveGameSubsystem>();
+
+	bool bLoaded = false;
+
+	if (ensureAlways(IsValid(SaveGameSubsystem)))
+	{
+		bLoaded = SaveGameSubsystem->LoadBotOrGenerateUniquePlayerID(PlayerState);
+	}
+
+	PostLoadInitPlayerOrBot(PlayerState, bLoaded);
+}
+
+void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded)
+{
+#if DO_ENSURE
+	ensureAlwaysMsgf(bInitialGameLoadFinishedOrFailed,
+		TEXT("You must call this function only after the initial loading of the game has finished or "
+			"failed!"));
+#endif
+
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
 	// Register the player in the player ownership system because we have a valid UniquePlayerID now
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
 
-	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+	OnPlayerOrBotInitialized.Broadcast(PlayerState, bLoaded);
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->GetUniquePlayerID().IsValid());
+#endif
+
+	// Remember that this player or bot was fully initialized and whether he was successfully loaded or not
+	FullyInitializedPlayersOrBots.Add(PlayerState->GetUniquePlayerID(), bLoaded);
+}
+
+void AEscapeChroniclesGameMode::BeginPlay()
+{
+	Super::BeginPlay();
+
+	BotSpawnerComponent->SpawnBots();
 }
 
 void AEscapeChroniclesGameMode::Logout(AController* Exiting)
@@ -213,7 +619,16 @@ void AEscapeChroniclesGameMode::Logout(AController* Exiting)
 	check(Exiting->PlayerState->IsA<AEscapeChroniclesPlayerState>());
 #endif
 
-	OnPlayerOrBotLogout.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState));
+	AEscapeChroniclesPlayerState* PlayerState = CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState);
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->GetUniquePlayerID().IsValid());
+#endif
+
+	// Since the player or bot is logging out, remove him from the list of fully initialized players or bots
+	FullyInitializedPlayersOrBots.Remove(PlayerState->GetUniquePlayerID());
+
+	OnPlayerOrBotLogout.Broadcast(PlayerState);
 
 	Super::Logout(Exiting);
 }

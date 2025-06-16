@@ -85,21 +85,3 @@ void UEscapeChroniclesSaveGame::OverrideOfflineStandalonePlayerSaveData(const FU
 	// Add the new data
 	OfflinePlayersSaveData.Add(UniquePlayerID, SavedPlayerData);
 }
-
-void UEscapeChroniclesSaveGame::AddBotSaveData(const FUniquePlayerID& UniquePlayerID,
-	const FPlayerSaveData& SavedBotData)
-{
-#if DO_CHECK
-	check(UniquePlayerID.IsValid());
-#endif
-
-#if DO_ENSURE
-	ensureAlwaysMsgf(UniquePlayerID.NetID.IsEmpty(), TEXT("Bots must NOT contain the NetID!"));
-#endif
-
-	// Remove the old data if it exists
-	OnlinePlayersSaveData.Remove(UniquePlayerID);
-
-	// Add the new data
-	OnlinePlayersSaveData.Add(UniquePlayerID, SavedBotData);
-}

@@ -6,11 +6,13 @@
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
-#include "ActiveGameplayEffectHandle.h"
+#include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UCarryCharacterComponent;
 class UInventoryManagerComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
@@ -28,12 +30,14 @@ enum class EGroundSpeedMode : uint8;
 
 UCLASS(Config=Game)
 class AEscapeChroniclesCharacter : public APawn, public IMoverInputProducerInterface, public IAbilitySystemInterface,
-	public ISaveable
+	public ISaveable, public ICrowdAgentInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
 public:
 	AEscapeChroniclesCharacter();
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Returns CapsuleComponent subobject
 	UCapsuleComponent* GetCapsuleComponent() const { return CapsuleComponent; }
@@ -55,6 +59,8 @@ public:
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
 
+	UCarryCharacterComponent* GetCarryCharacterComponent() const { return CarryCharacterComponent; }
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
@@ -62,6 +68,9 @@ public:
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+
+	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
+	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -77,7 +86,11 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool HasAnyMeshControllingStateTags() const;
 
+	virtual void OnPreSaveObject() override;
+
 	virtual void PostLoad() override;
+
+	virtual void PostInitializeComponents() override;
 
 	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,
 		APlayerState* OldPlayerState)
@@ -87,6 +100,15 @@ public:
 	virtual FVector GetNavAgentLocation() const override;
 
 	virtual void UpdateNavigationRelevance() override;
+
+	virtual FVector GetCrowdAgentLocation() const override
+	{
+		return GetNavAgentLocation();
+	}
+
+	virtual FVector GetCrowdAgentVelocity() const override;
+	virtual void GetCrowdAgentCollisions(float& CylinderRadius, float& CylinderHalfHeight) const override;
+	virtual float GetCrowdAgentMaxSpeed() const override;
 
 	virtual void AddMovementInput(FVector WorldDirection, float ScaleValue = 1.0f, bool bForce = false) override;
 	virtual FVector ConsumeMovementInputVector() override;
@@ -120,6 +142,30 @@ public:
 	 * @remark The ground speed mode will be reset only after the completion of such an input that was the last one.
 	 */
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
+
+	/**
+	 * The same as ResetGroundSpeedMode, but resets the ground speed mode to the default one no	matter what mode is
+	 * currently set.
+	 */
+	void ForceResetGroundSpeedMode()
+	{
+		DesiredGroundSpeedModeOverride = EGroundSpeedMode::None;
+	}
+
+	/**
+	 * Replaces the skeletal mesh of the character with a new one.
+	 * @remark This function won't work if the character already has an overriden mesh. You should call the ResetMesh
+	 * first.
+	 */
+	void SetMesh(USkeletalMesh* NewMesh);
+
+	/**
+	 * Resets the skeletal mesh of the character to the original one.
+	 * @remark This function won't work if the character doesn't have an overriden mesh.
+	 */
+	void ResetMesh();
+
+	virtual FGenericTeamId GetGenericTeamId() const override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -252,6 +298,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -268,8 +317,11 @@ private:
 	// Whether the mesh is turning now
 	bool bTurning = false;
 
-	// Mesh rotation on BeginPlay
-	FRotator InitialMeshRotation;
+	// Mesh transform on BeginPlay
+	FTransform InitialMeshTransform;
+
+	//  Mesh attach parent on BeginPlay
+	TWeakObjectPtr<USceneComponent> InitialMeshAttachParent;
 
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
@@ -303,7 +355,26 @@ private:
 	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
-	
+
 	// Checks if has a tag that block movement and does so
-	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const;
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
+
+	void MoveCapsuleToMesh();
+
+	// The current mesh that is set to the character
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_CurrentMesh")
+	TObjectPtr<USkeletalMesh> CurrentMesh;
+
+	UFUNCTION()
+	void OnRep_CurrentMesh() const;
+
+	// Original mesh that was set before it was changed if it was changed
+	UPROPERTY(Transient)
+	TObjectPtr<USkeletalMesh> OriginalMesh;
+
+	/**
+	 * We moved the SetGenericTeamId to private because we don't want to allow setting the team ID directly to the
+	 * character. We want to use the TeamID from PlayerState instead.
+	 */
+	virtual void SetGenericTeamId(const FGenericTeamId& TeamID) override {}
 };

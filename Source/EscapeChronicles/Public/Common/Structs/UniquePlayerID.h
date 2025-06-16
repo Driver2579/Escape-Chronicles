@@ -66,6 +66,15 @@ struct FUniquePlayerID
 		return (PlayerID == Other.PlayerID || (!NetID.IsEmpty() && NetID == Other.NetID)) &&
 			LocalPlayerID == Other.LocalPlayerID;
 	}
+
+	/**
+	 * @return True if all fields of this instance and another instance are equal.
+	 * @remark Consider using the operator== instead of this function in most cases.
+	 */
+	bool ExactlyEquals(const FUniquePlayerID& Other) const
+	{
+		return PlayerID == Other.PlayerID && NetID == Other.NetID && LocalPlayerID == Other.LocalPlayerID;
+	}
 };
 
 // This is required to use FUniquePlayerID as a key in TMap and TSet

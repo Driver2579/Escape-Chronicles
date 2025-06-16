@@ -17,7 +17,7 @@ class UInventoryManagerFragment;
  * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
  */
-UCLASS(Blueprintable, Const)
+UCLASS(Blueprintable, Const, meta=(BlueprintSpawnableComponent))
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
@@ -27,7 +27,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
+	const FInventorySlotsTypedArrayContainer& GetInventoryContent() const { return InventoryContent; }
 
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
@@ -101,7 +101,7 @@ private:
 	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
 
 	// Inventory storage with typed slots containers
-	UPROPERTY(ReplicatedUsing="OnRep_InventoryContent")
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_InventoryContent")
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()

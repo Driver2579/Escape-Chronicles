@@ -140,12 +140,14 @@ void UScheduleEventManagerComponent::OnCurrentGameDateTimeUpdated(const FGamepla
 	}
 
 	// Notify that the current scheduled event has changed
-	OnCurrentScheduledEventChanged.Broadcast(OldScheduledEvent, *NewScheduledEvent);
+	OnCurrentScheduledEventChanged.Broadcast(OldScheduledEvent, GetCurrentScheduledEventDataChecked());
+
+	const FScheduleEventData& CurrentActiveEvent = GetCurrentActiveEventDataChecked();
 
 	// Notify that the current active event has changed if the new scheduled event is the current active one
-	if (*NewScheduledEvent == GetCurrentActiveEventDataChecked())
+	if (*NewScheduledEvent == CurrentActiveEvent)
 	{
-		OnCurrentActiveEventChanged.Broadcast(OldScheduledEvent, *NewScheduledEvent);
+		OnCurrentActiveEventChanged.Broadcast(OldScheduledEvent, CurrentActiveEvent);
 	}
 }
 
@@ -197,7 +199,7 @@ void UScheduleEventManagerComponent::PushEvent(const FScheduleEventData& EventDa
 	CreateEventInstanceAndStartOrPauseIt(EventData, bLoadEventClassSynchronously);
 
 	// Notify that the active event has changed
-	OnCurrentActiveEventChanged.Broadcast(OldActiveEvent, EventData);
+	OnCurrentActiveEventChanged.Broadcast(OldActiveEvent, GetCurrentActiveEventDataChecked());
 }
 
 void UScheduleEventManagerComponent::CreateEventInstanceAndStartOrPauseIt(const FScheduleEventData& EventData,
