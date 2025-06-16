@@ -4,18 +4,20 @@
 
 #include "CommonRotator.h"
 #include "Common/Enums/GraphicsQualityLevel.h"
+#include "Components/ComboBoxString.h"
 #include "GameUserSettings/EscapeChroniclesGameUserSettings.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget/SettingsMenus/SettingsMenuWidget.h"
+#include "UI/Widgets/UserWidgets/Containers/ComboBoxStringWidgetContainer.h"
 
 void UGraphicsSettingsMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	InitializeWindowModeRotator();
-	InitializeResolutionRotator();
-	InitializeVSyncRotator();
-	InitializeQualityRotators();
+	InitializeWindowModeComboBox();
+	InitializeResolutionComboBox();
+	InitializeVSyncComboBox();
+	InitializeQualityComboBoxes();
 
 	USettingsMenuWidget* SettingsMenuWidget = GetTypedOuter<USettingsMenuWidget>();
 
@@ -35,7 +37,7 @@ UEscapeChroniclesGameUserSettings* UGraphicsSettingsMenuWidget::GetGameUserSetti
 	return CachedGameUserSettings.Get();
 }
 
-void UGraphicsSettingsMenuWidget::InitializeWindowModeRotator() const
+void UGraphicsSettingsMenuWidget::InitializeWindowModeComboBox() const
 {
 	const UEscapeChroniclesGameUserSettings* GameUserSettings = GetGameUserSettings();
 
@@ -43,48 +45,40 @@ void UGraphicsSettingsMenuWidget::InitializeWindowModeRotator() const
 	check(IsValid(GameUserSettings));
 #endif
 
-	TArray<FText> WindowModeOptionsValues;
-    WindowModeOptions.GenerateValueArray(WindowModeOptionsValues);
+	// Clear the existing options if any
+	WindowModeComboBox->GetComboBox()->ClearOptions();
 
-	// Add all window modes to the rotator
-    WindowModeRotator->PopulateTextLabels(WindowModeOptionsValues);
+	// Add all window modes to the combo box
+	for (const TTuple<TEnumAsByte<EWindowMode::Type>, FText>& WindowModeOption : WindowModeOptions)
+	{
+		WindowModeComboBox->GetComboBox()->AddOption(WindowModeOption.Value.ToString());
+	}
 
 	// Find the current window mode option
 	const FText* CurrentWindowModeOption = WindowModeOptions.Find(GameUserSettings->GetFullscreenMode());
 
-	// Set the current window mode as rotator's default value
+	// Set the current window mode as combo box's default value
 	if (ensureAlways(CurrentWindowModeOption))
 	{
-		for (int32 i = 0; i < WindowModeOptionsValues.Num(); ++i)
-		{
-			if (WindowModeOptionsValues[i].EqualTo(*CurrentWindowModeOption))
-			{
-				WindowModeRotator->SetSelectedItem(i);
-
-				break;
-			}
-		}
+		WindowModeComboBox->GetComboBox()->SetSelectedOption(CurrentWindowModeOption->ToString());
 	}
 }
 
-void UGraphicsSettingsMenuWidget::InitializeResolutionRotator()
+void UGraphicsSettingsMenuWidget::InitializeResolutionComboBox()
 {
 	// Get all supported resolutions
 	Resolutions.Empty();
 	UKismetSystemLibrary::GetSupportedFullscreenResolutions(Resolutions);
 
-	TArray<FText> ResolutionOptions;
-	ResolutionOptions.Reserve(Resolutions.Num());
+	// Clear the existing options if any
+	ResolutionComboBox->GetComboBox()->ClearOptions();
 
-	// Construct an array of all resolution options
+	// Add all resolutions to the combo box
 	for (const FIntPoint& Resolution : Resolutions)
 	{
-		ResolutionOptions.Add(
-			FText::FromString(FString::Printf(TEXT("%dx%d"), Resolution.X, Resolution.Y)));
+		FString ResolutionOption = FString::Printf(TEXT("%dx%d"), Resolution.X, Resolution.Y);
+		ResolutionComboBox->GetComboBox()->AddOption(ResolutionOption);
 	}
-
-	// Add all resolutions to the rotator
-	ResolutionRotator->PopulateTextLabels(ResolutionOptions);
 
 	const UEscapeChroniclesGameUserSettings* GameUserSettings = GetGameUserSettings();
 
@@ -96,14 +90,14 @@ void UGraphicsSettingsMenuWidget::InitializeResolutionRotator()
 	const FIntPoint CurrentResolution = GameUserSettings->GetScreenResolution();
 	const int32 CurrentResolutionIndex = Resolutions.IndexOfByKey(CurrentResolution);
 
-	// Set the current resolution as rotator's default value
+	// Set the current resolution as combo box's default value
 	if (ensureAlways(Resolutions.IsValidIndex(CurrentResolutionIndex)))
 	{
-		ResolutionRotator->SetSelectedItem(CurrentResolutionIndex);
+		ResolutionComboBox->GetComboBox()->SetSelectedIndex(CurrentResolutionIndex);
 	}
 }
 
-void UGraphicsSettingsMenuWidget::InitializeVSyncRotator() const
+void UGraphicsSettingsMenuWidget::InitializeVSyncComboBox() const
 {
 	const UEscapeChroniclesGameUserSettings* GameUserSettings = GetGameUserSettings();
 
@@ -111,31 +105,26 @@ void UGraphicsSettingsMenuWidget::InitializeVSyncRotator() const
 	check(IsValid(GameUserSettings));
 #endif
 
-	TArray<FText> VSyncOptionsValues;
-	VSyncOptions.GenerateValueArray(VSyncOptionsValues);
+	// Clear the existing options if any
+	VSyncComboBox->GetComboBox()->ClearOptions();
 
-	// Add all VSync modes to the rotator
-	VSyncRotator->PopulateTextLabels(VSyncOptionsValues);
+	// Add all VSync options to the combo box
+	for (const TTuple<bool, FText>& VSyncOption : VSyncOptions)
+	{
+		VSyncComboBox->GetComboBox()->AddOption(VSyncOption.Value.ToString());
+	}
 
-	// Find the current VSync mode option
+	// Find the VSync mode option
 	const FText* CurrentVSyncOption = VSyncOptions.Find(GameUserSettings->IsVSyncEnabled());
 
-	// Set the VSync mode as rotator's default value
+	// Set the current VSync mode as combo box's default value
 	if (ensureAlways(CurrentVSyncOption))
 	{
-		for (int32 i = 0; i < VSyncOptionsValues.Num(); ++i)
-		{
-			if (VSyncOptionsValues[i].EqualTo(*CurrentVSyncOption))
-			{
-				VSyncRotator->SetSelectedItem(i);
-
-				break;
-			}
-		}
+		VSyncComboBox->GetComboBox()->SetSelectedOption(CurrentVSyncOption->ToString());
 	}
 }
 
-void UGraphicsSettingsMenuWidget::InitializeQualityRotators() const
+void UGraphicsSettingsMenuWidget::InitializeQualityComboBoxes() const
 {
 	const UEscapeChroniclesGameUserSettings* GameUserSettings = GetGameUserSettings();
 
@@ -143,32 +132,55 @@ void UGraphicsSettingsMenuWidget::InitializeQualityRotators() const
 	check(IsValid(GameUserSettings));
 #endif
 
-	TArray<FText> QualityOptionsValues;
-	SharedGraphicsQualityOptions.GenerateValueArray(QualityOptionsValues);
+	// Clear the existing options if any
+	ViewDistanceQualityComboBox->GetComboBox()->ClearOptions();
+	ShadowQualityComboBox->GetComboBox()->ClearOptions();
+	GlobalIlluminationQualityComboBox->GetComboBox()->ClearOptions();
+	ReflectionQualityComboBox->GetComboBox()->ClearOptions();
+	AntiAliasingQualityComboBox->GetComboBox()->ClearOptions();
+	TextureQualityComboBox->GetComboBox()->ClearOptions();
+	VisualEffectQualityComboBox->GetComboBox()->ClearOptions();
+	PostProcessingQualityComboBox->GetComboBox()->ClearOptions();
+	FoliageQualityComboBox->GetComboBox()->ClearOptions();
+	ShadingQualityComboBox->GetComboBox()->ClearOptions();
 
-	// Add all quality options to the rotators
-	ViewDistanceQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	ShadowQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	GlobalIlluminationQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	ReflectionQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	AntiAliasingQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	TextureQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	VisualEffectQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	PostProcessingQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	FoliageQualityRotator->PopulateTextLabels(QualityOptionsValues);
-	ShadingQualityRotator->PopulateTextLabels(QualityOptionsValues);
+	// Reserve space for the cached quality options to avoid reallocations
+	TArray<FString> CachedQualityOptions;
+	CachedQualityOptions.Reserve(static_cast<int32>(EGraphicsQuality::NumQualityLevels));
 
-	// Set all current quality levels as rotators' default values
-	ViewDistanceQualityRotator->SetSelectedItem(GameUserSettings->GetViewDistanceQuality());
-	ShadowQualityRotator->SetSelectedItem(GameUserSettings->GetShadowQuality());
-	GlobalIlluminationQualityRotator->SetSelectedItem(GameUserSettings->GetGlobalIlluminationQuality());
-	ReflectionQualityRotator->SetSelectedItem(GameUserSettings->GetReflectionQuality());
-	AntiAliasingQualityRotator->SetSelectedItem(GameUserSettings->GetAntiAliasingQuality());
-	TextureQualityRotator->SetSelectedItem(GameUserSettings->GetTextureQuality());
-	VisualEffectQualityRotator->SetSelectedItem(GameUserSettings->GetVisualEffectQuality());
-	PostProcessingQualityRotator->SetSelectedItem(GameUserSettings->GetPostProcessingQuality());
-	FoliageQualityRotator->SetSelectedItem(GameUserSettings->GetFoliageQuality());
-	ShadingQualityRotator->SetSelectedItem(GameUserSettings->GetShadingQuality());
+	// Cache all quality options to a string array to avoid calling FText::ToString() every time we need any
+	for (const TTuple<EGraphicsQuality, FText>& QualityOption : SharedGraphicsQualityOptions)
+	{
+		// Insert the quality option into the index that matches the enum value
+		CachedQualityOptions.Insert(QualityOption.Value.ToString(), static_cast<int32>(QualityOption.Key));
+	}
+
+	// Add all quality options to the combo boxes
+	for (int32 i = 0; i < CachedQualityOptions.Num(); ++i)
+	{
+		ViewDistanceQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		ShadowQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		GlobalIlluminationQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		ReflectionQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		AntiAliasingQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		TextureQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		VisualEffectQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		PostProcessingQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		FoliageQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+		ShadingQualityComboBox->GetComboBox()->AddOption(CachedQualityOptions[i]);
+	}
+
+	// Set all current quality levels as combo boxes' default values
+	ViewDistanceQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetViewDistanceQuality());
+	ShadowQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetShadowQuality());
+	GlobalIlluminationQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetGlobalIlluminationQuality());
+	ReflectionQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetReflectionQuality());
+	AntiAliasingQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetAntiAliasingQuality());
+	TextureQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetTextureQuality());
+	VisualEffectQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetVisualEffectQuality());
+	PostProcessingQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetPostProcessingQuality());
+	FoliageQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetFoliageQuality());
+	ShadingQualityComboBox->GetComboBox()->SetSelectedIndex(GameUserSettings->GetShadingQuality());
 }
 
 void UGraphicsSettingsMenuWidget::OnApplyButtonClicked() const
@@ -179,12 +191,12 @@ void UGraphicsSettingsMenuWidget::OnApplyButtonClicked() const
 	check(IsValid(GameUserSettings));
 #endif
 
-	const FText SelectedWindowModeOption = WindowModeRotator->GetSelectedText();
+	const FString SelectedWindowModeOption = WindowModeComboBox->GetComboBox()->GetSelectedOption();
 
 	// Find the EWindowMode::Type value that matches the selected window mode option and set it as a window mode
 	for (const TTuple<TEnumAsByte<EWindowMode::Type>, FText>& WindowModeOption : WindowModeOptions)
 	{
-		if (SelectedWindowModeOption.EqualTo(WindowModeOption.Value))
+		if (SelectedWindowModeOption.Equals(WindowModeOption.Value.ToString()))
 		{
 			GameUserSettings->SetFullscreenMode(WindowModeOption.Key);
 
@@ -192,14 +204,14 @@ void UGraphicsSettingsMenuWidget::OnApplyButtonClicked() const
 		}
 	}
 
-	GameUserSettings->SetScreenResolution(Resolutions[ResolutionRotator->GetSelectedIndex()]);
+	GameUserSettings->SetScreenResolution(Resolutions[ResolutionComboBox->GetComboBox()->GetSelectedIndex()]);
 
-	const FText SelectedVSyncOption = VSyncRotator->GetSelectedText();
+	const FString SelectedVSyncOption = VSyncComboBox->GetComboBox()->GetSelectedOption();
 
 	// Find the bool value that matches the selected VSync option and set it as a current VSync state
 	for (const TTuple<bool, FText>& VSyncOption : VSyncOptions)
 	{
-		if (SelectedWindowModeOption.EqualTo(VSyncOption.Value))
+		if (SelectedWindowModeOption.Equals(VSyncOption.Value.ToString()))
 		{
 			GameUserSettings->SetVSyncEnabled(VSyncOption.Key);
 
@@ -208,46 +220,46 @@ void UGraphicsSettingsMenuWidget::OnApplyButtonClicked() const
 	}
 
 	GameUserSettings->SetViewDistanceQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(ViewDistanceQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(ViewDistanceQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetShadowQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(ShadowQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(ShadowQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetGlobalIlluminationQuality(
 		GetGraphicsQualityIntValueFromComboBoxOption(
-			GlobalIlluminationQualityRotator->GetSelectedText()));
+			GlobalIlluminationQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetReflectionQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(ReflectionQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(ReflectionQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetAntiAliasingQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(AntiAliasingQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(AntiAliasingQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetTextureQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(TextureQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(TextureQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetVisualEffectQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(VisualEffectQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(VisualEffectQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetPostProcessingQuality(
 		GetGraphicsQualityIntValueFromComboBoxOption(
-			PostProcessingQualityRotator->GetSelectedText()));
+			PostProcessingQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetFoliageQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(FoliageQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(FoliageQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->SetShadingQuality(
-		GetGraphicsQualityIntValueFromComboBoxOption(ShadingQualityRotator->GetSelectedText()));
+		GetGraphicsQualityIntValueFromComboBoxOption(ShadingQualityComboBox->GetComboBox()->GetSelectedOption()));
 
 	GameUserSettings->ApplySettings(true);
 }
 
 EGraphicsQuality UGraphicsSettingsMenuWidget::GetGraphicsQualityValueFromComboBoxOption(
-	const FText& ComboBoxOption) const
+	const FString& ComboBoxOption) const
 {
 	for (const TTuple<EGraphicsQuality, FText>& QualityOption : SharedGraphicsQualityOptions)
 	{
-		if (ComboBoxOption.EqualTo(QualityOption.Value))
+		if (ComboBoxOption.Equals(QualityOption.Value.ToString()))
 		{
 			return QualityOption.Key;
 		}

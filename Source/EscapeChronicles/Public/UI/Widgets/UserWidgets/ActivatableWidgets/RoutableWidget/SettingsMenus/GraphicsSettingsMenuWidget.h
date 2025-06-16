@@ -6,7 +6,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "GraphicsSettingsMenuWidget.generated.h"
 
-class UCommonRotator;
+class UComboBoxStringWidgetContainer;
 class UEscapeChroniclesGameUserSettings;
 
 enum class EGraphicsQuality : uint8;
@@ -25,70 +25,71 @@ private:
 	mutable TWeakObjectPtr<UEscapeChroniclesGameUserSettings> CachedGameUserSettings;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> WindowModeRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> WindowModeComboBox;
 
 	UPROPERTY(EditDefaultsOnly, Category="Settings")
 	TMap<TEnumAsByte<EWindowMode::Type>, FText> WindowModeOptions;
 
-	void InitializeWindowModeRotator() const;
+	void InitializeWindowModeComboBox() const;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> ResolutionRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> ResolutionComboBox;
 
-	void InitializeResolutionRotator();
+	void InitializeResolutionComboBox();
 
 	TArray<FIntPoint> Resolutions;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> VSyncRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> VSyncComboBox;
 
 	UPROPERTY(EditDefaultsOnly, Category="Settings")
 	TMap<bool, FText> VSyncOptions;
 
-	void InitializeVSyncRotator() const;
+	void InitializeVSyncComboBox() const;
 
 	// Options from this map are going to be used for all graphics quality levels that support this format
 	UPROPERTY(EditDefaultsOnly, Category="Settings")
 	TMap<EGraphicsQuality, FText> SharedGraphicsQualityOptions;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> ViewDistanceQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> ViewDistanceQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> ShadowQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> ShadowQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> GlobalIlluminationQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> GlobalIlluminationQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> ReflectionQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> ReflectionQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> AntiAliasingQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> AntiAliasingQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> TextureQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> TextureQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> VisualEffectQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> VisualEffectQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> PostProcessingQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> PostProcessingQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> FoliageQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> FoliageQualityComboBox;
 
 	UPROPERTY(Transient, meta=(BindWidget))
-	TObjectPtr<UCommonRotator> ShadingQualityRotator;
+	TObjectPtr<UComboBoxStringWidgetContainer> ShadingQualityComboBox;
 
-	void InitializeQualityRotators() const;
+	void InitializeQualityComboBoxes() const;
 
+	UFUNCTION()
 	void OnApplyButtonClicked() const;
 
 	// Finds the EGraphicsQuality value that matches the selected graphics quality option and returns it
-	EGraphicsQuality GetGraphicsQualityValueFromComboBoxOption(const FText& ComboBoxOption) const;
+	EGraphicsQuality GetGraphicsQualityValueFromComboBoxOption(const FString& ComboBoxOption) const;
 
-	int32 GetGraphicsQualityIntValueFromComboBoxOption(const FText& ComboBoxOption) const
+	int32 GetGraphicsQualityIntValueFromComboBoxOption(const FString& ComboBoxOption) const
 	{
 		return static_cast<int32>(GetGraphicsQualityValueFromComboBoxOption(ComboBoxOption));
 	}
