@@ -22,6 +22,8 @@ class ESCAPECHRONICLES_API ADoor : public AActor, public ISaveable
 public:	
 	ADoor();
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const FGameplayTag& GetKeyAccessTag() const { return KeyAccessTag; }
 	const FGameplayTagContainer& GetCharacterAccessTags() const { return CharacterAccessTags; }
 	bool IsEnterRequiresKey() const { return bEnterRequiresKey; }
@@ -99,12 +101,12 @@ private:
 	UPROPERTY(EditAnywhere, Category="Access")
 	FGameplayTagContainer CharacterAccessTags;
 
-	// Do character need to use a key to enter this door
-	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
+	// Whether the character need to use a key to enter this door
+	UPROPERTY(EditAnywhere, Category="Access", Replicated, SaveGame)
 	bool bEnterRequiresKey = false;
 
-	// Do character need to use a key to exit this door
-	UPROPERTY(EditAnywhere, Category="Access", SaveGame)
+	// Whether the character need to use a key to exit this door
+	UPROPERTY(EditAnywhere, Category="Access", Replicated, SaveGame)
 	bool bExitRequiresKey = false;
 
 	UFUNCTION()
