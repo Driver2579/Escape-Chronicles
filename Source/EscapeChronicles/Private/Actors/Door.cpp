@@ -6,6 +6,7 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemFragments/DoorKeyInventoryItemFragment.h"
 #include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
 
@@ -26,6 +27,16 @@ ADoor::ADoor()
 
 	DoorwayBoxOverlap = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxOverlap"));
 	DoorwayBoxOverlap->SetupAttachment(RootComponent);
+
+	bReplicates = true;
+}
+
+void ADoor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ThisClass, bEnterRequiresKey);
+	DOREPLIFETIME(ThisClass, bExitRequiresKey);
 }
 
 void ADoor::BeginPlay()
@@ -39,12 +50,13 @@ void ADoor::BeginPlay()
 	ExitBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterOrExitBoxOverlapEndOverlap);
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (IsValid(Character))
+	if (IsValid(Character) && OtherComp == Character->GetCapsuleComponent())
 	{
 		TryAddCharacterToPool(Character);
 	}
