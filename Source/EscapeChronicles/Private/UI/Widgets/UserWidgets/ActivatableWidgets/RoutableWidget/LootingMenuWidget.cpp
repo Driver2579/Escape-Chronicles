@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "EscapeChronicles/Public/UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget/LootingMenuWidget.h"
+
+#include "CommonButtonBase.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
@@ -10,6 +12,11 @@
 void ULootingMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	ExitButton->OnClicked().AddWeakLambda(this, [this]
+	{
+		DeactivateWidget();
+	});
 	
 	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 

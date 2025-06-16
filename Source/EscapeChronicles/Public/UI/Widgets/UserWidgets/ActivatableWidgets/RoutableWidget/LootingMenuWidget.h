@@ -7,6 +7,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "LootingMenuWidget.generated.h"
 
+class UCommonButtonBase;
 class UInventoryManagerComponent;
 class UItemSlotsWidget;
 
@@ -25,6 +26,9 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UItemSlotsWidget> LootingInventoryWidget;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCommonButtonBase> ExitButton;
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag OwningMainInventoryTypeTag;
