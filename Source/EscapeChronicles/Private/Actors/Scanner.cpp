@@ -6,7 +6,9 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Enums/ItemClassification.h"
+#include "Components/AudioComponent.h"
 #include "Components/BoxComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Engine/AssetManager.h"
 #include "Objects/InventoryItemFragments/ClassificationInventoryItemFragment.h"
 #include "Objects/InventoryItemFragments/ContrabandBagInventoryItemFragment.h"
@@ -23,12 +25,24 @@ AScanner::AScanner()
 
 	TriggerComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Trigger"));
 	TriggerComponent->SetupAttachment(RootComponent);
+
+	TriggerAudioComponent = CreateDefaultSubobject<UAudioComponent>(TEXT("Trigger Audio"));
+	TriggerAudioComponent->SetupAttachment(RootComponent);
+	TriggerAudioComponent->SetAutoActivate(false);
+
+	bReplicates = true;
 }
 
-void AScanner::NotifyActorBeginOverlap(AActor* OtherActor)
+void AScanner::BeginPlay()
 {
-	Super::NotifyActorBeginOverlap(OtherActor);
+	Super::BeginPlay();
 
+	TriggerComponent->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnTriggerComponentBeginOverlap);
+}
+
+void AScanner::OnTriggerComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
 	// The next logic won't work on clients, so there is no point to waste resources on it
 	if (!HasAuthority())
 	{
@@ -37,7 +51,11 @@ void AScanner::NotifyActorBeginOverlap(AActor* OtherActor)
 
 	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character))
+	/**
+	 * Don't do anything if the overlapping actor isn't a character or if the overlapping component isn't the
+	 * character's capsule.
+	 */
+	if (!IsValid(Character) || OtherComp != Character->GetCapsuleComponent())
 	{
 		return;
 	}
@@ -110,9 +128,12 @@ void AScanner::NotifyActorBeginOverlap(AActor* OtherActor)
 	 * Since the character doesn't have a tag immunity, has a contraband item, and doesn't have a contraband bag, we
 	 * need to apply the gameplay effect to him. Load the gameplay effect class now to do that.
 	 */
-	UAssetManager::GetStreamableManager().RequestAsyncLoad(this, 
+	UAssetManager::GetStreamableManager().RequestAsyncLoad(GameplayEffectClass.ToSoftObjectPath(), 
 		FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnGameplayEffectClassLoaded,
 			Character));
+
+	// Play the scanner sound effect both on server and all clients
+	NetMulticast_PlayTriggerAudioComponent();
 }
 
 // ReSharper disable once CppPassValueParameterByConstReference
@@ -153,4 +174,9 @@ void AScanner::OnGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObj
 
 	// Release the handle to the gameplay effect class as we don't need it anymore
 	LoadObjectHandle->ReleaseHandle();
+}
+
+void AScanner::NetMulticast_PlayTriggerAudioComponent_Implementation() const
+{
+	TriggerAudioComponent->Play();
 }

@@ -28,7 +28,11 @@ public:
 	AScanner();
 
 protected:
-	virtual void NotifyActorBeginOverlap(AActor* OtherActor) override;
+	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	virtual void OnTriggerComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
@@ -37,6 +41,10 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> TriggerComponent;
 
+	// An audio component that plays a sound when the character enters the scanner with contraband items
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UAudioComponent> TriggerAudioComponent;
+
 	/**
 	 * If the character has any of these tags, he will not be affected by the scanner. If this container is empty, all
 	 * characters will be affected.
@@ -44,11 +52,14 @@ private:
 	UPROPERTY(EditAnywhere, Category="Gameplay Tags")
 	FGameplayTagContainer ImmunityTags;
 
-	// The gameplay effect to apply when the player enters the scanner with contraband items
+	// The gameplay effect to apply when the character enters the scanner with contraband items
 	UPROPERTY(EditAnywhere, Category="Gameplay Effects")
 	TSoftClassPtr<UGameplayEffect> GameplayEffectClass;
 
 	// Applies a gameplay effect to the given character
 	void OnGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle,
 		const AEscapeChroniclesCharacter* Character) const;
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void NetMulticast_PlayTriggerAudioComponent() const;
 };
