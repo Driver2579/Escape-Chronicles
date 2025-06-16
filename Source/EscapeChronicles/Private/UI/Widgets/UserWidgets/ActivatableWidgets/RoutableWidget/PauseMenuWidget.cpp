@@ -5,6 +5,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "UI/Widgets/UserWidgets/Buttons/TextButtonBaseWidget.h"
 #include "EscapeChronicles/Public/UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/ConfirmationPopup.h"
+#include "GameInstances/EscapeChroniclesGameInstance.h"
 
 void UPauseMenuWidget::NativeOnInitialized()
 {
@@ -47,20 +48,16 @@ void UPauseMenuWidget::OnExitButtonClicked()
 	}
 
 	ConfirmationExitWidget->SetDisplayedText(ExitConfirmationWidgetText);
-	
+
+	// Close the session and travel to the main menu if the user confirms the exit
 	ConfirmationExitWidget->OnResult.AddWeakLambda(this, [this](bool bConfirmed)
 	{
-		if (!bConfirmed)
+		if (bConfirmed)
 		{
-			return;
-		}
-		
-		// TODO: Make an exit to the main menu
-		APlayerController* OwningPlayerController = GetOwningPlayer();
-				
-		if (IsValid(OwningPlayerController))
-		{
-			OwningPlayerController->ConsoleCommand("quit");	
+			UEscapeChroniclesGameInstance* GameInstance = GetWorld()->GetGameInstanceChecked<
+				UEscapeChroniclesGameInstance>();
+
+			GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
 		}
 	});
 }

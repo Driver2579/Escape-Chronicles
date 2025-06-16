@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerState.h"
 #include "GameInstances/EscapeChroniclesGameInstance.h"
 #include "HUDs/EscapeChroniclesHUD.h"
+#include "UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/ConfirmationPopup.h"
 #include "UI/Widgets/UserWidgets/Buttons/TextButtonBaseWidget.h"
 
 void UMainMenuWidget::NativeConstruct()
@@ -13,7 +14,7 @@ void UMainMenuWidget::NativeConstruct()
 
 	CreateGameButton->OnClicked().AddUObject(this, &ThisClass::OnCreateGameButtonClicked);
 	SettingsButton->OnClicked().AddUObject(this, &ThisClass::OnSettingsButtonClicked);
-	// TODO: Implement the exit button
+	ExitButton->OnClicked().AddUObject(this, &ThisClass::OnExitButtonClicked);
 }
 
 void UMainMenuWidget::OnCreateGameButtonClicked() const
@@ -82,4 +83,31 @@ void UMainMenuWidget::OnSettingsButtonClicked() const
 
 		HUD->GoTo(SettingsMenuRouteTag);
 	}
+}
+
+void UMainMenuWidget::OnExitButtonClicked()
+{
+	UConfirmationPopup* ExitConfirmationWidget = PushPrompt<UConfirmationPopup>(ExitConfirmationWidgetClass);
+
+	if (!ensureAlways(IsValid(ExitConfirmationWidget)))
+	{
+		return;
+	}
+
+	ExitConfirmationWidget->SetDisplayedText(ExitConfirmationWidgetText);
+
+	ExitConfirmationWidget->OnResult.AddWeakLambda(this, [this](bool bConfirmed)
+	{
+		if (!bConfirmed)
+		{
+			return;
+		}
+
+		APlayerController* OwningPlayerController = GetOwningPlayer();
+				
+		if (IsValid(OwningPlayerController))
+		{
+			OwningPlayerController->ConsoleCommand("quit");	
+		}
+	});
 }

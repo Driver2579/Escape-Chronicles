@@ -41,4 +41,14 @@ private:
 	// Gameplay tag of the settings menu's route
 	UPROPERTY(EditDefaultsOnly, Category="Routes")
 	FGameplayTag SettingsMenuRouteTag;
+
+	// A widget that will be shown when the user clicks the exit button
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
+
+	// Text that will be displayed in the exit confirmation widget
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	FText ExitConfirmationWidgetText;
+
+	void OnExitButtonClicked();
 };

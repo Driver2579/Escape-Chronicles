@@ -18,12 +18,6 @@ protected:
 	virtual void NativeOnInitialized() override;
 	
 private:
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")  
-	FText ExitConfirmationWidgetText;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")  
-	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
-
 	// Button to resume gameplay 
 	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ContinueButton;
@@ -41,6 +35,14 @@ private:
 
 	UFUNCTION()
 	void OnOptionsButtonClicked();
+
+	// A widget that will be shown when the user clicks the exit button
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
+
+	// Text that will be displayed in the exit confirmation widget
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	FText ExitConfirmationWidgetText;
 
 	UFUNCTION()
 	void OnExitButtonClicked();
