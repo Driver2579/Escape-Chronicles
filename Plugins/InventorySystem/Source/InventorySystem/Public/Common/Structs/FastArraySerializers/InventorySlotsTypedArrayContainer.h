@@ -59,14 +59,14 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
-	const UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
 	/**
 	 * Initializes inventory slots from configuration data.
 	 * @tparam KeyType Tag of the slot's type.
 	 * @tparam ValueType Number of slots.
 	 */
-	void Construct(const UInventoryManagerComponent* InInventoryManagerComponent,
+	void Construct(UInventoryManagerComponent* InInventoryManagerComponent,
 		const TMap<FGameplayTag, int32>& InitializationData)
 	{
 		InventoryManagerComponent = InInventoryManagerComponent;
@@ -118,7 +118,7 @@ private:
 	TArray<FInventorySlotsTypedArray> Arrays;
 
 	UPROPERTY(Transient)
-	TObjectPtr<const UInventoryManagerComponent> InventoryManagerComponent;
+	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 };
 
 template<>

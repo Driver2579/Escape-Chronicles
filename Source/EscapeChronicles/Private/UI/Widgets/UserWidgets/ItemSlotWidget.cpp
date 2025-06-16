@@ -16,10 +16,15 @@ void UItemSlotWidget::SetAssociate(const FInventorySlot* InventorySlot, const in
 	AssociatedInventorySlot = InventorySlot;
 	AssociatedSlotIndex = InAssociatedSlotIndex;
 
+	if (!ensureAlways(Data))
+	{
+		return;
+	}
+
 	// If nullptr is passed, then this slot is empty
 	if (!IsValid(InventorySlot->Instance))
 	{
-		ItemInstanceIcon->SetBrushFromTexture(Data->EmptySlotTexture);
+		ItemInstanceIcon->SetBrush(Data->EmptySlotBrush);
 
 		return;
 	}
@@ -29,16 +34,75 @@ void UItemSlotWidget::SetAssociate(const FInventorySlot* InventorySlot, const in
 
 	// If an item doesn't have an icon, give it an invalid icon
 	ensureAlways(IsValid(IconFragment)) ?
-		ItemInstanceIcon->SetBrushFromTexture(IconFragment->GetIcon()):
-		ItemInstanceIcon->SetBrushFromTexture(Data->InvalidItemInstanceIconTexture);
+		ItemInstanceIcon->SetBrush(IconFragment->GetIcon()):
+		ItemInstanceIcon->SetBrush(Data->InvalidItemInstanceBrush);
+}
+
+void UItemSlotWidget::SetSlotSelected(const bool bInSlotSelected)
+{
+	if (bInSlotSelected)
+	{
+		SlotBackgroundIcon->SetBrush(Data->SelectedSlotBackgroundBrush);
+	}
+	else
+	{
+		SlotBackgroundIcon->SetBrush(Data->DefaultSlotBackgroundBrush);
+	}
+
+	bSlotSelected = bInSlotSelected;
+}
+
+void UItemSlotWidget::NativePreConstruct()
+{
+	Super::NativePreConstruct();
+
+	if (Data)
+	{
+		SlotBackgroundIcon->SetBrush(Data->DefaultSlotBackgroundBrush);
+		ItemInstanceIcon->SetBrush(Data->EmptySlotBrush);
+	}
+}
+
+void UItemSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+
+	if (bSelectSlotOnHover)
+	{
+		SetSlotSelected(true);
+
+		bSlotSelectedOnHover = true;
+	}
+}
+
+void UItemSlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseLeave(InMouseEvent);
+
+	if (bSelectSlotOnHover && bSlotSelectedOnHover)
+	{
+		SetSlotSelected(false);
+
+		bSlotSelectedOnHover = false;
+	}
 }
 
 FReply UItemSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
+	if (!ensureAlways(Data))
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	if (!IsValid(AssociatedInventorySlot->Instance))
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
 	// === This code is like UWidgetBlueprintLibrary::DetectDragIfPressed but optimized for the project's task ===
 
-	// Drag works either with DragAndDropKey or with a finger (for phones)
-	if (InMouseEvent.GetEffectingButton() != Data->DragAndDropKey && !InMouseEvent.IsTouchEvent())
+	// Drag works either with DragAndDropKey
+	if (InMouseEvent.GetEffectingButton() != Data->DragAndDropKey)
 	{
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
@@ -59,20 +123,27 @@ void UItemSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FP
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
+	if (!ensureAlways(Data) || !ensureAlways(IsValid(Data->DragVisualWidget)))
+	{
+		return;
+	}
+
 	UDragDropOperation* DragDropOperation = NewObject<UDragDropOperation>(GetTransientPackage(),
 		UDragDropOperation::StaticClass());
 
-	if (!ensureAlways(IsValid(DragDropOperation)) || !ensureAlways(IsValid(Data->DragVisualWidget)))
+	if (!ensureAlways(IsValid(DragDropOperation)))
 	{
 		return;
 	}
 
 	// === Visualisation ===
+
 	Data->DragVisualWidget->SetBrush(ItemInstanceIcon->GetBrush());
 	DragDropOperation->DefaultDragVisual = Data->DragVisualWidget;
 	DragDropOperation->Pivot = EDragPivot::CenterCenter;
 
-	ApplyDragVisualStyle();
+	ApplyDragVisualisation();
+
 	// === Applying ===
 
 	DragDropOperation->Payload = this;
@@ -83,7 +154,7 @@ void UItemSlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEven
 {
 	Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
 
-	ResetDragVisualStyle();
+	ResetDragVisualisation();
 }
 
 bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
@@ -91,15 +162,24 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 {
 	const bool DefaultResult = Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 
-	// === Reset drag visual style on dropped widget ===
+	// === We handle this event only for other slots. So reset drag visual style on dropped widget ===
+
 	UItemSlotWidget* DroppedSlotWidget = Cast<UItemSlotWidget>(InOperation->Payload);
 
-	if (!ensureAlways(IsValid(DroppedSlotWidget)))
+	if (!IsValid(DroppedSlotWidget))
 	{
 		return DefaultResult;
 	}
 
-	DroppedSlotWidget->ResetDragVisualStyle();
+	DroppedSlotWidget->ResetDragVisualisation();
+
+	// Ignore drop by itself
+	if (DroppedSlotWidget == this)
+	{
+		return DefaultResult;
+	}
+
+	// === Determine if a character has the ability to transfer items ===
 
 	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 
@@ -108,7 +188,7 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 		return DefaultResult;
 	}
 
-	UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
+	const UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 
 	if (!ensureAlways(IsValid(InventoryManagerComponent)))
 	{
@@ -124,7 +204,7 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 		return DefaultResult;
 	}
 
-	// === ===
+	// === Preparing data for transfer ===
 
 	const FInventorySlot* FromAssociatedInventorySlot = DroppedSlotWidget->GetAssociatedInventorySlot();
 
@@ -133,8 +213,6 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	check(AssociatedInventorySlot);
 #endif
 
-	// === ===
-
 	const FInventorySlotsArray* FromInventorySlotsArray = FromAssociatedInventorySlot->GetInventorySlotsArray();
 	const FInventorySlotsArray* ToInventorySlotsArray = AssociatedInventorySlot->GetInventorySlotsArray();
 
@@ -142,8 +220,6 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	check(FromInventorySlotsArray);
 	check(ToInventorySlotsArray);
 #endif
-
-	// === ===
 
 	const FInventorySlotsTypedArray* FromInventorySlotsTypedArray =
 		FromInventorySlotsArray->GetInventorySlotsTypedArray();
@@ -156,8 +232,6 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	check(ToInventorySlotsTypedArray);
 #endif
 
-	// === ===
-
 	const FInventorySlotsTypedArrayContainer* FromInventorySlotsTypedArrayContainer =
 		FromInventorySlotsTypedArray->GetInventorySlotsTypedArrayContainer();
 
@@ -169,12 +243,10 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	check(ToInventorySlotsTypedArrayContainer);
 #endif
 
-	// === ===
-
-	const UInventoryManagerComponent* FromInventoryManagerComponent =
+	UInventoryManagerComponent* FromInventoryManagerComponent =
 		FromInventorySlotsTypedArrayContainer->GetInventoryManagerComponent();
 
-	const UInventoryManagerComponent* ToInventoryManagerComponent =
+	UInventoryManagerComponent* ToInventoryManagerComponent =
 		ToInventorySlotsTypedArrayContainer->GetInventoryManagerComponent();
 
 #if DO_CHECK
@@ -182,7 +254,7 @@ bool UItemSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropE
 	check(ToInventoryManagerComponent);
 #endif
 
-	// === ===
+	// === Do transfer ===
 
 	FTransferItemsData TransferItemsData;
 

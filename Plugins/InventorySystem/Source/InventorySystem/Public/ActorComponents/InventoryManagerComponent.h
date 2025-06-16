@@ -27,7 +27,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
+	const FInventorySlotsTypedArrayContainer& GetInventoryContent() const { return InventoryContent; }
 
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>

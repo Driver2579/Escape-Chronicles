@@ -14,10 +14,16 @@ class ESCAPECHRONICLES_API UItemSlotWidgetData : public UDataAsset
 
 public:
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UTexture2D> EmptySlotTexture;
+	FSlateBrush EmptySlotBrush;
 
 	UPROPERTY(EditDefaultsOnly)
-	TObjectPtr<UTexture2D> InvalidItemInstanceIconTexture;
+	FSlateBrush InvalidItemInstanceBrush;
+
+	UPROPERTY(EditDefaultsOnly)
+	FSlateBrush DefaultSlotBackgroundBrush;
+
+	UPROPERTY(EditDefaultsOnly)
+	FSlateBrush SelectedSlotBackgroundBrush;
 
 	UPROPERTY(EditDefaultsOnly)
 	FKey DragAndDropKey = EKeys::LeftMouseButton;

@@ -28,11 +28,11 @@ struct FTransferItemsData
 {
 	GENERATED_BODY()
 
-	TWeakObjectPtr<const UInventoryManagerComponent> FromInventoryManager;
+	TWeakObjectPtr<UInventoryManagerComponent> FromInventoryManager;
 	FGameplayTag FromSlotTypeTag;
 	int32 FromSlotIndex;
 
-	TWeakObjectPtr<const UInventoryManagerComponent> ToInventoryManager;
+	TWeakObjectPtr<UInventoryManagerComponent> ToInventoryManager;
 	FGameplayTag ToSlotTypeTag;
 	int32 ToSlotIndex;
 };
@@ -46,8 +46,6 @@ class INVENTORYSYSTEM_API UInventoryManagerTransferItemsFragment : public UInven
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// ol UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInstance, int32 SlotIndex,
-	//const FGameplayTag& SlotTypeTag)
 	UFUNCTION(Server, Reliable)
 	void Server_TransferItems(const FTransferItemsData& TransferItemsData);
 
