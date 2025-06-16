@@ -48,6 +48,8 @@ public:
 
 	EInventoryAccess GetAccess() const { return Access; };
 
+	UInventoryManagerComponent* GetLootInventory() const { return LootInventory.Get(); }
+
 	void SetInventoryAccess(const EInventoryAccess InInventoryAccess) { Access = InInventoryAccess; }
 
 	void TrySetLootInventory(UInventoryManagerComponent* InInventory);
@@ -61,23 +63,23 @@ public:
 
 	FOnAccessChangedDelegate OnAccessChanged;
 
-	DECLARE_MULTICAST_DELEGATE(FOnInventoryAccessChangedDelegate);
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnLootInventoryChangedDelegate, UInventoryManagerComponent* InInventory);
 
-	FOnInventoryAccessChangedDelegate OnInventoryAccessChanged;
+	FOnLootInventoryChangedDelegate OnLootInventoryChanged;
 
 private:
 	void SetLootInventory(UInventoryManagerComponent* InInventory)
 	{
 		LootInventory = InInventory;
 
-		OnInventoryAccessChanged.Broadcast();
+		OnLootInventoryChanged.Broadcast(LootInventory.Get());
 	}
 
 	UPROPERTY(EditDefaultsOnly, ReplicatedUsing="OnRep_Access")
 	EInventoryAccess Access;
 
 	UPROPERTY(ReplicatedUsing="OnRep_LootInventory")
-	TObjectPtr<UInventoryManagerComponent> LootInventory;
+	TWeakObjectPtr<UInventoryManagerComponent> LootInventory;
 
 	UFUNCTION()
 	void OnRep_Access() const
@@ -88,6 +90,6 @@ private:
 	UFUNCTION()
 	void OnRep_LootInventory() const
 	{
-		OnInventoryAccessChanged.Broadcast();
+		OnLootInventoryChanged.Broadcast(LootInventory.Get());
 	}
 };

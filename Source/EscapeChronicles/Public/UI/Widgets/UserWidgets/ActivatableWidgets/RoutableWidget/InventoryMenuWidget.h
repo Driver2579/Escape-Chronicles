@@ -19,11 +19,11 @@ protected:
 	virtual void NativeConstruct() override;
 
 private:
-	UPROPERTY(meta = (BindWidget))
-	UItemSlotsWidget* MainInventoryWidget;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UItemSlotsWidget> MainInventoryWidget;
 
-	UPROPERTY(meta = (BindWidget))
-	UItemSlotsWidget* ClothesInventoryWidget;
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UItemSlotsWidget> ClothesInventoryWidget;
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag MainInventoryTypeTag;
