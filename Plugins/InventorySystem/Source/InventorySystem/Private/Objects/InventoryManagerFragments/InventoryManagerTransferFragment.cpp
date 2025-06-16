@@ -8,7 +8,7 @@ void UInventoryManagerTransferItemsFragment::GetLifetimeReplicatedProps(
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, OnLootInventoryChanged);
+	DOREPLIFETIME(ThisClass, LootInventory);
 	DOREPLIFETIME(ThisClass, Access);
 }
 
