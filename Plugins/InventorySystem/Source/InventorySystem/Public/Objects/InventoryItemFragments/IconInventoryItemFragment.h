@@ -13,9 +13,9 @@ class INVENTORYSYSTEM_API UIconInventoryItemFragment : public UInventoryItemFrag
 	GENERATED_BODY()
 
 public:
-	UTexture2D* GetIcon() const { return Icon; }
+	const FSlateBrush& GetIcon() const { return Icon; }
 
 private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UTexture2D> Icon;
+	FSlateBrush Icon;
 };

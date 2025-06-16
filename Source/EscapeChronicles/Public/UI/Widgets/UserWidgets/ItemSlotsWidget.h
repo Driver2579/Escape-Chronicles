@@ -6,35 +6,40 @@
 #include "CommonUserWidget.h"
 #include "ItemSlotWidget.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsArray.h"
-#include "Components/Image.h"
 #include "Components/StackBox.h"
 #include "ItemSlotsWidget.generated.h"
 
-// TODO: do comments
 UCLASS()
 class ESCAPECHRONICLES_API UItemSlotsWidget : public UCommonUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	void SetInventorySlots(const TArray<FInventorySlot>& InventorySlots)
+	const FInventorySlotsTypedArray* GetAssociatedInventorySlotsTypedArray() const
 	{
-		const int32 InventorySlotsNumber = InventorySlots.Num();
+		return AssociatedInventorySlotsTypedArray;
+	}
+
+	void SetAssociate(const FInventorySlotsTypedArray* InventorySlotsTypedArray)
+	{
+		AssociatedInventorySlotsTypedArray = InventorySlotsTypedArray;
+
+		const TArray<FInventorySlot>& Slots = InventorySlotsTypedArray->Array.GetItems();
 		
-		if (InventorySlotsNumber != SlotsContainer->GetChildrenCount())
+		if (Slots.Num() != SlotsContainer->GetChildrenCount())
 		{
-			ConstructSlots(InventorySlots);
+			ConstructSlots(Slots);
 
 			return;
 		}
 
-		for (int32 Index = 0; Index < InventorySlotsNumber; ++Index)
+		for (int32 Index = 0; Index < Slots.Num(); ++Index)
 		{
-			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < InventorySlots.Num());
+			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < Slots.Num());
 
 			UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
 
-			ItemSlotWidget->SetItemInstance(InventorySlots[Index].Instance);
+			ItemSlotWidget->SetAssociate(&Slots[Index], Index);
 		}
 	}
 
@@ -42,21 +47,22 @@ protected:
 	virtual void ConstructSlots(const TArray<FInventorySlot>& InventorySlots)
 	{
 		SlotsContainer->ClearChildren();
-		
-		for (const FInventorySlot& InventorySlot : InventorySlots)
+
+		for (int32 Index = 0; Index < InventorySlots.Num(); ++Index)
 		{
 			UItemSlotWidget* NewSlotWidget = CreateWidget<UItemSlotWidget>(this, SlotClass);
 
 			SlotsContainer->AddChildToStackBox(NewSlotWidget);
-
-			NewSlotWidget->SetItemInstance(InventorySlot.Instance);
+			NewSlotWidget->SetAssociate(&InventorySlots[Index], Index);
 		}
 	}
-	
+
 private:
-	UPROPERTY(meta = (BindWidget))
-	UStackBox* SlotsContainer;
+	UPROPERTY(Transient, meta = (BindWidget))
+	TObjectPtr<UStackBox> SlotsContainer;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemSlotWidget> SlotClass;
+
+	const FInventorySlotsTypedArray* AssociatedInventorySlotsTypedArray;
 };

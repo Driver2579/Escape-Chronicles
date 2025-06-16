@@ -178,10 +178,10 @@ void AEscapeChroniclesCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	CurrentMesh = MeshComponent->GetSkeletalMeshAsset();
+
 	InitialMeshTransform = MeshComponent->GetRelativeTransform();
 	InitialMeshAttachParent = MeshComponent->GetAttachParent();
-
-	CurrentMesh = MeshComponent->GetSkeletalMeshAsset();
 }
 
 void AEscapeChroniclesCharacter::BeginPlay()
