@@ -10,9 +10,9 @@ void AGameplayHUD::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AEscapeChroniclesCharacter* Character = GetOwner<AEscapeChroniclesCharacter>();
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(GetOwningPawn());
 
-	/*if (!ensureAlways(IsValid(Character)))
+	if (!ensureAlways(IsValid(Character)))
 	{
 		return;
 	}
@@ -32,7 +32,7 @@ void AGameplayHUD::BeginPlay()
 		return;
 	}
 
-	InventoryManagerTransferItemsFragment->OnLootInventoryChanged.AddUObject(this, & ThisClass::OnLootInventoryChanged);*/
+	InventoryManagerTransferItemsFragment->OnLootInventoryChanged.AddUObject(this, & ThisClass::OnLootInventoryChanged);
 }
 
 void AGameplayHUD::OnLootInventoryChanged(UInventoryManagerComponent* InInventory)
