@@ -15,6 +15,8 @@ class ESCAPECHRONICLES_API ULootableComponent : public UInteractableComponent
 	GENERATED_BODY()
 
 public:
+	ULootableComponent();
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -25,7 +27,7 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly)
-	float MaxLootingDistance = 500;
+	float MaxLootingDistance = 250;
 
 	TArray<TWeakObjectPtr<UInventoryManagerTransferItemsFragment>> Looters;
 };

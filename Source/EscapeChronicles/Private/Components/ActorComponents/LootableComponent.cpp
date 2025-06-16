@@ -6,6 +6,11 @@
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerTransferItemsFragment.h"
 
+ULootableComponent::ULootableComponent()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+}
+
 void ULootableComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -75,7 +80,7 @@ void ULootableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			Looter->TrySetLootInventory(nullptr);
 
-			Looters.Remove(Looter);
+			Looters.Remove(Looter.Get());
 		}
 	}
 }
