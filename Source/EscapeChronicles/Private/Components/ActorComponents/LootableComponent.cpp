@@ -3,7 +3,6 @@
 #include "Components/ActorComponents/LootableComponent.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
-#include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerTransferItemsFragment.h"
 
@@ -45,5 +44,38 @@ void ULootableComponent::OnOpenInventory(UInteractionManagerComponent* Interacti
 	if (InventoryManagerTransferItemsFragment->HasInventoryAccess(InInventoryManagerTransferItemsFragment))
 	{
 		InInventoryManagerTransferItemsFragment->TrySetLootInventory(Inventory);
+
+		Looters.Add(InInventoryManagerTransferItemsFragment);
+	}
+}
+
+void ULootableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+	FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (!GetOwner()->HasAuthority())
+	{
+		return;
+	}
+
+	for (TWeakObjectPtr<UInventoryManagerTransferItemsFragment>& Looter : Looters)
+	{
+		const UInventoryManagerComponent* LooterInventory = Looter->GetInventoryManager();
+
+		if (!ensureAlways(IsValid(LooterInventory)))
+		{
+			return;
+		}
+
+		const float DistanceToLooter =
+			FVector::Distance(LooterInventory->GetOwner()->GetActorLocation(), GetOwner()->GetActorLocation());
+
+		if (DistanceToLooter > MaxLootingDistance)
+		{
+			Looter->TrySetLootInventory(nullptr);
+
+			Looters.Remove(Looter);
+		}
 	}
 }

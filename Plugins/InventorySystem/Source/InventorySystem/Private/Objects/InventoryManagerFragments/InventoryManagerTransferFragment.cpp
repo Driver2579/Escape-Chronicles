@@ -20,18 +20,20 @@ bool UInventoryManagerTransferItemsFragment::HasInventoryAccess(
 
 void UInventoryManagerTransferItemsFragment::TrySetLootInventory(UInventoryManagerComponent* InInventory)
 {
-#if DO_CHECK
-	check(IsValid(InInventory))
-#endif
-
 	if (!ensureAlways(GetInventoryManager()->GetOwner()->HasAuthority()))
 	{
 		return;
 	}
 
+	if (InInventory == nullptr)
+	{
+		SetLootInventory(nullptr);
+ 
+		return;
+	}
+	
 	UInventoryManagerTransferItemsFragment* InInventoryManagerTransferItemsFragment =
 		InInventory->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
-
 
 	const bool bCanSetLootInventory = ensureAlways(IsValid(InInventoryManagerTransferItemsFragment)) &&
 		ensureAlways(InInventoryManagerTransferItemsFragment->HasInventoryAccess(this));

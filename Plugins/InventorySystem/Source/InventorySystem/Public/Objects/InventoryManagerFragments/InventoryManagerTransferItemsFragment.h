@@ -14,7 +14,7 @@ enum class EInventoryAccess : uint8
 	Private,
 
 	// Access via access list (TODO: do handling in fragment)
-	Group,
+	//Group,
 
 	// Access to all players
 	Public,
