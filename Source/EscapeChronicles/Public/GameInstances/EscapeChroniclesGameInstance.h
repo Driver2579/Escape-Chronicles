@@ -16,6 +16,9 @@ class ESCAPECHRONICLES_API UEscapeChroniclesGameInstance : public UGameInstance
 public:
 	virtual void Init() override;
 
+	virtual void OnWorldChanged(UWorld* OldWorld, UWorld* NewWorld) override;
+	virtual void OnWorldPreBeginPlay();
+
 	/**
 	 * This should be called when the player wants to host a new game.
 	 * @param HostingPlayerNetID Local player that is hosting the game.
@@ -98,6 +101,8 @@ public:
 	FOnJoinSessionComplete OnJoinSession;
 
 protected:
+	virtual void OnApplySoundSettings();
+
 	// Called when the session is created after the StartHostSession function is called
 	virtual void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 
@@ -130,6 +135,19 @@ protected:
 		EOnJoinSessionCompleteResult::Type OnJoinSessionCompleteResult);
 
 private:
+	// A sound mix to use and to apply the settings to
+	UPROPERTY(EditDefaultsOnly, Category="Settings|Sounds")
+	TObjectPtr<USoundMix> SoundMix;
+
+	UPROPERTY(EditDefaultsOnly, Category="Settings|Sounds")
+	TArray<TSoftObjectPtr<USoundClass>> MasterSoundClasses;
+
+	UPROPERTY(EditDefaultsOnly, Category="Settings|Sounds")
+	TArray<TSoftObjectPtr<USoundClass>> MusicSoundClasses;
+
+	UPROPERTY(EditDefaultsOnly, Category="Settings|Sounds")
+	TArray<TSoftObjectPtr<USoundClass>> SFXSoundClasses;
+
 	// The maximum players that can play together in one session
 	UPROPERTY(EditDefaultsOnly, Category="Sessions")
 	uint8 MaxPlayersPerSession = 4;

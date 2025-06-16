@@ -2,32 +2,61 @@
 
 #include "GameInstances/EscapeChroniclesGameInstance.h"
 
+#include "AudioDevice.h"
 #include "OnlineSessionSettings.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSubsystemUtils.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
+#include "GameUserSettings/EscapeChroniclesGameUserSettings.h"
 #include "Interfaces/OnlineSessionInterface.h"
+#include "Kismet/GameplayStatics.h"
 
 void UEscapeChroniclesGameInstance::Init()
 {
 	Super::Init();
 
+	UEscapeChroniclesGameUserSettings* GameUserSettings =
+		UEscapeChroniclesGameUserSettings::GetEscapeChroniclesGameUserSettings();
+
+	if (ensureAlways(IsValid(GameUserSettings)))
+	{
+		GameUserSettings->OnApplySoundSettings.AddUObject(this, &ThisClass::OnApplySoundSettings);
+	}
+
 	const IOnlineSubsystem* OnlineSubsystem = Online::GetSubsystem(GetWorld());
 
-	if (!ensureAlways(OnlineSubsystem))
+	if (ensureAlways(OnlineSubsystem))
 	{
-		return;
+		const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
+
+		// Listen for a player accepting an invitation to join a session
+		if (ensureAlways(SessionInterface.IsValid()))
+		{
+			SessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(
+				FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &ThisClass::OnSessionUserInviteAccepted));
+		}
 	}
+}
 
-	const IOnlineSessionPtr SessionInterface = OnlineSubsystem->GetSessionInterface();
+void UEscapeChroniclesGameInstance::OnWorldChanged(UWorld* OldWorld, UWorld* NewWorld)
+{
+	Super::OnWorldChanged(OldWorld, NewWorld);
 
-	// Listen for a player accepting an invitation to join a session
-	if (ensureAlways(SessionInterface.IsValid()))
+	if (IsValid(NewWorld))
 	{
-		SessionInterface->AddOnSessionUserInviteAcceptedDelegate_Handle(
-			FOnSessionUserInviteAcceptedDelegate::CreateUObject(this, &ThisClass::OnSessionUserInviteAccepted));
+		NewWorld->OnWorldPreBeginPlay.AddUObject(this, &ThisClass::OnWorldPreBeginPlay);
 	}
+}
+
+void UEscapeChroniclesGameInstance::OnWorldPreBeginPlay()
+{
+#if DO_ENSURE
+	ensureAlways(SoundMix);
+#endif
+
+	UGameplayStatics::SetBaseSoundMix(this, SoundMix);
+	OnApplySoundSettings();
 }
 
 void UEscapeChroniclesGameInstance::StartHostSession(const FUniqueNetId& HostingPlayerNetID,
@@ -92,6 +121,52 @@ void UEscapeChroniclesGameInstance::StartHostSession(const FUniqueNetId& Hosting
 
 	// Create the session for the passed player and with our constructed settings
 	SessionInterface->CreateSession(HostingPlayerNetID, SessionName, SessionSettings);
+}
+
+void UEscapeChroniclesGameInstance::OnApplySoundSettings()
+{
+#if DO_ENSURE
+	ensureAlways(SoundMix);
+#endif
+
+	const UEscapeChroniclesGameUserSettings* GameUserSettings =
+		UEscapeChroniclesGameUserSettings::GetEscapeChroniclesGameUserSettings();
+
+	if (!ensureAlways(IsValid(GameUserSettings)))
+	{
+		return;
+	}
+
+	FAudioDeviceHandle AudioDevice = GetWorld()->GetAudioDevice();
+
+	if (!AudioDevice.IsValid())
+	{
+		return;
+	}
+
+	for (const TSoftObjectPtr<USoundClass>& SoundClassSoftPtr : MasterSoundClasses)
+	{
+		USoundClass* SoundClass = SoundClassSoftPtr.LoadSynchronous();
+
+		AudioDevice->SetSoundMixClassOverride(SoundMix, SoundClass, GameUserSettings->GetMasterVolume(), 1,
+			1, true);
+	}
+
+	for (const TSoftObjectPtr<USoundClass>& SoundClassSoftPtr : MusicSoundClasses)
+	{
+		USoundClass* SoundClass = SoundClassSoftPtr.LoadSynchronous();
+
+		AudioDevice->SetSoundMixClassOverride(SoundMix, SoundClass, GameUserSettings->GetMusicVolume(), 1,
+			1, true);
+	}
+
+	for (const TSoftObjectPtr<USoundClass>& SoundClassSoftPtr : SFXSoundClasses)
+	{
+		USoundClass* SoundClass = SoundClassSoftPtr.LoadSynchronous();
+
+		AudioDevice->SetSoundMixClassOverride(SoundMix, SoundClass, GameUserSettings->GetSFXVolume(), 1,
+			1, true);
+	}
 }
 
 void UEscapeChroniclesGameInstance::OnCreateSessionComplete(FName SessionName, bool bWasSuccessful)
