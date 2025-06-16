@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
+#include "GameplayTagContainer.h"
 #include "PauseMenuWidget.generated.h"
 
 class UTextButtonBaseWidget;
@@ -33,8 +34,12 @@ private:
 	UFUNCTION()
 	void OnContinueButtonClicked();
 
+	// Gameplay tag of the settings menu's route
+	UPROPERTY(EditDefaultsOnly, Category="Routes")
+	FGameplayTag SettingsMenuRouteTag;
+
 	UFUNCTION()
-	void OnOptionsButtonClicked();
+	void OnSettingsButtonClicked() const;
 
 	// A widget that will be shown when the user clicks the exit button
 	UPROPERTY(EditDefaultsOnly, Category="Exit")  

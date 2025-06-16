@@ -28,19 +28,19 @@ private:
 	UPROPERTY(Transient, meta=(BindWidget))
 	TObjectPtr<UTextButtonBaseWidget> ExitButton;
 
+	UPROPERTY(EditDefaultsOnly, Category="Sessions")
+	TSoftObjectPtr<UWorld> GameLevel;
+
 	void OnCreateGameButtonClicked() const;
 
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful) const;
 	void OnStartSessionComplete(FName SessionName, bool bWasSuccessful) const;
 
-	UPROPERTY(EditDefaultsOnly, Category="Sessions")
-	TSoftObjectPtr<UWorld> GameLevel;
-
-	void OnSettingsButtonClicked() const;
-
 	// Gameplay tag of the settings menu's route
 	UPROPERTY(EditDefaultsOnly, Category="Routes")
 	FGameplayTag SettingsMenuRouteTag;
+
+	void OnSettingsButtonClicked() const;
 
 	// A widget that will be shown when the user clicks the exit button
 	UPROPERTY(EditDefaultsOnly, Category="Exit")  
