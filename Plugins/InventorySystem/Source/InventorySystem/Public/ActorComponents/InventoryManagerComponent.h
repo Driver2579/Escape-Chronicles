@@ -17,7 +17,7 @@ class UInventoryManagerFragment;
  * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
  */
-UCLASS(Blueprintable, Const)
+UCLASS(Blueprintable, Const, meta=(BlueprintSpawnableComponent))
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
@@ -27,7 +27,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
+	const FInventorySlotsTypedArrayContainer& GetInventoryContent() const { return InventoryContent; }
 
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
@@ -58,17 +58,6 @@ public:
 	 */
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
-
-	/**
-	 * Swap two items between inventory slots
-	 * @param FromSlotIndex Index of the source slot
-	 * @param ToSlotIndex Index of the destination slot
-	 * @param FromSlotsType Tag identifying the source slot type
-	 * @param ToSlotsType Tag identifying the destination slot type
-	 */
-	bool SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
-		const FGameplayTag& FromSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main,
-		const FGameplayTag& ToSlotsType = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
 	/**
 	 * Method for obtaining data on item location in inventory
@@ -112,7 +101,7 @@ private:
 	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
 
 	// Inventory storage with typed slots containers
-	UPROPERTY(ReplicatedUsing="OnRep_InventoryContent")
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_InventoryContent")
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()

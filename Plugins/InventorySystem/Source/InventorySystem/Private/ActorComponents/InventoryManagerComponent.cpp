@@ -1,7 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ActorComponents/InventoryManagerComponent.h"
-
 #include "InventorySystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryManagerFragment.h"
@@ -68,7 +67,7 @@ void UInventoryManagerComponent::BeginPlay()
 
 	// === Construct inventory ===
 
-	InventoryContent.Construct(SlotsNumberByTypes);
+	InventoryContent.Construct(this, SlotsNumberByTypes);
 }
 
 void UInventoryManagerComponent::ReadyForReplication()
@@ -231,50 +230,6 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 
 	OnContentChanged.Broadcast();
 
-	return true;
-}
-
-bool UInventoryManagerComponent::SwapItems(const int32 FromSlotIndex, const int32 ToSlotIndex,
-	const FGameplayTag& FromSlotsType, const FGameplayTag& ToSlotsType)
-{
-#if DO_ENSURE
-	ensureAlways(GetOwner()->HasAuthority());
-#endif
-
-	// Get indexes of slot arrays by their tags
-	const int32 FromSlotsArrayIndex = InventoryContent.IndexOfByTag(FromSlotsType);
-	const int32 ToSlotsArrayIndex = InventoryContent.IndexOfByTag(ToSlotsType);
-
-	// Arrays must exist
-	if (!ensureAlwaysMsgf(FromSlotsArrayIndex != INDEX_NONE && ToSlotsArrayIndex != INDEX_NONE,
-		TEXT("Array not found by tag")))
-	{
-		return false;
-	}
-
-	// Get the slot arrays themselves
-	const FInventorySlotsArray& FromSlotsArray = InventoryContent[FromSlotsArrayIndex].Array;
-	const FInventorySlotsArray& ToSlotsArray = InventoryContent[ToSlotsArrayIndex].Array;
-
-	// Check validity of indexes in slot arrays
-	if (!ensureAlwaysMsgf(FromSlotsArray.IsValidSlotIndex(FromSlotIndex), TEXT("Unavailable from slot index")) ||
-		!ensureAlwaysMsgf(ToSlotsArray.IsValidSlotIndex(ToSlotIndex), TEXT("Unavailable to slot index"))) 
-	{
-		return false;
-	}
-
-	// Save a temporary reference to the item from the original slot
-	UInventoryItemInstance* TempFromItemInstance = FromSlotsArray.GetItems()[FromSlotIndex].Instance;
-
-	// Move the item from the target slot to the source slot
-	InventoryContent.SetInstance(ToSlotsArray.GetItems()[ToSlotIndex].Instance, FromSlotsArrayIndex,
-		FromSlotIndex);
-
-	// Move the item from the source slot to the target slot
-	InventoryContent.SetInstance(TempFromItemInstance, ToSlotsArrayIndex,
-		ToSlotIndex);
-
-	OnContentChanged.Broadcast();
 	return true;
 }
 
