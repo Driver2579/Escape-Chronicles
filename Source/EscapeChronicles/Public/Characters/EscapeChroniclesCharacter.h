@@ -141,8 +141,6 @@ public:
 	void ResetMesh();
 
 protected:
-	virtual void PostInitializeComponents() override;
-
 	virtual void BeginPlay() override;
 
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
