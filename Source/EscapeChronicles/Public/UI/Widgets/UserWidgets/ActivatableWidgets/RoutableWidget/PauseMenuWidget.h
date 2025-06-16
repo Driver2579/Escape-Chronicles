@@ -18,10 +18,10 @@ protected:
 	virtual void NativeOnInitialized() override;
 	
 private:
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")  
+	UPROPERTY(EditDefaultsOnly, Category="Exiting")
 	FText ExitConfirmationWidgetText;
 	
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")  
+	UPROPERTY(EditDefaultsOnly, Category="Exiting")
 	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
 
 	// Button to resume gameplay 

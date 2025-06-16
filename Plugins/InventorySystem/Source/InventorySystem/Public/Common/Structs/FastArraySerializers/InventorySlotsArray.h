@@ -6,14 +6,28 @@
 #include "Objects/InventoryItemInstance.h"
 #include "InventorySlotsArray.generated.h"
 
+struct FInventorySlotsTypedArray;
+struct FInventorySlotsArray;
+
 // A single slot in an inventory
 USTRUCT()
 struct FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
+	FInventorySlot() = default;
+
+	explicit FInventorySlot(const FInventorySlotsArray* InInventorySlotsArray)
+		: InventorySlotsArray(InInventorySlotsArray)
+	{}
+
+	const FInventorySlotsArray* GetInventorySlotsArray() const { return InventorySlotsArray; }
+
+	UPROPERTY(Transient)
 	TObjectPtr<UInventoryItemInstance> Instance = nullptr;
+
+private:
+	const FInventorySlotsArray* InventorySlotsArray;
 };
 
 // Array of inventory slots
@@ -22,10 +36,14 @@ struct FInventorySlotsArray : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
+	const FInventorySlotsTypedArray* GetInventorySlotsTypedArray() const { return InventorySlotsTypedArray; }
+
 	// Creates the specified number of empty slots and replicates them
-	void Construct(const int32 InSlotsNumber)
+	void Construct(const FInventorySlotsTypedArray* InInventorySlotsTypedArray, const int32 InSlotsNumber)
 	{
-		Slots.Init(FInventorySlot(), InSlotsNumber);
+		InventorySlotsTypedArray = InInventorySlotsTypedArray;
+
+		Slots.Init(FInventorySlot(this), InSlotsNumber);
 
 		MarkArrayDirty();
 	}
@@ -40,6 +58,14 @@ struct FInventorySlotsArray : public FFastArraySerializer
 	{
 		Slots[Index].Instance = Instance;
 		MarkItemDirty(Slots[Index]);
+	}
+
+	int32 IndexOfByTag(const FInventorySlot& InInventorySlot) const
+	{
+		return Slots.IndexOfByPredicate([InInventorySlot](const FInventorySlot& InventorySlot)
+			{
+				return &InventorySlot == &InInventorySlot;
+			});
 	}
 
 	/**
@@ -75,8 +101,10 @@ struct FInventorySlotsArray : public FFastArraySerializer
 	}
 
 private:
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TArray<FInventorySlot> Slots;
+
+	const FInventorySlotsTypedArray* InventorySlotsTypedArray = nullptr;
 };
 
 template<>

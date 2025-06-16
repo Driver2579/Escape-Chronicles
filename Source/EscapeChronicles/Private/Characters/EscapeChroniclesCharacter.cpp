@@ -167,6 +167,9 @@ void AEscapeChroniclesCharacter::PostInitializeComponents()
 	Super::PostInitializeComponents();
 
 	CurrentMesh = MeshComponent->GetSkeletalMeshAsset();
+
+	InitialMeshTransform = MeshComponent->GetRelativeTransform();
+	InitialMeshAttachParent = MeshComponent->GetAttachParent();
 }
 
 void AEscapeChroniclesCharacter::BeginPlay()
@@ -185,14 +188,16 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
-
-	InitialMeshTransform = MeshComponent->GetRelativeTransform();
-	InitialMeshAttachParent = MeshComponent->GetAttachParent();
 }
 
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if (MeshComponent->GetAttachParent() != CapsuleComponent)
+	{
+		return;
+	}
 
 	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
@@ -584,7 +589,7 @@ void AEscapeChroniclesCharacter::ResetGroundSpeedMode(const EGroundSpeedMode Gro
 }
 
 void AEscapeChroniclesCharacter::OnMovementModeChanged(const FName& PreviousMovementModeName,
-	const FName& NewMovementModeName)
+                                                       const FName& NewMovementModeName)
 {
 	/**
 	 * Even though the movement mode is changed, we need to wait for the next tick because gameplay tags in the
@@ -842,8 +847,6 @@ void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag G
 
 		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-
-		MoveCapsuleToMesh();
 	}
 }
 

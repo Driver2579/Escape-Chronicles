@@ -12,7 +12,9 @@ public class InventorySystem : ModuleRules
 			{
 				"Core",
 				"NetCore",
-				"GameplayTags"
+				"GameplayTags",
+				"Slate",
+				"SlateCore",
 			});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]
