@@ -8,6 +8,7 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "Interfaces/Saveable.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
+#include "Components/ActorComponents/LootableComponent.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UCarryCharacterComponent;
@@ -65,9 +66,11 @@ public:
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
+	ULootableComponent* GetLootableComponent() const { return LootableComponent; }
+
 	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
 	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
-
+	
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
@@ -259,6 +262,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<ULootableComponent> LootableComponent;
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -304,6 +310,8 @@ private:
 	 * disabled, and the mesh becomes a ragdoll)
 	 */
 	void UpdateFaintedState();
+
+	void SetCanBeLooted(bool bValue);
 
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;

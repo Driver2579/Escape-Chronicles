@@ -18,6 +18,7 @@
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerTransferItemsFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -50,6 +51,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetUsingAbsoluteRotation(true);
 
 	CarryCharacterComponent = CreateDefaultSubobject<UCarryCharacterComponent>(TEXT("Carry Character Component"));
+
+	LootableComponent = CreateDefaultSubobject<ULootableComponent>(TEXT("Lootable Component"));
 
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
@@ -757,6 +760,8 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 	{
 		MeshComponent->WakeAllRigidBodies();
 
+		SetCanBeLooted(true);
+
 		if (!ensureAlways(!FaintedGameplayEffectClass.IsNull()))
 		{
 			return;
@@ -777,12 +782,36 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 	{
 		MeshComponent->PutAllRigidBodiesToSleep();
 
+		SetCanBeLooted(false);
+
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintedGameplayEffectHandle);
 			FaintedGameplayEffectHandle.Invalidate();
 		}
 	}
+}
+
+void AEscapeChroniclesCharacter::SetCanBeLooted(bool bValue)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	LootableComponent->SetCanInteract(bValue);
+
+	UInventoryManagerTransferItemsFragment* InventoryManagerTransferItemsFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
+
+	if (!IsValid(InventoryManagerTransferItemsFragment))
+	{
+		return;
+	}
+
+	bValue ?
+		InventoryManagerTransferItemsFragment->SetInventoryAccess(EInventoryAccess::Public) :
+		InventoryManagerTransferItemsFragment->SetInventoryAccess(EInventoryAccess::Private);
 }
 
 void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)

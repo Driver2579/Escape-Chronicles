@@ -66,7 +66,6 @@ public:
 	void TrySetLootInventory(UInventoryManagerComponent* InInventory);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_TransferItems(const FTransferItemsData& TransferItemsData);
