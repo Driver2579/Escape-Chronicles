@@ -72,6 +72,11 @@ void AEscapeChroniclesPlayerController::InitPlayerState()
 		Super::InitPlayerState();
 	}
 
+#if DO_CHECK
+	check(PlayerState);
+	check(PlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
+
 	/**
 	 * Bind all input configs once the PlayerState is initialized if they failed to bind in SetupInputComponent.
 	 * 
@@ -82,11 +87,20 @@ void AEscapeChroniclesPlayerController::InitPlayerState()
 	{
 		BindInputConfigs();
 	}
+
+	// Broadcast the PlayerState initialization event and clear its subscribers as it will never be called again
+	OnPlayerStateInitialized.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
+	OnPlayerStateInitialized.Clear();
 }
 
 void AEscapeChroniclesPlayerController::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();
+
+#if DO_CHECK
+	check(PlayerState);
+	check(PlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
 
 	/**
 	 * Bind all input configs once the PlayerState is replicated if they failed to bind in SetupInputComponent.
@@ -96,6 +110,29 @@ void AEscapeChroniclesPlayerController::OnRep_PlayerState()
 	if (bBindInputConfigsOnPlayerStateInitialized)
 	{
 		BindInputConfigs();
+	}
+
+	// Broadcast the PlayerState initialization event and clear its subscribers as it will never be called again
+	OnPlayerStateInitialized.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
+	OnPlayerStateInitialized.Clear();
+}
+
+void AEscapeChroniclesPlayerController::CallOrRegister_OnPlayerStateInitialized(
+	const FOnPlayerStateInitializedDelegate::FDelegate& Callback)
+{
+	// Execute the given callback now if the PlayerState is already initialized
+	if (PlayerState)
+	{
+#if DO_CHECK
+		check(PlayerState.IsA<AEscapeChroniclesPlayerState>());
+#endif
+
+		Callback.Execute(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
+	}
+	// Otherwise, register the callback to be executed when the PlayerState is initialized
+	else
+	{
+		OnPlayerStateInitialized.Add(Callback);
 	}
 }
 

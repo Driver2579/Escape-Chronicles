@@ -8,11 +8,14 @@
 #include "GameplayTagContainer.h"
 #include "EscapeChroniclesPlayerController.generated.h"
 
+class AEscapeChroniclesPlayerState;
 class UEscapeChroniclesAbilitySystemComponent;
 class AEscapeChroniclesCharacter;
 class UInputConfig;
 
 struct FInputActionValue;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitializedDelegate, AEscapeChroniclesPlayerState* PlayerState)
 
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerController, public IAbilitySystemInterface
@@ -30,6 +33,8 @@ public:
 	virtual void InitPlayerState() override;
 	virtual void OnRep_PlayerState() override;
 
+	void CallOrRegister_OnPlayerStateInitialized(const FOnPlayerStateInitializedDelegate::FDelegate& Callback);
+
 	// Adds all input mapping contexts and binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
 
@@ -46,7 +51,9 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<class AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+	TSubclassOf<AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+
+	FOnPlayerStateInitializedDelegate OnPlayerStateInitialized;
 
 	bool bBindInputConfigsOnPlayerStateInitialized = false;
 
