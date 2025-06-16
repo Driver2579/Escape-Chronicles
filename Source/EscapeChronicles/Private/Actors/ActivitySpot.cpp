@@ -34,7 +34,7 @@ AActivitySpot::AActivitySpot()
 	MeshComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
 #if WITH_EDITORONLY_DATA
-	CharacterTransformOnOccupySpotComponent = CreateEditorOnlyDefaultSubobject<UCapsuleComponent>(
+	CharacterTransformOnOccupySpotComponent = CreateDefaultSubobject<UCapsuleComponent>(
 		TEXT("Character Transform On Occupy Spot"));
 
 	CharacterTransformOnOccupySpotComponent->SetupAttachment(MeshComponent);

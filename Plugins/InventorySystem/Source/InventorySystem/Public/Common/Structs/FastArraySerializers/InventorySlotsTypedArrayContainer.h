@@ -7,8 +7,10 @@
 #include "InventorySlotsTypedArrayContainer.generated.h"
 
 class UInventoryItemInstance;
+class UInventoryManagerComponent;
 
 struct FInventorySlotsArray;
+struct FInventorySlotsTypedArrayContainer;
 
 // Typifies an array of slots with tag
 USTRUCT()
@@ -16,10 +18,25 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
+	void Construct(const FInventorySlotsTypedArrayContainer* InInventorySlotsTypedArrayContainer,
+		const FGameplayTag& InTypeTag, const int32 InSlotsNumber)
+	{
+		InventorySlotsTypedArrayContainer = InInventorySlotsTypedArrayContainer;
+
+		TypeTag = InTypeTag;
+
+		Array.Construct(this, InSlotsNumber);
+	}
+
+	const FInventorySlotsTypedArrayContainer* GetInventorySlotsTypedArrayContainer() const
+	{
+		return InventorySlotsTypedArrayContainer;
+	}
+
+	UPROPERTY(Transient)
 	FGameplayTag TypeTag;
 
-	UPROPERTY()
+	UPROPERTY(Transient)
 	FInventorySlotsArray Array;
 
 	bool operator==(const FGameplayTag& InTypeTag) const
@@ -31,6 +48,9 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 	{
 		return TypeTag == Other.TypeTag;
 	}
+
+private:
+	const FInventorySlotsTypedArrayContainer* InventorySlotsTypedArrayContainer = nullptr;
 };
 
 // Contain arrays of slots by their types
@@ -39,22 +59,25 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+
 	/**
 	 * Initializes inventory slots from configuration data.
 	 * @tparam KeyType Tag of the slot's type.
 	 * @tparam ValueType Number of slots.
 	 */
-	void Construct(const TMap<FGameplayTag, int32>& InitializationData)
+	void Construct(UInventoryManagerComponent* InInventoryManagerComponent,
+		const TMap<FGameplayTag, int32>& InitializationData)
 	{
+		InventoryManagerComponent = InInventoryManagerComponent;
+
 		Arrays.Empty();
 
 		for (const TPair<FGameplayTag, int32>& Pair : InitializationData)
 		{
-			FInventorySlotsTypedArray InventorySlotsTypedArray = FInventorySlotsTypedArray();
-			InventorySlotsTypedArray.TypeTag = Pair.Key;
-			InventorySlotsTypedArray.Array.Construct(Pair.Value);
-			
-			Arrays.Add(InventorySlotsTypedArray);
+			const int32 Index = Arrays.Add(FInventorySlotsTypedArray());
+
+			Arrays[Index].Construct(this, Pair.Key, Pair.Value);
 		}
 
 		MarkArrayDirty();
@@ -91,8 +114,11 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 
 private:
 	// Arrays of slots by their types
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TArray<FInventorySlotsTypedArray> Arrays;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 };
 
 template<>
