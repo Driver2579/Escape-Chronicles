@@ -21,7 +21,7 @@ public:
 	 * @param ItemInstance the item instance whose durability is being reduced.
 	 * @param Amount how much durability to subtract.
 	 */
-	void ReduceDurability(UInventoryItemInstance* ItemInstance, int32 Amount) const;
+	void ReduceDurability(UInventoryItemInstance* ItemInstance, int32 Amount = 1) const;
 	
 private:
 	// Initial durability value for items of this type
