@@ -1,0 +1,44 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
+#include "GameplayTagContainer.h"
+#include "MainMenuWidget.generated.h"
+
+class UEscapeChroniclesGameInstance;
+class UTextButtonBaseWidget;
+
+UCLASS()
+class ESCAPECHRONICLES_API UMainMenuWidget : public URoutableWidget
+{
+	GENERATED_BODY()
+
+protected:
+	virtual void NativeConstruct() override;
+
+private:
+	UPROPERTY(Transient, meta=(BindWidget))
+	TObjectPtr<UTextButtonBaseWidget> CreateGameButton;
+
+	UPROPERTY(Transient, meta=(BindWidget))
+	TObjectPtr<UTextButtonBaseWidget> SettingsButton;
+
+	UPROPERTY(Transient, meta=(BindWidget))
+	TObjectPtr<UTextButtonBaseWidget> ExitButton;
+
+	void OnCreateGameButtonClicked() const;
+
+	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful) const;
+	void OnStartSessionComplete(FName SessionName, bool bWasSuccessful) const;
+
+	UPROPERTY(EditDefaultsOnly, Category="Sessions")
+	TSoftObjectPtr<UWorld> GameLevel;
+
+	void OnSettingsButtonClicked() const;
+
+	// Gameplay tag of the settings menu's route
+	UPROPERTY(EditDefaultsOnly, Category="Routes")
+	FGameplayTag SettingsMenuRouteTag;
+};

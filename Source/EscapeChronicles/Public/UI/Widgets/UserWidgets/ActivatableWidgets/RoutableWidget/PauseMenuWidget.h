@@ -28,9 +28,9 @@ private:
 	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ContinueButton;
 
-	// Button to open options submenu 
+	// Button to open settings submenu 
 	UPROPERTY(meta=(BindWidget))  
-	TObjectPtr<UTextButtonBaseWidget> OptionsButton;
+	TObjectPtr<UTextButtonBaseWidget> SettingsButton;
 
 	// Button to initiate exit flow 
 	UPROPERTY(meta=(BindWidget))  

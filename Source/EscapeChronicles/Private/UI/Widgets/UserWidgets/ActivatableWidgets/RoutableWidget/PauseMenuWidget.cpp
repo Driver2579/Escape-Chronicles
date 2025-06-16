@@ -15,9 +15,9 @@ void UPauseMenuWidget::NativeOnInitialized()
 		ContinueButton->OnClicked().AddUObject(this, &ThisClass::OnContinueButtonClicked);
 	}
 
-	if (ensureAlways(OptionsButton))
+	if (ensureAlways(SettingsButton))
 	{
-		OptionsButton->OnClicked().AddUObject(this, &ThisClass::OnOptionsButtonClicked);
+		SettingsButton->OnClicked().AddUObject(this, &ThisClass::OnOptionsButtonClicked);
 	}
 
 	if (ensureAlways(ExitButton))
