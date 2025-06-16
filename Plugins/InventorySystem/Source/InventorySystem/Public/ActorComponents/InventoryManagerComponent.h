@@ -17,7 +17,7 @@ class UInventoryManagerFragment;
  * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
  */
-UCLASS(Blueprintable, Const)
+UCLASS(Blueprintable, Const, meta=(BlueprintSpawnableComponent))
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()

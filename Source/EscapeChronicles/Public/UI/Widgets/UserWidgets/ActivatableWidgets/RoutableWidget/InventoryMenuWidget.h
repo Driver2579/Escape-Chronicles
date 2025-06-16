@@ -16,60 +16,28 @@ class ESCAPECHRONICLES_API UInventoryMenuWidget : public URoutableWidget
 	GENERATED_BODY()
 
 protected:
-	virtual void NativeConstruct() override
-	{
-		Super::NativeConstruct();
-
-		const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
-
-		if (!ensureAlways(IsValid(Character)))
-		{
-			return;
-		}
-
-		UInventoryManagerComponent* InventoryManager = Character->GetInventoryManagerComponent();
-
-		if (!ensureAlways(IsValid(InventoryManager)))
-		{
-			return;
-		}
-
-		CachedInventoryManager = InventoryManager;
-
-		InventoryManager->OnContentChanged.AddUObject(this, &ThisClass::OnInventoryContentChanged);
-
-		UpdateMainInventoryWidget();
-	}
+	virtual void NativeConstruct() override;
 
 private:
 	UPROPERTY(meta = (BindWidget))
 	UItemSlotsWidget* MainInventoryWidget;
 
+	UPROPERTY(meta = (BindWidget))
+	UItemSlotsWidget* ClothesInventoryWidget;
+
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag MainInventoryTypeTag;
 
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag ClothesInventoryTypeTag;
+
 	TWeakObjectPtr<UInventoryManagerComponent> CachedInventoryManager;
 
-	void OnInventoryContentChanged()
+	void OnInventoryContentChanged() const
 	{
-		UpdateMainInventoryWidget();
+		UpdateInventoryWidget(MainInventoryWidget, MainInventoryTypeTag);
+		UpdateInventoryWidget(ClothesInventoryWidget, ClothesInventoryTypeTag);
 	}
 
-	void UpdateMainInventoryWidget() const
-	{
-		if (!ensureAlways(CachedInventoryManager.IsValid()))
-		{
-			return;
-		}
-
-		const FInventorySlotsTypedArrayContainer& InventorySlotsTypedArrayContainer =
-			CachedInventoryManager->GetInventoryContent();
-
-		const int32 InventoryIndex = InventorySlotsTypedArrayContainer.IndexOfByTag(MainInventoryTypeTag);
-
-		check(InventoryIndex >= 0 && InventoryIndex < InventorySlotsTypedArrayContainer.GetItems().Num());
-		
-		MainInventoryWidget->SetInventorySlots(InventorySlotsTypedArrayContainer[InventoryIndex].Array.GetItems());
-		
-	}
+	void UpdateInventoryWidget(UItemSlotsWidget* InventoryWidget, const FGameplayTag& InventoryTypeTag) const;
 };

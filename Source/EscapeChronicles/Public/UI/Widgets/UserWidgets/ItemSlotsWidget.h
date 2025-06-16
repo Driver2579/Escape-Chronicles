@@ -6,37 +6,40 @@
 #include "CommonUserWidget.h"
 #include "ItemSlotWidget.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsArray.h"
-#include "Components/Image.h"
 #include "Components/StackBox.h"
 #include "ItemSlotsWidget.generated.h"
 
-// TODO: do comments
 UCLASS()
 class ESCAPECHRONICLES_API UItemSlotsWidget : public UCommonUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	const FGameplayTag& GetAssociatedSlotTypeTag() const { return AssociatedSlotTypeTag; }
-	
-	void SetInventorySlots(const TArray<FInventorySlot>& InventorySlots)
+	const FInventorySlotsTypedArray* GetAssociatedInventorySlotsTypedArray() const
 	{
-		const int32 InventorySlotsNumber = InventorySlots.Num();
+		return AssociatedInventorySlotsTypedArray;
+	}
+
+	void SetAssociate(const FInventorySlotsTypedArray* InventorySlotsTypedArray)
+	{
+		AssociatedInventorySlotsTypedArray = InventorySlotsTypedArray;
+
+		const TArray<FInventorySlot>& Slots = InventorySlotsTypedArray->Array.GetItems();
 		
-		if (InventorySlotsNumber != SlotsContainer->GetChildrenCount())
+		if (Slots.Num() != SlotsContainer->GetChildrenCount())
 		{
-			ConstructSlots(InventorySlots);
+			ConstructSlots(Slots);
 
 			return;
 		}
 
-		for (int32 Index = 0; Index < InventorySlotsNumber; ++Index)
+		for (int32 Index = 0; Index < Slots.Num(); ++Index)
 		{
-			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < InventorySlots.Num());
+			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < Slots.Num());
 
 			UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
 
-			ItemSlotWidget->SetAssociate(&InventorySlots[Index], Index);
+			ItemSlotWidget->SetAssociate(&Slots[Index], Index);
 		}
 	}
 
@@ -61,5 +64,5 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UItemSlotWidget> SlotClass;
 
-	FGameplayTag AssociatedSlotTypeTag;
+	const FInventorySlotsTypedArray* AssociatedInventorySlotsTypedArray;
 };

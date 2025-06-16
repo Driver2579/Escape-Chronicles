@@ -8,7 +8,90 @@ void UInventoryManagerTransferItemsFragment::GetLifetimeReplicatedProps(
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ThisClass, InventoryAccess);
+	DOREPLIFETIME(ThisClass, OnInventoryAccessChanged);
+	DOREPLIFETIME(ThisClass, Access);
+}
+
+bool UInventoryManagerTransferItemsFragment::HasInventoryAccess(
+	const UInventoryManagerTransferItemsFragment* InInventoryManagerTransferItemsFragment) const
+{
+	return GetAccess() != EInventoryAccess::Private;
+}
+
+void UInventoryManagerTransferItemsFragment::TrySetLootInventory(UInventoryManagerComponent* InInventory)
+{
+#if DO_CHECK
+	check(IsValid(InInventory))
+#endif
+
+	if (!ensureAlways(GetInventoryManager()->GetOwner()->HasAuthority()))
+	{
+		return;
+	}
+
+	UInventoryManagerTransferItemsFragment* InInventoryManagerTransferItemsFragment =
+		InInventory->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
+
+
+	const bool bCanSetLootInventory = ensureAlways(IsValid(InInventoryManagerTransferItemsFragment)) &&
+		ensureAlways(InInventoryManagerTransferItemsFragment->HasInventoryAccess(this));
+
+	if (!bCanSetLootInventory)
+	{
+		return;
+	}
+
+	SetLootInventory(InInventory);
+
+	FDelegateHandle DelegateHandle = InInventoryManagerTransferItemsFragment->OnAccessChanged.AddWeakLambda(this,
+		[this, InInventoryManagerTransferItemsFragment, DelegateHandle](EInventoryAccess InInventoryAccess)
+		{
+			if (!InInventoryManagerTransferItemsFragment->HasInventoryAccess(this))
+			{
+				SetLootInventory(nullptr);
+				
+				InInventoryManagerTransferItemsFragment->OnAccessChanged.Remove(DelegateHandle);
+			}
+		});
+}
+
+bool UInventoryManagerTransferItemsFragment::Server_TransferItems_Validate(const FTransferItemsData& TransferItemsData)
+{
+	const UInventoryManagerComponent* FromInventoryManager = TransferItemsData.FromInventoryManager.Get();
+	const UInventoryManagerComponent* ToInventoryManager = TransferItemsData.ToInventoryManager.Get();
+
+	const UInventoryManagerTransferItemsFragment* FromInventoryManagerTransferItemsFragment =
+		FromInventoryManager->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
+
+	const UInventoryManagerTransferItemsFragment* ToInventoryManagerTransferItemsFragment =
+		ToInventoryManager->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
+
+	const UInventoryManagerComponent* Owner = GetInventoryManager();
+
+	const bool bSuccessValidation = ensureAlways(IsValid(FromInventoryManagerTransferItemsFragment)) &&
+		ensureAlways(IsValid(FromInventoryManagerTransferItemsFragment)) && ensureAlways(IsValid(Owner));
+
+	if (!bSuccessValidation)
+	{
+		return false;
+	}
+
+	if (Owner == FromInventoryManager)
+	{
+		if (Owner == ToInventoryManager || ToInventoryManagerTransferItemsFragment->HasInventoryAccess(this))
+		{
+			return true;
+		}
+	}
+	else if (Owner == ToInventoryManager)
+	{
+		if (Owner == FromInventoryManager || FromInventoryManagerTransferItemsFragment->HasInventoryAccess(this))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 void UInventoryManagerTransferItemsFragment::Server_TransferItems_Implementation(

@@ -44,23 +44,50 @@ class INVENTORYSYSTEM_API UInventoryManagerTransferItemsFragment : public UInven
 	GENERATED_BODY()
 
 public:
+	bool HasInventoryAccess(const UInventoryManagerTransferItemsFragment* InInventoryManagerTransferItemsFragment) const;
+
+	EInventoryAccess GetAccess() const { return Access; };
+
+	void SetInventoryAccess(const EInventoryAccess InInventoryAccess) { Access = InInventoryAccess; }
+
+	void TrySetLootInventory(UInventoryManagerComponent* InInventory);
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	UFUNCTION(Server, Reliable)
+	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_TransferItems(const FTransferItemsData& TransferItemsData);
 
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnAccessChangedDelegate, EInventoryAccess CurrentInventoryAccess);
 
 	FOnAccessChangedDelegate OnAccessChanged;
 
+	DECLARE_MULTICAST_DELEGATE(FOnInventoryAccessChangedDelegate);
+
+	FOnInventoryAccessChangedDelegate OnInventoryAccessChanged;
+
 private:
-	// 
-	UPROPERTY(ReplicatedUsing="OnRep_InventoryAccess")
-	EInventoryAccess InventoryAccess;
+	void SetLootInventory(UInventoryManagerComponent* InInventory)
+	{
+		LootInventory = InInventory;
+
+		OnInventoryAccessChanged.Broadcast();
+	}
+
+	UPROPERTY(EditDefaultsOnly, ReplicatedUsing="OnRep_Access")
+	EInventoryAccess Access;
+
+	UPROPERTY(ReplicatedUsing="OnRep_LootInventory")
+	TObjectPtr<UInventoryManagerComponent> LootInventory;
 
 	UFUNCTION()
-	void OnRep_InventoryAccess() const
+	void OnRep_Access() const
 	{
-		OnAccessChanged.Broadcast(InventoryAccess);
+		OnAccessChanged.Broadcast(Access);
+	}
+
+	UFUNCTION()
+	void OnRep_LootInventory() const
+	{
+		OnInventoryAccessChanged.Broadcast();
 	}
 };
