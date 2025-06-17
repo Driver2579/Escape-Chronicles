@@ -50,6 +50,7 @@ namespace EscapeChroniclesGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Prisoner, "Role.Prisoner", "The character is a prisoner");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Guard, "Role.Guard", "The character is a guard");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Medic, "Role.Medic", "The character is a medic");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_NPC, "Role.NPC", "The character is controlled by an AI");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Role_Player, "Role.Player", "The character is controlled by a real player");
 }
