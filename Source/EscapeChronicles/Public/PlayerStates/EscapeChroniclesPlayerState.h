@@ -45,6 +45,10 @@ public:
 		OccupyingActivitySpot = InOccupyingActivitySpot;
 	}
 
+	AEscapeChroniclesCharacter* GetCarryingCharacter() const { return CarryingCharacter.Get(); }
+
+	void SetCarryingCharacter(AEscapeChroniclesCharacter* InCarryingCharacter);
+
 	// The same as AController::InitPlayerState() but with a custom PlayerState class
 	static void InitPlayerStateForController(AController* OwnerController,
 		const TSubclassOf<AEscapeChroniclesPlayerState>& PlayerStateClass);
@@ -87,6 +91,9 @@ private:
 	FUniquePlayerID UniquePlayerID;
 
 	TWeakObjectPtr<AActivitySpot> OccupyingActivitySpot;
+
+	// Character currently carrying the character from this player state if any
+	TWeakObjectPtr<AEscapeChroniclesCharacter> CarryingCharacter;
 
 	// The set of team IDs that the player will use to determine its team
 	UPROPERTY(EditDefaultsOnly, Category="Team")

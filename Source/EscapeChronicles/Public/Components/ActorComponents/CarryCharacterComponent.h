@@ -25,7 +25,7 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// Sets the carried character (called on the server)
-	void SetCarriedCharacter(AEscapeChroniclesCharacter* InCarriedCharacter);
+	bool SetCarriedCharacter(AEscapeChroniclesCharacter* InCarriedCharacter);
 
 	AEscapeChroniclesCharacter* GetCarriedCharacter() const { return CarriedCharacter.Get(); }
 
@@ -40,15 +40,18 @@ private:
 		ReplaceCarriedCharacter(OldCharacter, CarriedCharacter);
 	}
 
-	// Replaces the old carried character with a new one (handles pickup/drop logic)
-	void ReplaceCarriedCharacter(const AEscapeChroniclesCharacter* OldCarriedCharacter,
-		const AEscapeChroniclesCharacter* NewCarriedCharacter);
+	/**
+	 * Replaces the old carried character with a new one (handles pickup/drop logic).
+	 * @return False if new character was set but wasn't picked up successfully, true otherwise.
+	 */
+	bool ReplaceCarriedCharacter(AEscapeChroniclesCharacter* OldCarriedCharacter,
+		AEscapeChroniclesCharacter* NewCarriedCharacter);
 
 	// Picks up a character (attaches, loads animations)
-	void PickupCharacter(USkeletalMeshComponent* CarriedCharacterMesh);
+	bool PickupCharacter(AEscapeChroniclesCharacter* InCarriedCharacter);
 
 	// Drops a character (detaches, enables physics)
-	void DropCharacter(USkeletalMeshComponent* CarriedCharacterMesh) const;
+	void DropCharacter(AEscapeChroniclesCharacter* InCarriedCharacter) const;
 
 	// Tags defining which characters can be carried
 	UPROPERTY(EditDefaultsOnly)
