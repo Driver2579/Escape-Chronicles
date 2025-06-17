@@ -21,10 +21,11 @@ EStateTreeRunStatus FCarryCharacterStateTreeTask::EnterState(FStateTreeExecution
 	check(InstanceData.TargetCharacter);
 #endif
 
-	// Carry the target character
-	InstanceData.CarryingCharacter->GetCarryCharacterComponent()->SetCarriedCharacter(InstanceData.TargetCharacter);
+	// Carry the target character and remember the result
+	const bool bResult = InstanceData.CarryingCharacter->GetCarryCharacterComponent()->SetCarriedCharacter(
+		InstanceData.TargetCharacter);
 
-	return EStateTreeRunStatus::Succeeded;
+	return bResult ? EStateTreeRunStatus::Succeeded : EStateTreeRunStatus::Failed;
 }
 
 void FCarryCharacterStateTreeTask::ExitState(FStateTreeExecutionContext& Context,

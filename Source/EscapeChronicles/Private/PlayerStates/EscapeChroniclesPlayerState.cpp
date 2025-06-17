@@ -3,6 +3,7 @@
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 #include "EscapeChroniclesGameplayTags.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/AbilitySystemSet.h"
 #include "Common/DataAssets/TeamIDsSet.h"
 #include "Common/Enums/CharacterRole.h"
@@ -218,4 +219,9 @@ ECharacterRole AEscapeChroniclesPlayerState::GetCharacterRole() const
 	}
 
 	return ECharacterRole::None;
+}
+
+void AEscapeChroniclesPlayerState::SetCarryingCharacter(AEscapeChroniclesCharacter* InCarryingCharacter)
+{
+	CarryingCharacter = InCarryingCharacter;
 }

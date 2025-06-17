@@ -156,7 +156,15 @@ void AEscapeChroniclesCharacter::OnPreSaveObject()
 {
 	ISaveable::OnPreSaveObject();
 
-	if (MeshComponent->GetAttachParent() != CapsuleComponent)
+	const AEscapeChroniclesPlayerState* EscapeChroniclesPlayerState = CastChecked<AEscapeChroniclesPlayerState>(
+		GetPlayerState(), ECastCheckedType::NullAllowed);
+
+	const bool bCanMoveCapsuleToMesh =
+		(!IsValid(EscapeChroniclesPlayerState) ||
+			!IsValid(EscapeChroniclesPlayerState->GetOccupyingActivitySpot())) &&
+			MeshComponent->GetAttachParent() != CapsuleComponent;
+
+	if (bCanMoveCapsuleToMesh)
 	{
 		MoveCapsuleToMesh();
 	}
