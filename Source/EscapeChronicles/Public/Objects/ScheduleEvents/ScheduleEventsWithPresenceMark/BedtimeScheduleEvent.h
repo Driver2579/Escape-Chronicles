@@ -80,6 +80,9 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
 
+	// Sets the EventStartDateTime to the current GameDateTime and registers the OnCurrentGameDateTimeUpdated function
+	void RegisterTimeForPlayersToCheckIn();
+
 	// Whether the time for players to check in has passed
 	bool bTimeForPlayersToCheckInPassed = false;
 

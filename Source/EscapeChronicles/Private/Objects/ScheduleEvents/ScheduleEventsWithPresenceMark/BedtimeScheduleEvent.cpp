@@ -80,19 +80,7 @@ void UBedtimeScheduleEvent::OnEventStarted(const bool bStartPaused)
 		}
 	}
 
-	AEscapeChroniclesGameState* GameState = World->GetGameState<AEscapeChroniclesGameState>();
-
-	/**
-	 * If GameState is valid, then we can listen for the game time being updated to start an alert if any player doesn't
-	 * check in within the given time.
-	 */
-	if (ensureAlways(IsValid(GameState)))
-	{
-		EventStartDateTime = GameState->GetCurrentGameDateTime();
-
-		OnCurrentGameDateTimeUpdatedDelegateHandle = GameState->OnCurrentGameDateTimeUpdated.AddUObject(this,
-			&ThisClass::OnCurrentGameDateTimeUpdated);
-	}
+	RegisterTimeForPlayersToCheckIn();
 }
 
 // ReSharper disable once CppParameterMayBeConstPtrOrRef
@@ -113,6 +101,30 @@ void UBedtimeScheduleEvent::OnPrisonerChamberZoneOwningPlayerInitialized(
 	// Stop listening for the event and remove its handle because we don't need these anymore
 	PlayerOwnershipComponent->Unregister_OnOwningPlayerInitialized(
 		OnOwningPlayerInitializedDelegateHandles.FindAndRemoveChecked(PlayerOwnershipComponent));
+}
+
+void UBedtimeScheduleEvent::RegisterTimeForPlayersToCheckIn()
+{
+	// Don't do anything if we already registered the delegate to listen for the game time updates
+	if (OnCurrentGameDateTimeUpdatedDelegateHandle.IsValid())
+	{
+		return;
+	}
+
+	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+
+	/**
+	 * If GameState is valid, then we can listen for the game time being updated to start an alert if any player doesn't
+	 * check in within the given time.
+	 */
+	if (ensureAlways(IsValid(GameState)))
+	{
+		EventStartDateTime = GameState->GetCurrentGameDateTime();
+		bTimeForPlayersToCheckInPassed = false;
+
+		OnCurrentGameDateTimeUpdatedDelegateHandle = GameState->OnCurrentGameDateTimeUpdated.AddUObject(this,
+			&ThisClass::OnCurrentGameDateTimeUpdated);
+	}
 }
 
 bool UBedtimeScheduleEvent::CanCheckInPlayer(const AActor* PresenceMarkTrigger,
@@ -182,18 +194,20 @@ void UBedtimeScheduleEvent::OnCurrentGameDateTimeUpdated(const FGameplayDateTime
 		return;
 	}
 
-	// If the time for players to check in has passed, we need to lock the specified doors
-	SetDoorsLocked(true);
-
-	// This will automatically start an alert if any player still didn't check in
-	CollectPlayersThatMissedAnEvent();
-
 	/**
 	 * Unsubscribe from the event because we don't need it anymore. We can be sure the game state is valid here because
 	 * this function is called by the delegate from the game state.
 	 */
 	GetWorld()->GetGameStateChecked<AEscapeChroniclesGameState>()->OnCurrentGameDateTimeUpdated.Remove(
 		OnCurrentGameDateTimeUpdatedDelegateHandle);
+
+	OnCurrentGameDateTimeUpdatedDelegateHandle.Reset();
+
+	// If the time for players to check in has passed, we need to lock the specified doors
+	SetDoorsLocked(true);
+
+	// This will automatically start an alert if any player still didn't check in
+	CollectPlayersThatMissedAnEvent();
 }
 
 void UBedtimeScheduleEvent::SetDoorsLocked(const bool bLockDoors)
@@ -310,6 +324,13 @@ void UBedtimeScheduleEvent::OnEventResumed()
 	{
 		SetDoorsLocked(true);
 	}
+
+	/**
+	 * Reregister the time for players to check in if we unsubscribed from this event before the event was paused
+	 * (possibly because the time for players to check in has passed and the alert has started). This will give the time
+	 * for players to check in after the alert.
+	 */
+	RegisterTimeForPlayersToCheckIn();
 }
 
 void UBedtimeScheduleEvent::OnEventEnded(const EScheduleEventEndReason EndReason)
