@@ -15,7 +15,7 @@ public:
 	const TSoftObjectPtr<UAnimMontage>& GetAnimMontage() const { return AnimMontage; }
 	const FName& GetDamageCollisionTag() const { return DamageCollisionTag; }
 
-	virtual void EffectHit() {}
+	virtual void EffectHit(UInventoryItemInstance* ItemInstance) {}
 
 private:
 	// Playable animation for the realization of this punch

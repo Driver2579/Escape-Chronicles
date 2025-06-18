@@ -60,7 +60,7 @@ void UPunchGameplayAbility::SetupUsingWeapon()
 	const int32 Index = InventoryManagerSelectorFragment->GetCurrentSlotIndex();
 	const FGameplayTag& SlotTypeTag = InventoryManagerSelectorFragment->GetSelectableSlotsTypeTag();
 
-	const UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(Index, SlotTypeTag);
+	UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(Index, SlotTypeTag);
 
 	if (!IsValid(ItemInstance))
 	{
@@ -76,16 +76,22 @@ void UPunchGameplayAbility::SetupUsingWeapon()
 	}
 
 	UsingWeaponFragment = WeaponInventoryItemFragment;
-
-	UsingWeapon = WeaponInventoryItemFragment->GetActor(ItemInstance);
+	UsingWeapon = ItemInstance;
 }
 
 bool UPunchGameplayAbility::SetupDamageCollision()
 {
 	if (UsingWeaponFragment.IsValid() && ensureAlways(UsingWeapon.IsValid()))
 	{
+		const AActor* UsingWeaponActor = UsingWeaponFragment->GetActor(UsingWeapon.Get());
+
+		if (!ensureAlways(IsValid(UsingWeaponActor)))
+		{
+			return false;
+		}
+
 		DesiredDamageCollision =
-			UsingWeapon->FindComponentByTag<UPrimitiveComponent>(UsingWeaponFragment->GetDamageCollisionTag());
+			UsingWeaponActor->FindComponentByTag<UPrimitiveComponent>(UsingWeaponFragment->GetDamageCollisionTag());
 
 		RegisterPunchGameplayEvents();
 
@@ -273,6 +279,11 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		return;
 	}
 
+	if (UsingWeaponFragment.IsValid())
+	{
+		UsingWeaponFragment->EffectHit(UsingWeapon.Get());
+	}
+
 	UAbilitySystemComponent* InstigatorAbilitySystemComponent = CurrentActorInfo->AbilitySystemComponent.Get();
 
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
@@ -308,11 +319,6 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	if (DesiredGameplayEffectClassToApply.IsValid())
 	{
 		ApplyDesiredGameplayEffectToTargetChecked();
-	}
-
-	if (UsingWeaponFragment.IsValid())
-	{
-		UsingWeaponFragment->EffectHit();
 	}
 }
 

@@ -103,7 +103,7 @@ private:
 	// Unloads a previously loaded asset using its handle
 	static void UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle);
 
-	TWeakObjectPtr<AActor> UsingWeapon;
+	TWeakObjectPtr<UInventoryItemInstance> UsingWeapon;
 	TWeakObjectPtr<UWeaponInventoryItemFragment> UsingWeaponFragment;
 
 	// Delegate handles for gameplay event tags (used to remove safely)
