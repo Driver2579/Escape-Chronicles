@@ -80,8 +80,12 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTime TimeForPlayersToCheckIn = FGameplayTime(1, 0);
 
-	// Sets the EventStartDateTime to the current GameDateTime and registers the OnCurrentGameDateTimeUpdated function
-	void RegisterTimeForPlayersToCheckIn();
+	/**
+	 * Sets the EventStartDateTime to the current GameDateTime and registers the OnCurrentGameDateTimeUpdated function
+	 * if it isn't already. If bReset is true, then it will also clear the list of checked-in players and the list of
+	 * players that missed the event and will recollect the checked-in players from the PresenceMarkTriggers.
+	 */
+	void PostEventStarted(const bool bReset = false);
 
 	// Whether the time for players to check in has passed
 	bool bTimeForPlayersToCheckInPassed = false;
