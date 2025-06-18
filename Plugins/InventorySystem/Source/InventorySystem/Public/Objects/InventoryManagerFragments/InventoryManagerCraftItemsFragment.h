@@ -11,8 +11,12 @@ class INVENTORYSYSTEM_API UInventoryManagerCraftItemsFragment : public UInventor
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(Server, Reliable)
+	void Server_Craft(const FName CraftName);
 
 private:
 	UPROPERTY(EditDefaultsOnly)
-	TSoftObjectPtr<UDataTable> AvailableCraftListDataTable;
+	TObjectPtr<const UDataTable> AvailableCraftListDataTable;
+
+	
 };
