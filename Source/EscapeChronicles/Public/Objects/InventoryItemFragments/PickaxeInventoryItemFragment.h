@@ -6,6 +6,7 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Enums/DestructiveToolType.h"
+#include "Common/Structs/EnvironmentInteractionEvents.h"
 #include "Components/ActorComponents/DestructibleComponent.h"
 #include "Objects/InventoryItemInstance.h"
 #include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
@@ -45,7 +46,7 @@ public:
 			return;
 		}
 
-		const AEscapeChroniclesCharacter* Character = Inventory->GetOwner<AEscapeChroniclesCharacter>();
+		AEscapeChroniclesCharacter* Character = Inventory->GetOwner<AEscapeChroniclesCharacter>();
 
 		if (!ensureAlways(IsValid(Character)))
 		{
@@ -98,6 +99,8 @@ public:
 			const float Radius = FMath::RandRange(DestructiveMinRadius, DestructiveMaxRadius);
 
 			DestructibleComponent->AddHoleAtWorldLocation(Hit.Location, Radius);
+
+			FEnvironmentInteractionEvents::OnDestructibleDamaged.Broadcast(Character, DestructibleComponent);
 		}
 
 		if (!bUseDurability)
