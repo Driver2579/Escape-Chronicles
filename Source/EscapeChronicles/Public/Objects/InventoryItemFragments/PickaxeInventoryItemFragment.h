@@ -63,32 +63,42 @@ public:
 		FRotator ViewRotation;
 		Controller->GetPlayerViewPoint(ViewLocation, ViewRotation);
 
+		const FVector TraceStart = Character->GetActorLocation();
 		const FVector TraceEnd = ViewLocation + ViewRotation.Vector() * DestructiveMaxDistance;
 
 		FCollisionQueryParams TraceParams;
 		TraceParams.bTraceComplex = true;
 		TraceParams.AddIgnoredActor(Character);
 
-		FHitResult HitResult;
-		const bool bHit = Controller->GetWorld()->LineTraceSingleByChannel(HitResult, ViewLocation, TraceEnd,
-			ECC_Visibility, TraceParams);
+		FCollisionShape CollisionShape = FCollisionShape::MakeSphere(SphereTraceRadius);
 
-		if (!bHit || !IsValid(HitResult.GetActor()))
+		TArray<FHitResult> HitResults;
+		const bool bHit = Controller->GetWorld()->SweepMultiByChannel(HitResults, TraceStart, TraceEnd,
+			FQuat::Identity, ECC_Visibility, CollisionShape, TraceParams);
+
+		if (!bHit)
 		{
 			return;
 		}
 
-		UDestructibleComponent* DestructibleComponent =
-			HitResult.GetActor()->GetComponentByClass<UDestructibleComponent>();
-
-		if (!IsValid(DestructibleComponent) || DestructibleComponent->GetDestructiveToolType() != DestructiveToolType)
+		for (const FHitResult& Hit : HitResults)
 		{
-			return;
+			if (!IsValid(Hit.GetActor()))
+			{
+				continue;
+			}
+
+			UDestructibleComponent* DestructibleComponent = Hit.GetActor()->GetComponentByClass<UDestructibleComponent>();
+
+			if (!IsValid(DestructibleComponent) || DestructibleComponent->GetDestructiveToolType() != DestructiveToolType)
+			{
+				continue;
+			}
+
+			const float Radius = FMath::RandRange(DestructiveMinRadius, DestructiveMaxRadius);
+
+			DestructibleComponent->AddHoleAtWorldLocation(Hit.Location, Radius);
 		}
-
-		const float Radius = FMath::RandRange(DestructiveMinRadius, DestructiveMaxRadius);
-
-		DestructibleComponent->AddHoleAtWorldLocation(HitResult.Location, Radius);
 
 		if (!bUseDurability)
 		{
@@ -110,6 +120,9 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	float DestructiveMaxDistance = 200;
+
+	UPROPERTY(EditDefaultsOnly)
+	float SphereTraceRadius = 35;
 
 	UPROPERTY(EditDefaultsOnly)
 	float DestructiveMaxRadius = 100;
