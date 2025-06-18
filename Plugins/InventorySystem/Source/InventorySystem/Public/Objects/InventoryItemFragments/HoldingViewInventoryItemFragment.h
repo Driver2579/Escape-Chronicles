@@ -24,8 +24,13 @@ class INVENTORYSYSTEM_API UHoldingViewInventoryItemFragment : public UInventoryI
 	GENERATED_BODY()
 
 public:
-	void StartHolding(UInventoryItemInstance* ItemInstance);
-	void StopHolding(UInventoryItemInstance* ItemInstance);
+	AActor* GetActor(const UInventoryItemInstance* ItemInstance) const
+	{
+		return HoldingViewData[ItemInstance].SpawnedActor;
+	}
+
+	virtual void StartHolding(UInventoryItemInstance* ItemInstance);
+	virtual void StopHolding(UInventoryItemInstance* ItemInstance);
 
 private:
 	UPROPERTY(EditDefaultsOnly)
