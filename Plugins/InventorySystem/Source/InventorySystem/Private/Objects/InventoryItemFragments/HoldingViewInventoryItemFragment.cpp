@@ -62,8 +62,14 @@ void UHoldingViewInventoryItemFragment::ItemInstanceViewClassLoaded(UInventoryIt
 				SocketToAttach);
 
 			SpawnedActor->SetActorRelativeTransform(TransformToAttach);
+
+			return;
 		}
 	}
+
+#if DO_ENSURE
+	ensureAlwaysMsgf(false, TEXT("No matching component. Perhaps you forgot to set the tag."));
+#endif
 }
 
 void UHoldingViewInventoryItemFragment::StopHolding(UInventoryItemInstance* ItemInstance)

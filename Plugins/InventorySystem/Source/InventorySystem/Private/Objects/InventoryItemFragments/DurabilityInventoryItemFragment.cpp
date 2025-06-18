@@ -2,6 +2,7 @@
 
 #include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
 #include "Objects/InventoryItemInstance.h"
+#include "Objects/InventoryItemFragments/HoldingViewInventoryItemFragment.h"
 
 void UDurabilityInventoryItemFragment::OnItemInstanceInitialized(UInventoryItemInstance* Instance)
 {
@@ -19,9 +20,19 @@ void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* 
 	
 	Instance->GetInstanceStats_Mutable().SetStat(DurabilityStatTag, NewDurability);
 
-	// Break item if durability has run out
-	if (NewDurability <= 0)
+	if (NewDurability > 0)
 	{
-		Instance->Break();
+		return;	
 	}
+
+	// It's too bad I have to do this here, the fragments should be as independent as possible. TODO: fix this
+	UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
+		Instance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
+
+	if (IsValid(HoldingViewInventoryItemFragment) && HoldingViewInventoryItemFragment->GetHoldingViewData().Contains(Instance))
+	{
+		HoldingViewInventoryItemFragment->StopHolding(Instance);
+	}
+
+	Instance->Break();
 }

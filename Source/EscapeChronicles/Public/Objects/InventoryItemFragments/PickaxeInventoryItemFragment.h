@@ -8,6 +8,7 @@
 #include "Common/Enums/DestructiveToolType.h"
 #include "Components/ActorComponents/DestructibleComponent.h"
 #include "Objects/InventoryItemInstance.h"
+#include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
 #include "PickaxeInventoryItemFragment.generated.h"
 
 UCLASS()
@@ -16,8 +17,27 @@ class ESCAPECHRONICLES_API UPickaxeInventoryItemFragment : public UWeaponInvento
 	GENERATED_BODY()
 
 public:
+	bool IsUseDurability() const { return bUseDurability; }
+
+	virtual bool IsValidConfiguration(UInventoryItemDefinition* ItemDefinition) override
+	{
+		// Non-durability keys are always valid
+		if (!bUseDurability)
+		{
+			return true;
+		}
+
+		// Durability keys must include durability fragment
+		return ensureAlwaysMsgf(ItemDefinition->GetFragments().FindItemByClass<UDurabilityInventoryItemFragment>(),
+			TEXT("If bUseDurability is true, the definition must include UDurabilityInventoryItemFragment"));
+	}
+
 	virtual void EffectHit(UInventoryItemInstance* ItemInstance) override
 	{
+#if DO_CHECK
+		check(ItemInstance)
+#endif
+
 		const UInventoryManagerComponent* Inventory = Cast<UInventoryManagerComponent>(ItemInstance->GetOuter());
 
 		if (!ensureAlways(IsValid(Inventory)))
@@ -69,6 +89,19 @@ public:
 		const float Radius = FMath::RandRange(DestructiveMinRadius, DestructiveMaxRadius);
 
 		DestructibleComponent->AddHoleAtWorldLocation(HitResult.Location, Radius);
+
+		if (!bUseDurability)
+		{
+			return;
+		}
+
+		const UDurabilityInventoryItemFragment* DurabilityInventoryItemFragment =
+			ItemInstance->GetFragmentByClass<UDurabilityInventoryItemFragment>();
+
+		if (ensureAlways(IsValid(DurabilityInventoryItemFragment)))
+		{
+			DurabilityInventoryItemFragment->ReduceDurability(ItemInstance, 1);
+		}
 	}
 
 private:
@@ -83,4 +116,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	float DestructiveMinRadius = 100;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bUseDurability;
 };

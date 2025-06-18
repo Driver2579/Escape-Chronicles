@@ -29,6 +29,11 @@ public:
 		return HoldingViewData[ItemInstance].SpawnedActor;
 	}
 
+	const TMap<TObjectPtr<UInventoryItemInstance>, FHoldingViewDataItem>& GetHoldingViewData() const
+	{
+		return HoldingViewData;
+	}
+
 	virtual void StartHolding(UInventoryItemInstance* ItemInstance);
 	virtual void StopHolding(UInventoryItemInstance* ItemInstance);
 

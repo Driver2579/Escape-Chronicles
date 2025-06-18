@@ -279,16 +279,12 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 		return;
 	}
 
-	if (UsingWeaponFragment.IsValid())
-	{
-		UsingWeaponFragment->EffectHit(UsingWeapon.Get());
-	}
-
 	UAbilitySystemComponent* InstigatorAbilitySystemComponent = CurrentActorInfo->AbilitySystemComponent.Get();
 
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
 	DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+
 	bPunchHappened = true;
 
 	/**
@@ -373,6 +369,12 @@ void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	bPunchHappened = false;
 	DesiredGameplayEffectClassToApply.Reset();
 
+	if (UsingWeaponFragment.IsValid())
+	{
+		UsingWeaponFragment->EffectHit(UsingWeapon.Get());
+	}
+
+	UsingWeaponFragment = nullptr;
 	UsingWeapon = nullptr;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
