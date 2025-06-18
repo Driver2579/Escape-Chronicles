@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "ActorComponents/InventoryManagerComponent.h"
-#include "Characters/EscapeChroniclesCharacter.h"
 #include "UI/Widgets/UserWidgets/ItemSlotsWidget.h"
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "InventoryMenuWidget.generated.h"
+
+class UCommonButtonBase;
 
 // Inventory menu screen widget
 UCLASS()
@@ -24,6 +25,9 @@ private:
 
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UItemSlotsWidget> ClothesInventoryWidget;
+
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCommonButtonBase> ExitButton;
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag MainInventoryTypeTag;

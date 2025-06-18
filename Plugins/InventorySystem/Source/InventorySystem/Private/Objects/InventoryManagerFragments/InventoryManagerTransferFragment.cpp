@@ -61,6 +61,7 @@ bool UInventoryManagerTransferItemsFragment::Server_TransferItems_Validate(const
 {
 	const UInventoryManagerComponent* FromInventoryManager = TransferItemsData.FromInventoryManager.Get();
 	const UInventoryManagerComponent* ToInventoryManager = TransferItemsData.ToInventoryManager.Get();
+	const UInventoryManagerComponent* Owner = GetInventoryManager();
 
 	const UInventoryManagerTransferItemsFragment* FromInventoryManagerTransferItemsFragment =
 		FromInventoryManager->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
@@ -68,7 +69,8 @@ bool UInventoryManagerTransferItemsFragment::Server_TransferItems_Validate(const
 	const UInventoryManagerTransferItemsFragment* ToInventoryManagerTransferItemsFragment =
 		ToInventoryManager->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
 
-	const UInventoryManagerComponent* Owner = GetInventoryManager();
+	const UInventoryManagerTransferItemsFragment* OwnerInventoryManagerTransferItemsFragment =
+		ToInventoryManager->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
 
 	const bool bSuccessValidation = ensureAlways(IsValid(FromInventoryManagerTransferItemsFragment)) &&
 		ensureAlways(IsValid(FromInventoryManagerTransferItemsFragment)) && ensureAlways(IsValid(Owner));
@@ -93,7 +95,8 @@ bool UInventoryManagerTransferItemsFragment::Server_TransferItems_Validate(const
 		}
 	}
 
-	return false;
+	return FromInventoryManager == ToInventoryManager &&
+		OwnerInventoryManagerTransferItemsFragment->HasInventoryAccess(FromInventoryManagerTransferItemsFragment);
 }
 
 void UInventoryManagerTransferItemsFragment::Server_TransferItems_Implementation(
@@ -111,19 +114,19 @@ void UInventoryManagerTransferItemsFragment::Server_TransferItems_Implementation
 		FromInventoryManager->GetItemInstance(TransferItemsData.FromSlotIndex, TransferItemsData.FromSlotTypeTag);
 
 	const UInventoryItemInstance* ToItemInstance =
-		FromInventoryManager->GetItemInstance(TransferItemsData.ToSlotIndex, TransferItemsData.ToSlotTypeTag);
+		ToInventoryManager->GetItemInstance(TransferItemsData.ToSlotIndex, TransferItemsData.ToSlotTypeTag);
 
-	if (IsValid(ToItemInstance))
+	if (IsValid(FromItemInstance))
 	{
-		const bool bSuccess = ensureAlways(FromInventoryManager->DeleteItem(TransferItemsData.ToSlotIndex,
-				TransferItemsData.ToSlotTypeTag));
+		const bool bSuccess = ensureAlways(FromInventoryManager->DeleteItem(TransferItemsData.FromSlotIndex,
+				TransferItemsData.FromSlotTypeTag));
 
 		if (!bSuccess) return;
 	}
-	if (IsValid(FromItemInstance))
+	if (IsValid(ToItemInstance))
 	{
-		const bool bSuccess = ensureAlways(ToInventoryManager->DeleteItem(TransferItemsData.FromSlotIndex,
-			TransferItemsData.FromSlotTypeTag));
+		const bool bSuccess = ensureAlways(ToInventoryManager->DeleteItem(TransferItemsData.ToSlotIndex,
+			TransferItemsData.ToSlotTypeTag));
 
 		if (!bSuccess) return;
 	}
