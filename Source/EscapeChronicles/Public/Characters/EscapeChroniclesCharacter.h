@@ -7,7 +7,9 @@
 #include "AbilitySystemInterface.h"
 #include "Interfaces/Saveable.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UInventoryManagerComponent;
@@ -72,6 +74,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
+
+	UFUNCTION(BlueprintCallable)
+	bool IsHoldingItem() const { return bHoldingItem; }
 
 	virtual void PostLoad() override;
 
@@ -254,6 +259,11 @@ private:
 
 	// Mesh rotation on BeginPlay
 	FRotator InitialMeshRotation;
+
+	// Whether the mesh is turning now
+	bool bHoldingItem = false;
+
+	void UpdateIsHoldingItem();
 
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed

@@ -34,7 +34,15 @@ struct FInventorySlotsArray : public FFastArraySerializer
 
 	const FInventorySlot& operator[](const int32 Index) const { return Slots[Index]; }
 
-	UInventoryItemInstance* GetInstance(const int32 Index) const { return Slots[Index].Instance; }
+	UInventoryItemInstance* GetInstance(const int32 Index) const
+	{
+		if (Slots.IsValidIndex(Index))
+		{
+			return Slots[Index].Instance;
+		}
+
+		return nullptr;
+	}
 
 	void SetInstance(UInventoryItemInstance* Instance, const int32 Index)
 	{

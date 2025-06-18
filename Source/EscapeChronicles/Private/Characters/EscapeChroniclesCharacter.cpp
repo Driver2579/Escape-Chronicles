@@ -17,6 +17,7 @@
 #include "DefaultMovementSet/NavMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
+#include "Objects/InventoryItemFragments/HoldingViewInventoryItemFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -159,6 +160,22 @@ void AEscapeChroniclesCharacter::BeginPlay()
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
 
 	InitialMeshRotation = MeshComponent->GetRelativeRotation();
+
+	InventoryManagerComponent->OnContentChanged.AddWeakLambda(this, [this]
+	{
+		UpdateIsHoldingItem();
+	});
+
+	UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (ensureAlways(IsValid(InventoryManagerSelectorFragment)))
+	{
+		InventoryManagerSelectorFragment->OnOffsetCurrentSlotIndex.AddWeakLambda(this, [this](int32 CurrentSlotIndex)
+		{
+			UpdateIsHoldingItem();
+		});
+	}
 }
 
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
@@ -633,6 +650,36 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 
 	AbilitySystemComponent->SetLooseGameplayTagCount(EscapeChroniclesGameplayTags::Status_Movement_Mode_Running,
 		CharacterMoverComponent->IsRunGroundSpeedModeActive() ? 1 : 0);
+}
+
+void AEscapeChroniclesCharacter::UpdateIsHoldingItem()
+{
+	const UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (!ensureAlways(IsValid(InventoryManagerSelectorFragment)))
+	{
+		bHoldingItem = false;
+
+		return;
+	}
+
+	const int32 Index = InventoryManagerSelectorFragment->GetCurrentSlotIndex();
+	const FGameplayTag& SlotTypeTag = InventoryManagerSelectorFragment->GetSelectableSlotsTypeTag();
+
+	const UInventoryItemInstance* ItemInstance = InventoryManagerComponent->GetItemInstance(Index, SlotTypeTag);
+
+	if (!IsValid(ItemInstance))
+	{
+		bHoldingItem = false;
+
+		return;
+	}
+
+	const UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
+		ItemInstance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
+
+	bHoldingItem = IsValid(HoldingViewInventoryItemFragment);
 }
 
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,

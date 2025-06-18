@@ -69,6 +69,11 @@ void UInventoryManagerComponent::BeginPlay()
 	// === Construct inventory ===
 
 	InventoryContent.Construct(SlotsNumberByTypes);
+
+	for (UInventoryManagerFragment* Fragment : Fragments)
+	{
+		Fragment->OnManagerInitialized();
+	}
 }
 
 void UInventoryManagerComponent::ReadyForReplication()
