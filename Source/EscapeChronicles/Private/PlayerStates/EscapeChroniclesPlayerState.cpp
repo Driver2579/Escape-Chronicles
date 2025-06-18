@@ -221,6 +221,20 @@ ECharacterRole AEscapeChroniclesPlayerState::GetCharacterRole() const
 	return ECharacterRole::None;
 }
 
+void AEscapeChroniclesPlayerState::SetPlayerNameInternal(const FString& NewName)
+{
+	Super::SetPlayerNameInternal(NewName);
+
+	OnPlayerNameChanged.Broadcast(NewName);
+}
+
+void AEscapeChroniclesPlayerState::OnRep_PlayerName()
+{
+	Super::OnRep_PlayerName();
+
+	OnPlayerNameChanged.Broadcast(GetPlayerName());
+}
+
 void AEscapeChroniclesPlayerState::SetCarryingCharacter(AEscapeChroniclesCharacter* InCarryingCharacter)
 {
 	CarryingCharacter = InCarryingCharacter;

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "DetourCrowdAIController.h"
+#include "Common/Delegates/PlayerStateDelegates.h"
 #include "EscapeChroniclesAIController.generated.h"
 
 class AEscapeChroniclesPlayerState;
@@ -30,8 +31,13 @@ public:
 	virtual void PostInitializeComponents() override;
 
 	virtual void InitPlayerState() override;
+	virtual void OnRep_PlayerState() override;
+
+	void CallOrRegister_OnPlayerStateInitialized(const FOnPlayerStateInitializedDelegate::FDelegate& Callback);
 
 private:
+	FOnPlayerStateInitializedDelegate OnPlayerStateInitialized;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="AI", meta=(AllowPrivateAccess ="true"))
 	TObjectPtr<UStateTreeAIComponent> StateTreeAIComponent;
 

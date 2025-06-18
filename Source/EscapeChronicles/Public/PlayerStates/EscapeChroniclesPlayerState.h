@@ -67,6 +67,10 @@ public:
 	// Returns the role depending on the gameplay tags
 	ECharacterRole GetCharacterRole() const;
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerNameChangedDelegate, const FString& NewPlayerName);
+
+	FOnPlayerNameChangedDelegate OnPlayerNameChanged;
+
 	virtual bool CanBeSavedOrLoaded() const override { return !IsSpectator(); }
 
 	virtual FGenericTeamId GetGenericTeamId() const override { return TeamID; }
@@ -78,6 +82,9 @@ protected:
 	 * SetUniquePlayerID function.
 	 */
 	virtual void OnUniquePlayerIdInitializedOrChanged() {}
+
+	virtual void SetPlayerNameInternal(const FString& NewName) override;
+	virtual void OnRep_PlayerName() override;
 
 private:
 	UPROPERTY(VisibleAnywhere, Category="Ability System")

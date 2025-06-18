@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "Common/Delegates/PlayerStateDelegates.h"
 #include "EscapeChroniclesPlayerController.generated.h"
 
 class AEscapeChroniclesPlayerState;
@@ -14,8 +15,6 @@ class AEscapeChroniclesCharacter;
 class UInputConfig;
 
 struct FInputActionValue;
-
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateInitializedDelegate, AEscapeChroniclesPlayerState* PlayerState)
 
 UCLASS()
 class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerController, public IAbilitySystemInterface
