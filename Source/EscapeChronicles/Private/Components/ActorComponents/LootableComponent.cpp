@@ -25,8 +25,8 @@ void ULootableComponent::OnOpenInventory(UInteractionManagerComponent* Interacti
 #endif
 
 	UInventoryManagerComponent* Inventory = GetOwner()->GetComponentByClass<UInventoryManagerComponent>();
-	
-	UInventoryManagerComponent* InInventory =
+
+	const UInventoryManagerComponent* InInventory =
 		InteractionManagerComponent->GetOwner()->GetComponentByClass<UInventoryManagerComponent>();
 
 	if (!ensureAlways(IsValid(Inventory)) || !ensureAlways(IsValid(InInventory)))
@@ -54,23 +54,26 @@ void ULootableComponent::OnOpenInventory(UInteractionManagerComponent* Interacti
 	}
 }
 
+
 void ULootableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (!GetOwner()->HasAuthority())
+	if (!GetOwner()->HasAuthority() && Looters.Num() > 0)
 	{
 		return;
 	}
 
-	for (TWeakObjectPtr<UInventoryManagerTransferItemsFragment>& Looter : Looters)
+	TArray<TWeakObjectPtr<UInventoryManagerTransferItemsFragment>> LootersToRemove;
+
+	for (const TWeakObjectPtr<UInventoryManagerTransferItemsFragment>& Looter : Looters)
 	{
 		const UInventoryManagerComponent* LooterInventory = Looter->GetInventoryManager();
 
 		if (!ensureAlways(IsValid(LooterInventory)))
 		{
-			return;
+			continue;
 		}
 
 		const float DistanceToLooter =
@@ -78,9 +81,14 @@ void ULootableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 
 		if (DistanceToLooter > MaxLootingDistance)
 		{
-			Looter->TrySetLootInventory(nullptr);
-
-			Looters.Remove(Looter.Get());
+			LootersToRemove.Add(Looter);
 		}
+	}
+
+	for (const TWeakObjectPtr<UInventoryManagerTransferItemsFragment>& Looter : LootersToRemove)
+	{
+		Looter->TrySetLootInventory(nullptr);
+
+		Looters.Remove(Looter);
 	}
 }

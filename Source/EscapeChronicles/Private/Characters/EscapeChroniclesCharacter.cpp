@@ -21,6 +21,8 @@
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "Navigation/CrowdManager.h"
 #include "Net/UnrealNetwork.h"
+#include "Objects/InventoryItemFragments/HoldingViewInventoryItemFragment.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerTransferItemsFragment.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
@@ -55,6 +57,8 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	MeshComponent->SetUsingAbsoluteRotation(true);
 
 	CarryCharacterComponent = CreateDefaultSubobject<UCarryCharacterComponent>(TEXT("Carry Character Component"));
+
+	LootableComponent = CreateDefaultSubobject<ULootableComponent>(TEXT("Lootable Component"));
 
 #if WITH_EDITORONLY_DATA
 	ArrowComponent = CreateEditorOnlyDefaultSubobject<UArrowComponent>(TEXT("Arrow"));
@@ -205,6 +209,22 @@ void AEscapeChroniclesCharacter::BeginPlay()
 
 	DefaultMeshCollisionProfileName = MeshComponent->GetCollisionProfileName();
 	DefaultCapsuleCollisionProfileName = CapsuleComponent->GetCollisionProfileName();
+
+	InventoryManagerComponent->OnContentChanged.AddWeakLambda(this, [this]
+	{
+		UpdateIsHoldingItem();
+	});
+
+	UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (ensureAlways(IsValid(InventoryManagerSelectorFragment)))
+	{
+		InventoryManagerSelectorFragment->OnOffsetCurrentSlotIndex.AddWeakLambda(this, [this](int32 CurrentSlotIndex)
+		{
+			UpdateIsHoldingItem();
+		});
+	}
 }
 
 void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
@@ -708,6 +728,36 @@ void AEscapeChroniclesCharacter::SyncGroundSpeedModeTagsWithAbilitySystem() cons
 		CharacterMoverComponent->IsRunGroundSpeedModeActive() ? 1 : 0);
 }
 
+void AEscapeChroniclesCharacter::UpdateIsHoldingItem()
+{
+	const UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (!ensureAlways(IsValid(InventoryManagerSelectorFragment)))
+	{
+		bHoldingItem = false;
+
+		return;
+	}
+
+	const int32 Index = InventoryManagerSelectorFragment->GetCurrentSlotIndex();
+	const FGameplayTag& SlotTypeTag = InventoryManagerSelectorFragment->GetSelectableSlotsTypeTag();
+
+	const UInventoryItemInstance* ItemInstance = InventoryManagerComponent->GetItemInstance(Index, SlotTypeTag);
+
+	if (!IsValid(ItemInstance))
+	{
+		bHoldingItem = false;
+
+		return;
+	}
+
+	const UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
+		ItemInstance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
+
+	bHoldingItem = IsValid(HoldingViewInventoryItemFragment);
+}
+
 void AEscapeChroniclesCharacter::SyncStancesTagsWithAbilitySystem(const EStanceMode OldStance,
 	const EStanceMode NewStance) const
 {
@@ -805,6 +855,8 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
 		MeshComponent->WakeAllRigidBodies();
 
+		SetCanBeLooted(true);
+
 		if (ensureAlways(!FaintedGameplayEffectClass.IsNull()))
 		{
 			if (!LoadFaintedGameplayEffectClassHandle.IsValid())
@@ -825,12 +877,36 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		MeshComponent->PutAllRigidBodiesToSleep();
 		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
 
+		SetCanBeLooted(false);
+
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
 			AbilitySystemComponent->RemoveActiveGameplayEffect(FaintedGameplayEffectHandle);
 			FaintedGameplayEffectHandle.Invalidate();
 		}
 	}
+}
+
+void AEscapeChroniclesCharacter::SetCanBeLooted(bool bValue)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	LootableComponent->SetCanInteract(bValue);
+
+	UInventoryManagerTransferItemsFragment* InventoryManagerTransferItemsFragment =
+		InventoryManagerComponent->GetFragmentByClass<UInventoryManagerTransferItemsFragment>();
+
+	if (!IsValid(InventoryManagerTransferItemsFragment))
+	{
+		return;
+	}
+
+	bValue ?
+		InventoryManagerTransferItemsFragment->SetInventoryAccess(EInventoryAccess::Public) :
+		InventoryManagerTransferItemsFragment->SetInventoryAccess(EInventoryAccess::Private);
 }
 
 void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)

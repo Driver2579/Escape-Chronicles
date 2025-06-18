@@ -7,6 +7,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "LootingMenuWidget.generated.h"
 
+class UCommonButtonBase;
 class UInventoryManagerComponent;
 class UItemSlotsWidget;
 
@@ -26,16 +27,19 @@ private:
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UItemSlotsWidget> LootingInventoryWidget;
 
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCommonButtonBase> ExitButton;
+
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag OwningMainInventoryTypeTag;
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag LootingMainInventoryTypeTag;
-	
+
 	TWeakObjectPtr<UInventoryManagerComponent> OwningInventoryManager;
 	TWeakObjectPtr<UInventoryManagerComponent> LootingInventoryManager;
 
-	/*void OnOwningInventoryContentChanged() const
+	void OnOwningInventoryContentChanged() const
 	{
 		UpdateOwningInventoryWidget(OwningMainInventoryTypeTag);
 	}
@@ -43,8 +47,8 @@ private:
 	void OnLootingInventoryContentChanged() const
 	{
 		UpdateLootingInventoryWidget(LootingMainInventoryTypeTag);
-	}*/
+	}
 
-	//static void UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag);
-	//static void UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag);
+	void UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
+	void UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
 };

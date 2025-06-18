@@ -8,8 +8,11 @@
 #include "ActiveGameplayEffectHandle.h"
 #include "GenericTeamAgentInterface.h"
 #include "Interfaces/Saveable.h"
+#include "ActorComponents/InventoryManagerComponent.h"
 #include "Navigation/CrowdAgentInterface.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
+#include "Components/ActorComponents/LootableComponent.h"
+#include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
 class UCarryCharacterComponent;
@@ -69,6 +72,8 @@ public:
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
+	ULootableComponent* GetLootableComponent() const { return LootableComponent; }
+
 	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
 	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
 
@@ -87,6 +92,9 @@ public:
 	bool HasAnyMeshControllingStateTags() const;
 
 	virtual void OnPreSaveObject() override;
+
+	UFUNCTION(BlueprintCallable)
+	bool IsHoldingItem() const { return bHoldingItem; }
 
 	virtual void PostLoad() override;
 
@@ -301,6 +309,9 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<ULootableComponent> LootableComponent;
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -322,6 +333,11 @@ private:
 
 	//  Mesh attach parent on BeginPlay
 	TWeakObjectPtr<USceneComponent> InitialMeshAttachParent;
+
+	// Whether the mesh is turning now
+	bool bHoldingItem = false;
+
+	void UpdateIsHoldingItem();
 
 	/**
 	 * Synchronizes all stances' tags from CharacterMoverComponent with an ability system component based on the passed
@@ -346,6 +362,8 @@ private:
 	 * disabled, and the mesh becomes a ragdoll)
 	 */
 	void UpdateFaintedState();
+
+	void SetCanBeLooted(bool bValue);
 
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;

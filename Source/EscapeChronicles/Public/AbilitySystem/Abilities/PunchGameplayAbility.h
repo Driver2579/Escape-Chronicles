@@ -7,6 +7,8 @@
 #include "AbilitySystem/Abilities/EscapeChroniclesGameplayAbility.h"
 #include "PunchGameplayAbility.generated.h"
 
+class UInventoryItemInstance;
+class UWeaponInventoryItemFragment;
 struct FStreamableHandle;
 
 // Defines the configuration for a single punch animation and its associated collision
@@ -73,6 +75,8 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTagContainer BlockingPunchesTags; 
 
+	void SetupUsingWeapon();
+
 	// Initializes the collision used to detect punch hits
 	bool SetupDamageCollision();
 
@@ -98,6 +102,9 @@ private:
 
 	// Unloads a previously loaded asset using its handle
 	static void UnloadSoftObject(TSharedPtr<FStreamableHandle>& Handle);
+
+	TWeakObjectPtr<UInventoryItemInstance> UsingWeapon;
+	TWeakObjectPtr<UWeaponInventoryItemFragment> UsingWeaponFragment;
 
 	// Delegate handles for gameplay event tags (used to remove safely)
 	FDelegateHandle OnStartDamageFrameEventTagDelegateHandle;
