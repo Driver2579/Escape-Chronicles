@@ -17,6 +17,11 @@ void AApplyGameplayEffectZone::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 #if DO_ENSURE
 	ensureAlways(!GameplayEffectClass.IsNull());
 #endif
@@ -119,8 +124,7 @@ void AApplyGameplayEffectZone::ApplyGameplayEffectChecked(UAbilitySystemComponen
 {
 	// Apply gameplay effect
 	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
-		GameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, AbilitySystemComponent->MakeEffectContext(),
-		AbilitySystemComponent->GetPredictionKeyForNewAction());
+		GameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1, AbilitySystemComponent->MakeEffectContext());
 
 	// If we successfully applied the gameplay effect and got a valid handle, then remember it
 	if (ActiveGameplayEffectHandle.IsValid())
@@ -131,6 +135,11 @@ void AApplyGameplayEffectZone::ApplyGameplayEffectChecked(UAbilitySystemComponen
 
 void AApplyGameplayEffectZone::NotifyActorEndOverlap(AActor* OtherActor)
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+
 	UAbilitySystemComponent* AbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(
 		OtherActor, false);
 
@@ -175,14 +184,8 @@ void AApplyGameplayEffectZone::NotifyActorEndOverlap(AActor* OtherActor)
 		return;
 	}
 
-	/**
-	 * Remove gameplay effect from the actor, but first check if we are the server because removing gameplay effects
-	 * predictively on clients is not supported 🤡.
-	 */
-	if (HasAuthority())
-	{
-		AbilitySystemComponent->RemoveActiveGameplayEffect(*ActiveGameplayEffectHandle);
-	}
+	// Remove gameplay effect from the actor
+	AbilitySystemComponent->RemoveActiveGameplayEffect(*ActiveGameplayEffectHandle);
 
 	// Forget about a gameplay effect handle
 	ActorsWithActiveGameplayEffects.Remove(AbilitySystemComponent);
