@@ -19,6 +19,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_DropItem(const int32 SlotIndex, const FGameplayTag& SlotsType);
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_PreDropItem(const int32 SlotIndex, const FGameplayTag& SlotsType);
+
 private:
 	// Class used for dropping away item instances
 	UPROPERTY(EditDefaultsOnly)

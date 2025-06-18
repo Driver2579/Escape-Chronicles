@@ -4,9 +4,11 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/Structs/CombatEvents.h"
 #include "Engine/AssetManager.h"
 #include "Engine/StreamableManager.h"
+#include "Objects/InventoryItemFragments/WeaponInventoryItemFragment.h"
 
 void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
@@ -20,6 +22,8 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	check(CurrentActorInfo->AbilitySystemComponent.IsValid());
 #endif
 
+	SetupUsingWeapon();
+
 	const bool bSuccess = CommitAbility(Handle, ActorInfo, ActivationInfo) && LoadAndPlayAnimMontage() &&
 		LoadGameplayEffects() && SetupDamageCollision();
 
@@ -29,8 +33,71 @@ void UPunchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	}
 }
 
+void UPunchGameplayAbility::SetupUsingWeapon()
+{
+	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(CurrentActorInfo->AvatarActor);
+
+	if (!ensureAlways(IsValid(Character)))
+	{
+		return;
+	}
+
+	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
+
+	if (!ensureAlways(IsValid(Inventory)))
+	{
+		return;
+	}
+
+	const UInventoryManagerSelectorFragment* InventoryManagerSelectorFragment =
+		Inventory->GetFragmentByClass<UInventoryManagerSelectorFragment>();
+
+	if (!ensureAlways(IsValid(InventoryManagerSelectorFragment)))
+	{
+		return;
+	}
+
+	const int32 Index = InventoryManagerSelectorFragment->GetCurrentSlotIndex();
+	const FGameplayTag& SlotTypeTag = InventoryManagerSelectorFragment->GetSelectableSlotsTypeTag();
+
+	UInventoryItemInstance* ItemInstance = Inventory->GetItemInstance(Index, SlotTypeTag);
+
+	if (!IsValid(ItemInstance))
+	{
+		return;
+	}
+
+	UWeaponInventoryItemFragment* WeaponInventoryItemFragment =
+		ItemInstance->GetFragmentByClass<UWeaponInventoryItemFragment>();
+
+	if (!IsValid(WeaponInventoryItemFragment))
+	{
+		return;
+	}
+
+	UsingWeaponFragment = WeaponInventoryItemFragment;
+	UsingWeapon = ItemInstance;
+}
+
 bool UPunchGameplayAbility::SetupDamageCollision()
 {
+	if (UsingWeaponFragment.IsValid() && ensureAlways(UsingWeapon.IsValid()))
+	{
+		const AActor* UsingWeaponActor = UsingWeaponFragment->GetActor(UsingWeapon.Get());
+
+		if (!ensureAlways(IsValid(UsingWeaponActor)))
+		{
+			return false;
+		}
+
+		DesiredDamageCollision =
+			UsingWeaponActor->FindComponentByTag<UPrimitiveComponent>(UsingWeaponFragment->GetDamageCollisionTag());
+
+		RegisterPunchGameplayEvents();
+
+		return true;
+	}
+
 	TWeakObjectPtr<UPrimitiveComponent>& DamageCollision = MontagesQueue[CurrentConfigurationIndex].DamageCollision;
 
 	// Search for a collision with the specified tag and assign it
@@ -93,6 +160,14 @@ bool UPunchGameplayAbility::LoadAndPlayAnimMontage()
 	check(MontagesQueue.IsValidIndex(CurrentConfigurationIndex));
 #endif
 
+	if (UsingWeaponFragment.IsValid())
+	{
+		LoadCurrentAnimMontageHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+			UsingWeaponFragment->GetAnimMontage().ToSoftObjectPath(), FStreamableDelegate::CreateUObject(this,
+				&ThisClass::OnAnimMontageLoaded));
+		return true;
+	}
+
 	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = MontagesQueue[CurrentConfigurationIndex].AnimMontage;
 
 	if (!ensureAlways(!DesiredAnimMontage.IsNull()))
@@ -133,28 +208,30 @@ void UPunchGameplayAbility::OnAnimMontageLoaded()
 	check(MontagesQueue.IsValidIndex(CurrentConfigurationIndex));
 #endif
 
-	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = MontagesQueue[CurrentConfigurationIndex].AnimMontage;
+	const TSoftObjectPtr<UAnimMontage>& DesiredAnimMontage = UsingWeaponFragment.IsValid() ?
+		UsingWeaponFragment->GetAnimMontage() :
+		MontagesQueue[CurrentConfigurationIndex].AnimMontage;
 	
 	if (!ensureAlways(DesiredAnimMontage.IsValid()))
-	{      
+	{
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 
 		return;
 	}
 
 	// === Play animation and bind its end as end of ability ===
-	
+
 	CurrentActorInfo->AbilitySystemComponent->PlayMontage(this, CurrentActivationInfo, DesiredAnimMontage.Get(), 1);
 	
 	UAnimInstance* AnimInstance = CurrentActorInfo->GetAnimInstance();
 
 	if (!ensureAlways(IsValid(AnimInstance)))
-	{      
+	{
 		CancelAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true);
 
 		return;
 	}
-	
+
 	FOnMontageBlendingOutStarted OnAnimMontageBlendingOutDelegate =
 		FOnMontageBlendingOutStarted::CreateUObject(this, &ThisClass::OnAnimMontageBlendingOut);
 
@@ -207,6 +284,7 @@ void UPunchGameplayAbility::OnHitBoxBeginOverlap(UPrimitiveComponent* Overlapped
 	TargetAbilitySystemComponent = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 
 	DesiredDamageCollision->OnComponentBeginOverlap.RemoveDynamic(this, &ThisClass::OnHitBoxBeginOverlap);
+
 	bPunchHappened = true;
 
 	/**
@@ -290,6 +368,14 @@ void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	TargetAbilitySystemComponent = nullptr;
 	bPunchHappened = false;
 	DesiredGameplayEffectClassToApply.Reset();
-	
+
+	if (UsingWeaponFragment.IsValid())
+	{
+		UsingWeaponFragment->EffectHit(UsingWeapon.Get());
+	}
+
+	UsingWeaponFragment = nullptr;
+	UsingWeapon = nullptr;
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

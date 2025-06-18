@@ -28,12 +28,23 @@ struct FTransferItemsData
 {
 	GENERATED_BODY()
 
+	UPROPERTY()
 	TWeakObjectPtr<UInventoryManagerComponent> FromInventoryManager;
+	
+	UPROPERTY()
 	FGameplayTag FromSlotTypeTag;
+
+	UPROPERTY()
 	int32 FromSlotIndex;
 
+
+	UPROPERTY()
 	TWeakObjectPtr<UInventoryManagerComponent> ToInventoryManager;
+
+	UPROPERTY()
 	FGameplayTag ToSlotTypeTag;
+
+	UPROPERTY()
 	int32 ToSlotIndex;
 };
 

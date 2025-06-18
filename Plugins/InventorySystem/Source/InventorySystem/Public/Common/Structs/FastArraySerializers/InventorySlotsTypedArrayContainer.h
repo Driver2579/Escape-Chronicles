@@ -33,6 +33,12 @@ struct FInventorySlotsTypedArray : public FFastArraySerializerItem
 		return InventorySlotsTypedArrayContainer;
 	}
 
+	void SetInventorySlotsTypedArrayContainer(
+		const FInventorySlotsTypedArrayContainer* InInventorySlotsTypedArrayContainer)
+	{
+		InventorySlotsTypedArrayContainer = InInventorySlotsTypedArrayContainer;
+	}
+
 	UPROPERTY(Transient)
 	FGameplayTag TypeTag;
 
@@ -110,6 +116,17 @@ struct FInventorySlotsTypedArrayContainer : public FFastArraySerializer
 	{
 		return FastArrayDeltaSerialize<FInventorySlotsTypedArray, FInventorySlotsTypedArrayContainer>(Arrays,
 			DeltaParams, *this);
+	}
+
+	void UpdateOwningRefs(UInventoryManagerComponent* InInventoryManagerComponent)
+	{
+		InventoryManagerComponent = InInventoryManagerComponent;
+		
+		for (FInventorySlotsTypedArray& Item : Arrays)
+		{
+			Item.SetInventorySlotsTypedArrayContainer(this);
+			Item.Array.UpdateOwningRefs(&Item);
+		}
 	}
 
 private:

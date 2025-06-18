@@ -7,6 +7,7 @@
 #include "InventorySystemGameplayTags.h"
 #include "InventoryManagerSelectorFragment.generated.h"
 
+class UHoldingViewInventoryItemFragment;
 class AInventoryPickupItem;
 
 // Stores the slot selector in the inventory array and allows to offset it
@@ -42,16 +43,27 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag SelectableSlotsTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main;
 
+	const FInventorySlotsArray* SelectableSlotsArray;
+
 	// Index of the currently selected slot
 	UPROPERTY(Transient, ReplicatedUsing="OnRep_SelectedSlotIndex")
 	int32 CurrentSlotIndex;
 
+	// Before calling this method, make sure that SelectableSlotsArray is valid
+	void SetCurrentSlotIndex(int32 NewIndex);
+
 	UFUNCTION()
-	void OnRep_SelectedSlotIndex();
+	void OnRep_SelectedSlotIndex(int32 OldIndex);
+
+	void StartHolding(const int32 Index) const;
+	void StopHolding(const int32 Index) const;
 
 #if WITH_EDITORONLY_DATA
 	// Whether to log the CurrentSlotIndex when it changes
 	UPROPERTY(EditDefaultsOnly)
 	bool bLogCurrentSlotIndex = false;
 #endif
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bTryHoldItems = true;
 };

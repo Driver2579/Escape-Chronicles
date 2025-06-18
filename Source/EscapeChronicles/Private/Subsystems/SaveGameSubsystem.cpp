@@ -3,6 +3,7 @@
 #include "Subsystems/SaveGameSubsystem.h"
 
 #include "EngineUtils.h"
+#include "Common/Enums/CharacterRole.h"
 #include "Common/Structs/SaveData/ActorSaveData.h"
 #include "Common/Structs/SaveData/PlayerSaveData.h"
 #include "GameFramework/GameModeBase.h"
@@ -56,6 +57,20 @@ UEscapeChroniclesSaveGame* USaveGameSubsystem::GetOrCreateSaveGameObjectChecked(
 #endif
 
 	return CurrentSaveGameObject;
+}
+
+bool USaveGameSubsystem::CanSaveOrLoadActor(const AActor* Actor) const
+{
+	const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
+
+	// If the actor implements the ISaveable interface, then check if it can be saved or loaded using the interface
+	if (SaveableActor)
+	{
+		return SaveableActor->CanBeSavedOrLoaded();
+	}
+
+	// If the actor doesn't implement the ISaveable interface, then check if it has the SaveableActorTag
+	return Actor->ActorHasTag(SaveableActorTag);
 }
 
 bool USaveGameSubsystem::IsAllowedDynamicallySpawnedActor(const AActor* Actor) const
@@ -158,10 +173,8 @@ void USaveGameSubsystem::SaveGame(FString SlotName, const bool bAsync)
 		check(IsValid(Actor));
 #endif
 
-		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
-
-		// Skip actors that don't implement an interface and actors that currently can't be saved
-		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
+		// Skip actors that can't be saved
+		if (!CanSaveOrLoadActor(Actor))
 		{
 			continue;
 		}
@@ -229,7 +242,6 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
@@ -263,8 +275,8 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 	SaveActorToSaveDataChecked(PlayerState, PlayerStateSaveData);
 	PlayerSaveData.PlayerSpecificActorsSaveData.Add(APlayerState::StaticClass(), PlayerStateSaveData);
 
-	// Save the Pawn if it's valid and implements Saveable interface
-	if (Pawn->Implements<USaveable>())
+	// Save the Pawn if it's valid and implements ISaveable interface or if it has the SaveableActorTag
+	if (Pawn->Implements<USaveable>() || Pawn->ActorHasTag(SaveableActorTag))
 	{
 		FActorSaveData PawnSaveData;
 		SaveActorToSaveDataChecked(Pawn, PawnSaveData);
@@ -273,8 +285,12 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 
 	AController* Controller = PlayerState->GetOwningController();
 
-	// Save the Controller if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
+	// We can save the controller if it implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanSaveController = ensureAlways(IsValid(Controller)) &&
+		(Controller->Implements<USaveable>() || Controller->ActorHasTag(SaveableActorTag));
+
+	// Save the Controller if we can
+	if (bCanSaveController)
 	{
 		FActorSaveData ControllerSaveData;
 		SaveActorToSaveDataChecked(Controller, ControllerSaveData);
@@ -304,7 +320,36 @@ void USaveGameSubsystem::SavePlayerOrBotChecked(UEscapeChroniclesSaveGame* SaveG
 	// If it's not an online player, then check if it's a bot and save it if it is
 	else if (PlayerState->IsABot())
 	{
-		SaveGameObject->AddBotSaveData(UniquePlayerID, PlayerSaveData);
+		UAbilitySystemComponent* AbilitySystemComponent = PlayerState->GetAbilitySystemComponent();
+
+#if DO_CHECK
+		check(IsValid(AbilitySystemComponent));
+#endif
+
+		const ECharacterRole CharacterRole = PlayerState->GetCharacterRole();
+
+		// Save the bot depending on its role
+		switch (CharacterRole)
+		{
+			case ECharacterRole::Prisoner:
+				SaveGameObject->AddPrisonerBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
+
+			case ECharacterRole::Guard:
+				SaveGameObject->AddGuardBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
+
+			case ECharacterRole::Medic:
+				SaveGameObject->AddMedicBotSaveData(UniquePlayerID, PlayerSaveData);
+				break;
+
+			// This should never happen
+			default:
+#if DO_ENSURE
+				ensureAlways(false);
+#endif
+				break;
+		}
 	}
 	// If it's not an online player and not a bot, then it's an offline standalone player. Save his data.
 	else
@@ -317,21 +362,20 @@ void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveDat
 {
 #if DO_CHECK
 	check(IsValid(Actor));
-	check(Actor->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
 	ensureAlways(Actor->HasAuthority());
+	ensureAlways(CanSaveOrLoadActor(Actor));
 #endif
 
-	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+	ISaveable* SaveableActor = Cast<ISaveable>(Actor);
 
-#if DO_ENSURE
-	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
-#endif
-
-	// Let the actor update its properties before saving it
-	SaveableActor->OnPreSaveObject();
+	// Let the actor update its properties before saving it if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPreSaveObject();
+	}
 
 	// Save actor's transform and all properties marked with "SaveGame"
 	OutActorSaveData.ActorSaveData.Transform = Actor->GetTransform();
@@ -374,8 +418,14 @@ void USaveGameSubsystem::SaveActorToSaveDataChecked(AActor* Actor, FActorSaveDat
 		OnGameSaved_Internal.AddRaw(SaveableComponent, &ISaveable::OnGameSaved);
 	}
 
-	// Subscribe an actor to the event to call OnGameSaved on it once the game is saved
-	OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
+	/**
+	 * Subscribe an actor to the event to call OnGameSaved on it once the game is saved if it implements the ISaveable
+	 * interface.
+	 */
+	if (SaveableActor)
+	{
+		OnGameSaved_Internal.AddRaw(SaveableActor, &ISaveable::OnGameSaved);
+	}
 }
 
 void USaveGameSubsystem::SaveObjectSaveGameFields(UObject* Object, TArray<uint8>& OutByteData)
@@ -509,10 +559,8 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 		check(IsValid(Actor));
 #endif
 
-		const ISaveable* SaveableActor = Cast<ISaveable>(Actor);
-
-		// Skip actors that don't implement an interface and actors that currently can't be loaded
-		if (!SaveableActor || !SaveableActor->CanBeSavedOrLoaded())
+		// Skip actors that can't be loaded
+		if (!CanSaveOrLoadActor(Actor))
 		{
 			continue;
 		}
@@ -576,10 +624,20 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 	// Then load players
 	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
 	{
-		LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+		if (!PlayerState->IsABot())
+		{
+			LoadPlayerOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+		}
 	}
 
-	// TODO: Also load bots once bots are implemented
+	// Then load bots
+	for (AEscapeChroniclesPlayerState* PlayerState : PlayerStates)
+	{
+		if (PlayerState->IsABot())
+		{
+			LoadBotOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+		}
+	}
 
 	OnGameLoaded.Broadcast();
 
@@ -587,19 +645,20 @@ void USaveGameSubsystem::OnLoadingSaveGameObjectFinished(const FString& SlotName
 }
 
 bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
-	AEscapeChroniclesPlayerState* PlayerState)
+	AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
 	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(!PlayerState->IsABot());
 #endif
 
-	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveData(SaveGameObject, PlayerState);
+	const FPlayerSaveData* PlayerSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveDataForPlayer(SaveGameObject,
+		PlayerState);
 
 	// Don't load the player if he doesn't have anything to load
 	if (!PlayerSaveData)
@@ -607,55 +666,17 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerIdChecked(const UEscape
 		return false;
 	}
 
-	const FActorSaveData* PlayerStateSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-		APlayerState::StaticClass());
-
-	// Load the PlayerState if its save data is valid
-	if (PlayerStateSaveData)
-	{
-		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
-	}
-
-	APawn* PlayerPawn = PlayerState->GetPawn();
-
-	// Try to load the Pawn if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(PlayerPawn)) && PlayerPawn->Implements<USaveable>())
-	{
-		const FActorSaveData* PawnSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-			APawn::StaticClass());
-
-		// Load the Pawn if its save data is valid
-		if (PawnSaveData)
-		{
-			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
-		}
-	}
-
-	AController* Controller = PlayerState->GetOwningController();
-
-	// Try to load the Controller if it's valid and implements Saveable interface
-	if (ensureAlways(IsValid(Controller)) && Controller->Implements<USaveable>())
-	{
-		const FActorSaveData* ControllerSaveData = PlayerSaveData->PlayerSpecificActorsSaveData.Find(
-			AController::StaticClass());
-
-		// Load the Controller if its save data is valid
-		if (ControllerSaveData)
-		{
-			LoadActorFromSaveDataChecked(Controller, *ControllerSaveData);
-		}
-	}
+	LoadPlayerSpecificActors(*PlayerSaveData, PlayerState);
 
 	return true;
 }
 
-const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveData(
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveDataForPlayer(
 	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState)
 {
 #if DO_CHECK
 	check(IsValid(SaveGameObject));
 	check(IsValid(PlayerState));
-	check(PlayerState->Implements<USaveable>());
 	check(IsValid(PlayerState->GetPlayerController()));
 #endif
 
@@ -672,7 +693,7 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 	 */
 	PlayerState->GenerateUniquePlayerIdIfInvalid();
 
-	FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID_Mutable();
+	FUniquePlayerID UniquePlayerID = PlayerState->GetUniquePlayerID();
 
 	// Load the save data for the player as an online player if the player is online
 	if (PlayerState->IsOnlinePlayer())
@@ -706,6 +727,9 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSa
 		PlayerSaveData = LoadOfflinePlayerSaveDataAndPlayerID(SaveGameObject, UniquePlayerID);
 	}
 
+	// Set the UniquePlayerID once we loaded or generated it
+	PlayerState->SetUniquePlayerID(UniquePlayerID);
+
 	return PlayerSaveData;
 }
 
@@ -737,28 +761,233 @@ const FPlayerSaveData* USaveGameSubsystem::LoadOfflinePlayerSaveDataAndPlayerID(
 	return nullptr;
 }
 
-void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData)
+bool USaveGameSubsystem::LoadBotOrGenerateUniquePlayerIdChecked(const UEscapeChroniclesSaveGame* SaveGameObject,
+	AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(PlayerState->IsABot());
+#endif
+
+	const FPlayerSaveData* BotSaveData = LoadOrGenerateUniquePlayerIdAndLoadSaveDataForBot(SaveGameObject, PlayerState);
+
+	// Don't load the bot if it doesn't have anything to load
+	if (!BotSaveData)
+	{
+		return false;
+	}
+
+	LoadPlayerSpecificActors(*BotSaveData, PlayerState);
+
+	return true;
+}
+
+const FPlayerSaveData* USaveGameSubsystem::LoadOrGenerateUniquePlayerIdAndLoadSaveDataForBot(
+	const UEscapeChroniclesSaveGame* SaveGameObject, AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(SaveGameObject));
+	check(IsValid(PlayerState));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+	ensureAlways(PlayerState->IsABot());
+#endif
+
+	const ECharacterRole CharacterRole = PlayerState->GetCharacterRole();
+
+	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
+
+	/**
+	 * Try to find the save data for a bot if it already has a UniquePlayerID. If failed to find, then return null as
+	 * this bot already has a UniquePlayerID and don't have any save data load.
+	 */
+	if (UniquePlayerID.IsValid())
+	{
+		// Find the save data depending on the bot's role
+		switch (CharacterRole)
+		{
+			case ECharacterRole::Prisoner:
+				return SaveGameObject->FindPrisonerBotSaveData(UniquePlayerID);
+
+			case ECharacterRole::Guard:
+				return SaveGameObject->FindGuardBotSaveData(UniquePlayerID);
+
+			case ECharacterRole::Medic:
+				return SaveGameObject->FindMedicBotSaveData(UniquePlayerID);
+
+			// This should never happen
+			default:
+#if DO_ENSURE
+				ensureAlways(false);
+#endif
+
+				return nullptr;
+		}
+	}
+
+	// Contains the save data of all bots that have the same role as the one we are trying to load
+	const TMap<FUniquePlayerID, FPlayerSaveData>* BotsSaveDataOfBotType;
+
+	// Get the save data depending on the bot's role
+	switch (CharacterRole)
+	{
+		case ECharacterRole::Prisoner:
+			BotsSaveDataOfBotType = &SaveGameObject->GetPrisonerBotsSaveData();
+			break;
+
+		case ECharacterRole::Guard:
+			BotsSaveDataOfBotType = &SaveGameObject->GetGuardBotsSaveData();
+			break;
+
+		case ECharacterRole::Medic:
+			BotsSaveDataOfBotType = &SaveGameObject->GetMedicBotsSaveData();
+			break;
+
+		// This should never happen
+		default:
+#if DO_ENSURE
+			ensureAlways(false);
+#endif
+
+			BotsSaveDataOfBotType = nullptr;
+	}
+
+	if (BotsSaveDataOfBotType)
+	{
+		for (const TPair<FUniquePlayerID, FPlayerSaveData>& BotSaveDataPair : *BotsSaveDataOfBotType)
+		{
+			// Go to the next pair if another bot already took UniquePlayerID from this pair
+			if (RegisteredBotsUniquePlayerIDs.Contains(BotSaveDataPair.Key))
+			{
+				continue;
+			}
+
+			// Initialize the UniquePlayerID of the bot with the first untaken UniquePlayerID from the saved data
+			PlayerState->SetUniquePlayerID(BotSaveDataPair.Key);
+
+#if DO_ENSURE
+			/**
+			 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the SetUniquePlayerID
+			 * function for this bot.
+			 */
+			EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
+
+			// Return the found save data for the bot to load
+			return &BotSaveDataPair.Value;
+		}
+	}
+
+	/**
+	 * If we get here, then we failed to find the UniquePlayerID and the save data to load for the bot. Generate the new
+	 * UniquePlayerID for the bot in this case (it will call the RegisterBotUniquePlayerID function automatically).
+	 */
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+#if DO_ENSURE
+	/**
+	 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the
+	 * GenerateUniquePlayerIdIfInvalid function for this bot.
+	 */
+	EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
+
+	// We didn't find any save data, so return null
+	return nullptr;
+}
+
+void USaveGameSubsystem::LoadPlayerSpecificActors(const FPlayerSaveData& PlayerOrBotSaveData,
+	AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+#if DO_ENSURE
+	ensureAlways(PlayerState->HasAuthority());
+#endif
+
+	APawn* PlayerPawn = PlayerState->GetPawn();
+
+	// We can load the Pawn if it's valid and implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanLoadPawn = ensureAlways(IsValid(PlayerPawn)) &&
+		(PlayerPawn->Implements<USaveable>() || PlayerPawn->ActorHasTag(SaveableActorTag));
+
+	// Try to load the Pawn if we can
+	if (bCanLoadPawn)
+	{
+		const FActorSaveData* PawnSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+			APawn::StaticClass());
+
+		// Load the Pawn if its save data is valid
+		if (PawnSaveData)
+		{
+			LoadActorFromSaveDataChecked(PlayerPawn, *PawnSaveData);
+		}
+	}
+
+	const FActorSaveData* PlayerStateSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+		APlayerState::StaticClass());
+
+	// Load the PlayerState if its save data is valid
+	if (PlayerStateSaveData)
+	{
+		LoadActorFromSaveDataChecked(PlayerState, *PlayerStateSaveData);
+	}
+
+	AController* Controller = PlayerState->GetOwningController();
+
+	// We can load the Controller if it's valid and implements the ISaveable interface or has the SaveableActorTag
+	const bool bCanLoadController = ensureAlways(IsValid(Controller)) &&
+		(Controller->Implements<USaveable>() || Controller->ActorHasTag(SaveableActorTag));
+
+	// Try to load the Controller if we can
+	if (bCanLoadController)
+	{
+		const FActorSaveData* ControllerSaveData = PlayerOrBotSaveData.PlayerSpecificActorsSaveData.Find(
+			AController::StaticClass());
+
+		// Load the Controller if its save data is valid
+		if (ControllerSaveData)
+		{
+			LoadActorFromSaveDataChecked(Controller, *ControllerSaveData);
+		}
+	}
+}
+
+void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActorSaveData& ActorSaveData) const
 {
 #if DO_CHECK
 	check(IsValid(Actor));
-	check(Actor->Implements<USaveable>());
 #endif
 
 #if DO_ENSURE
 	ensureAlways(Actor->HasAuthority());
+	ensureAlways(CanSaveOrLoadActor(Actor));
 #endif
 
-	ISaveable* SaveableActor = CastChecked<ISaveable>(Actor);
+	ISaveable* SaveableActor = Cast<ISaveable>(Actor);
 
-#if DO_ENSURE
-	ensureAlways(SaveableActor->CanBeSavedOrLoaded());
-#endif
+	// Notify the actor it's about to be loaded if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPreLoadObject();
+	}
 
-	// Notify the actor it's about to be loaded
-	SaveableActor->OnPreLoadObject();
+	// Load actor's transform if its RootComponent is Movable
+	if (Actor->GetRootComponent()->Mobility == EComponentMobility::Movable)
+	{
+		Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
+	}
 
-	// Load actor's transform and all properties marked with "SaveGame"
-	Actor->SetActorTransform(ActorSaveData.ActorSaveData.Transform);
+	// Load all actor's properties marked with "SaveGame"
 	LoadObjectSaveGameFields(Actor, ActorSaveData.ActorSaveData.ByteData);
 
 	for (UActorComponent* Component : Actor->GetComponents())
@@ -788,8 +1017,8 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 
 		USceneComponent* SceneComponent = Cast<USceneComponent>(Component);
 
-		// Load component's transform if it's a scene component
-		if (SceneComponent)
+		// Load component's transform if it's a movable scene component
+		if (SceneComponent && SceneComponent->Mobility == EComponentMobility::Movable)
 		{
 			SceneComponent->SetRelativeTransform(ComponentSaveData->Transform);
 		}
@@ -801,8 +1030,11 @@ void USaveGameSubsystem::LoadActorFromSaveDataChecked(AActor* Actor, const FActo
 		SaveableComponent->OnPostLoadObject();
 	}
 
-	// Notify the actor it's loaded
-	SaveableActor->OnPostLoadObject();
+	// Notify the actor it's loaded if it implements the ISaveable interface
+	if (SaveableActor)
+	{
+		SaveableActor->OnPostLoadObject();
+	}
 }
 
 void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<uint8>& InByteData)
@@ -820,7 +1052,7 @@ void USaveGameSubsystem::LoadObjectSaveGameFields(UObject* Object, const TArray<
 	Object->Serialize(Ar);
 }
 
-bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPlayerState* PlayerState) const
+bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerID(AEscapeChroniclesPlayerState* PlayerState) const
 {
 #if DO_CHECK
 	check(IsValid(PlayerState));
@@ -833,6 +1065,31 @@ bool USaveGameSubsystem::LoadPlayerOrGenerateUniquePlayerId(AEscapeChroniclesPla
 
 	// Just Generate a UniquePlayerID for the player if we don't have a save game object
 	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+	return false;
+}
+
+bool USaveGameSubsystem::LoadBotOrGenerateUniquePlayerID(AEscapeChroniclesPlayerState* PlayerState) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerState));
+#endif
+
+	if (CurrentSaveGameObject)
+	{
+		return LoadBotOrGenerateUniquePlayerIdChecked(CurrentSaveGameObject, PlayerState);
+	}
+
+	// Just Generate a UniquePlayerID for the bot if we don't have a save game object
+	PlayerState->GenerateUniquePlayerIdIfInvalid();
+
+#if DO_ENSURE
+	/**
+	 * Make sure the bot has called the RegisterBotUniquePlayerID function after we called the
+	 * GenerateUniquePlayerIdIfInvalid function for this bot.
+	 */
+	EnsureBotUniquePlayerIdIsRegistered(PlayerState->GetUniquePlayerID());
+#endif
 
 	return false;
 }

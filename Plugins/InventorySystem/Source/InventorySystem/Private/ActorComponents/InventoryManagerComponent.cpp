@@ -27,6 +27,11 @@ void UInventoryManagerComponent::BeginPlay()
 
 	if (!GetOwner()->HasAuthority())
 	{
+		for (UInventoryManagerFragment* Fragment : Fragments)
+		{
+			Fragment->OnManagerInitialized();
+		}
+
 		return;
 	}
 
@@ -68,6 +73,11 @@ void UInventoryManagerComponent::BeginPlay()
 	// === Construct inventory ===
 
 	InventoryContent.Construct(this, SlotsNumberByTypes);
+
+	for (UInventoryManagerFragment* Fragment : Fragments)
+	{
+		Fragment->OnManagerInitialized();
+	}
 }
 
 void UInventoryManagerComponent::ReadyForReplication()
@@ -179,6 +189,19 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 		AddReplicatedSubObject(ItemInstanceDuplicate);
 	}
 
+#if DO_CHECK
+	check(IsValid(ItemInstanceDuplicate->GetDefinition()));
+#endif
+
+	const UInventoryItemDefinition* ItemDefinitionCDO = ItemInstanceDuplicate->GetDefinition()->GetDefaultObject<
+		UInventoryItemDefinition>();
+
+	// Notify all fragments that the item was added to the slot
+	for (const UInventoryItemFragment* ItemFragment : ItemDefinitionCDO->GetFragments())
+	{
+		ItemFragment->OnItemAddedToSlot(ItemInstanceDuplicate, this, SlotTypeTag, SlotIndex);
+	}
+
 	OnContentChanged.Broadcast();
 
 	return true;
@@ -204,7 +227,7 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	const FInventorySlotsArray& SlotsArray = InventoryContent[SlotsArrayIndex].Array;
 
 #if DO_CHECK
-	checkf(SlotsArray.GetItems().IsValidIndex(SlotIndex), TEXT("Unavailable slot index"))
+	checkf(SlotsArray.GetItems().IsValidIndex(SlotIndex), TEXT("Unavailable slot index"));
 #endif
 
 	if (SlotsArray.IsSlotEmpty(SlotIndex))
@@ -228,13 +251,27 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	// Clear the slot by setting its instance to null
 	InventoryContent.SetInstance(nullptr, SlotsArrayIndex, SlotIndex);
 
+#if DO_CHECK
+	check(IsValid(ItemInstance->GetDefinition()));
+#endif
+
+	const UInventoryItemDefinition* ItemDefinitionCDO = ItemInstance->GetDefinition()->GetDefaultObject<
+		UInventoryItemDefinition>();
+
+	// Notify all fragments that the item was removed from the slot
+	for (const UInventoryItemFragment* ItemFragment : ItemDefinitionCDO->GetFragments())
+	{
+		ItemFragment->OnItemRemovedFromSlot(ItemInstance, this, SlotTypeTag, SlotIndex);
+	}
+
 	OnContentChanged.Broadcast();
 
 	return true;
 }
 
-void UInventoryManagerComponent::OnRep_InventoryContent() const
+void UInventoryManagerComponent::OnRep_InventoryContent()
 {
+	InventoryContent.UpdateOwningRefs(this);
 	OnContentChanged.Broadcast();
 }
 

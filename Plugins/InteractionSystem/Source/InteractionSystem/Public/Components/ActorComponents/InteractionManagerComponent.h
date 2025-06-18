@@ -19,14 +19,11 @@ class INTERACTIONSYSTEM_API UInteractionManagerComponent : public USceneComponen
 
 public:
 	UInteractionManagerComponent();
-	
-	UInteractableComponent* GetSelectedInteractableComponent() const
-	{
-		return SelectedInteractableComponent.Get();
-	}
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,
 		FActorComponentTickFunction* ThisTickFunction) override;
+	
+	UInteractableComponent* GetSelectedInteractableComponent();
 
 	/**
 	 * Attempts interaction with currently selected interactable
@@ -43,6 +40,8 @@ public:
 	
 protected:
 	virtual void BeginPlay() override;
+
+	AController* GetOrInitOwningController();
 
 private:
 	/**
@@ -79,7 +78,7 @@ private:
 	float MaxInteractionDistance = 500.0f;
 
 	// Controller that owns this interaction component 
-	TWeakObjectPtr<AController> OwnerController;
+	TWeakObjectPtr<AController> OwningController;
 
 	// Pool of all interactable components currently in detection range 
 	TArray<TWeakObjectPtr<UInteractableComponent>> InteractableComponentsPool;

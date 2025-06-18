@@ -6,8 +6,11 @@
 #include "AbilitySystemInterface.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "GameplayTagContainer.h"
+#include "Interfaces/Saveable.h"
 #include "ActivitySpot.generated.h"
 
+class ADollOccupyingActivitySpot;
+class AEscapeChroniclesPlayerState;
 struct FOnAttributeChangeData;
 class UInteractionManagerComponent;
 class UCapsuleComponent;
@@ -25,18 +28,26 @@ class UGameplayEffect;
  * - Auto unoccupy when health decreasing.
  */
 UCLASS()
-class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemInterface
+class ESCAPECHRONICLES_API AActivitySpot : public AActor, public IAbilitySystemInterface, public ISaveable
 {
 	GENERATED_BODY()
 	
 public:
 	AActivitySpot();
 
+	UPlayerOwnershipComponent* GetPlayerOwnershipComponent() const { return PlayerOwnershipComponent; }
+
 #if WITH_EDITORONLY_DATA && WITH_EDITOR
 	virtual void OnConstruction(const FTransform& Transform) override;
 #endif
 
-	bool IsOccupied() const { return  CachedOccupyingCharacter != nullptr; }
+	/**
+	 * @return True if the spot is currently occupied either by a character or a doll. False otherwise.
+	 */
+	bool IsOccupied() const
+	{
+		return CachedOccupyingCharacter || !CurrentOccupyingDollClass.IsNull();
+	}
 
 	int32 GetGameplayEffectLevel() const { return EffectLevel; }
 	void SetGameplayEffectLevel(const int32 InEffectLevel) { EffectLevel = InEffectLevel; }
@@ -49,10 +60,11 @@ public:
 
 	/**
 	 * Sets the occupying character for this activity spot. If the spot is already occupied by another character, the
-	 * operation will fail. (Server-only)
+	 * operation will fail. If the spot is occupied by a doll, it will be destroyed.
 	 * @param Character The character to occupy the spot (nullptr to clear occupation).
-	 * @return True if occupation state was changed (occupied or unoccupied), false if the spot is already occupied by
-	 * another character or no change is needed.
+	 * @return True if the occupation state was changed (occupied or unoccupied), false if the spot is already occupied
+	 * by another character or no change is needed.
+	 * @remark This function will work only on server. Clients' calls will be ignored.
 	 */
 	bool SetOccupyingCharacter(AEscapeChroniclesCharacter* Character);
 
@@ -64,13 +76,48 @@ public:
 	 */
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	/**
+	 * Returns a class of the doll that currently occupies the spot, if any.
+	 * @remark A class isn't guaranteed to be loaded.
+	 */
+	void GetOccupyingDollClass(TSoftClassPtr<ADollOccupyingActivitySpot>& OutOccupyingDollClass) const;
+
+	/**
+	 * Spawns a doll of the given class and sets it as an occupying doll.
+	 * @param OccupyingDollClass A class of the doll to spawn and set as an occupying doll.
+	 * @param DollTransformOnOccupy A relative transform that will be applied to the spawned doll after an attachment.
+	 * If nullptr, then the transform for the character attachment will be used.
+	 * @return Whether an occupation was successful. If the spot is already occupied, the function will return false.
+	 * @return False if the function was called on a client.
+	 * @remark This function will not work if the spot is already occupied by anything.
+	 */
+	bool SpawnOccupyingDoll(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+		const FTransform* DollTransformOnOccupy = nullptr);
+
+	/**
+	 * Destroys an occupying doll if any.
+	 * @remark This function will work only on server. Clients' calls won't take any effect and will only waste
+	 * performance.
+	 */
+	void DestroyOccupyingDoll();
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnOccupyingCharacterChanged, AEscapeChroniclesCharacter* NewCharacter);
 
 	// Called when occupation state changes (both occupy and unoccupy)
 	FOnOccupyingCharacterChanged OnOccupyingStateChanged;
 
+	virtual void OnPreLoadObject() override;
+	virtual void OnPostLoadObject() override;
+
 protected:
 	virtual void BeginPlay() override;
+
+	/**
+	 * Tries to set the initialized character as an occupying character for this spot if
+	 * bOccupyWhenOwningPlayerFirstJoined is true, the initialized player or bot wasn't loaded (which means that he
+	 * joined the game for the first time), and it is the player or bot that owns this spot.
+	 */
+	virtual void OnPlayerOrBotInitialized(AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -78,13 +125,13 @@ protected:
 	 * Handles the actual occupation process (Does not change the value of CachedOccupyingCharacter)
 	 * @param Character The character to occupy the spot
 	 */
-	virtual void OccupySpot(AEscapeChroniclesCharacter* Character);
+	virtual void OccupySpotWithCharacter(AEscapeChroniclesCharacter* Character);
 
 	/**
-	 * Handles cleanup when character leaves the spot (Does not change the value of CachedOccupyingCharacter)
+	 * Handles cleanup when a character leaves the spot (Does not change the value of CachedOccupyingCharacter)
 	 * @param Character The character that is unoccupying
 	 */
-	virtual void UnoccupySpot(AEscapeChroniclesCharacter* Character);
+	virtual void UnoccupySpotWithCharacter(AEscapeChroniclesCharacter* Character);
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
@@ -108,7 +155,7 @@ private:
 
 	// Mesh transform for character attachment during occupation
 	UPROPERTY(EditAnywhere)
-	FTransform AttachTransform;
+	FTransform CharacterAttachTransform;
 
 	/**
 	 * Restores character to cached state
@@ -116,12 +163,49 @@ private:
 	 */
 	static void ApplyInitialCharacterData(AEscapeChroniclesCharacter* SkeletalMesh);
 
+	/**
+	 * An actual implementation of the SpawnOccupyingDoll function. This version doesn't check if the class is valid,
+	 * the spot isn't occupied, or if the function is called on a client.
+	 */
+	bool SpawnOccupyingDollChecked(const TSoftClassPtr<ADollOccupyingActivitySpot>& OccupyingDollClass,
+		const FTransform* DollTransformOnOccupy = nullptr);
+
+	/**
+	 * A class of the doll that currently occupies the spot, if any. Doesn't point to a character's class, only points
+	 * to a class of a doll given via the SpawnOccupyingDoll function.\n
+	 * This class pointer is replicated to support IsOccupied function on clients.\n
+	 * This class pointer is saved, and a doll of this class, if it was loaded, will be spawned after it's loaded. 
+	 */
+	UPROPERTY(Transient, Replicated, SaveGame)
+	TSoftClassPtr<ADollOccupyingActivitySpot> CurrentOccupyingDollClass;
+
+	/**
+	 * This property only exists to be able to spawn a doll occupying the spot at the same transform as it was before
+	 * it was saved.
+	 */
+	UPROPERTY(Transient, SaveGame)
+	FTransform CurrentOccupyingDollTransform;
+
+	TSharedPtr<FStreamableHandle> LoadOccupyingDollClassHandle;
+
+	// Spawns a doll attached to the spot at the given transform
+	void OnOccupyingDollClassLoaded(const FTransform SpawnTransform);
+
+	// A doll that currently occupies the spot
+	TWeakObjectPtr<ADollOccupyingActivitySpot> SpawnedOccupyingDoll;
+
 	// === Interaction ===
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 
 	void OnInteract(UInteractionManagerComponent* InteractionManagerComponent);
+
+	/**
+	 * Tries to unoccupy the spot from the currently occupying doll if it occupies the spot by putting it into the
+	 * first available inventory slot of the character. If succeeded, the doll will be destroyed from this spot.
+	 */
+	void MoveOccupyingDollToCharacterInventory(const AEscapeChroniclesCharacter* Character);
 
 	// === Effect ===
 
@@ -161,6 +245,10 @@ private:
 	// Gameplay tags that prevent occupation
 	UPROPERTY(EditAnywhere)
 	FGameplayTagContainer OccupyingBlockedTags;
+
+	// If true, then the owning player or bot will occupy this spot when he first joined the game (i.e., wasn't loaded)
+	UPROPERTY(EditAnywhere)
+	bool bOccupyWhenOwningPlayerFirstJoined = false;
 
 	// === Health Tracking ===
 
