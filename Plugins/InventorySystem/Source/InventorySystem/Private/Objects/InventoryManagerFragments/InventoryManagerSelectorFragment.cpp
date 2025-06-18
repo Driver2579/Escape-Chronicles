@@ -40,22 +40,7 @@ void UInventoryManagerSelectorFragment::OnManagerInitialized()
 
 	Inventory->OnContentChanged.AddWeakLambda(this, [this]
 	{
-		// Start new holding
-		if (bTryHoldItems)
-		{
-			UInventoryItemInstance* ItemInstance = SelectableSlotsArray->GetInstance(CurrentSlotIndex);
-
-			if (IsValid(ItemInstance))
-			{
-				UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
-					ItemInstance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
-
-				if (IsValid(HoldingViewInventoryItemFragment))
-				{
-					HoldingViewInventoryItemFragment->StartHolding(ItemInstance);
-				}
-			}
-		}
+		StartHolding(CurrentSlotIndex);
 	});
 }
 
@@ -100,29 +85,27 @@ void UInventoryManagerSelectorFragment::Server_OffsetCurrentSlotIndex_Implementa
 
 void UInventoryManagerSelectorFragment::SetCurrentSlotIndex(const int32 NewIndex)
 {
-	// Stop Holding
-	if (bTryHoldItems)
-	{
-		UInventoryItemInstance* ItemInstance = SelectableSlotsArray->GetInstance(CurrentSlotIndex);
-
-		if (IsValid(ItemInstance))
-		{
-			UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
-				ItemInstance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
-
-			if (IsValid(HoldingViewInventoryItemFragment))
-			{
-				HoldingViewInventoryItemFragment->StopHolding(ItemInstance);
-			}
-		}
-	}
+	StopHolding(CurrentSlotIndex);
 
 	CurrentSlotIndex = NewIndex;
 
-	// Start new holding
+	StartHolding(CurrentSlotIndex);
+}
+
+void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex(int32 OldIndex)
+{
+	StopHolding(OldIndex);
+
+	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
+
+	StartHolding(CurrentSlotIndex);
+}
+
+void UInventoryManagerSelectorFragment::StartHolding(const int32 Index) const
+{
 	if (bTryHoldItems)
 	{
-		UInventoryItemInstance* ItemInstance = SelectableSlotsArray->GetInstance(CurrentSlotIndex);
+		UInventoryItemInstance* ItemInstance = SelectableSlotsArray->GetInstance(Index);
 
 		if (IsValid(ItemInstance))
 		{
@@ -137,9 +120,23 @@ void UInventoryManagerSelectorFragment::SetCurrentSlotIndex(const int32 NewIndex
 	}
 }
 
-void UInventoryManagerSelectorFragment::OnRep_SelectedSlotIndex()
+void UInventoryManagerSelectorFragment::StopHolding(const int32 Index) const
 {
-	OnOffsetCurrentSlotIndex.Broadcast(CurrentSlotIndex);
+	if (bTryHoldItems)
+	{
+		UInventoryItemInstance* ItemInstance = SelectableSlotsArray->GetInstance(Index);
+
+		if (IsValid(ItemInstance))
+		{
+			UHoldingViewInventoryItemFragment* HoldingViewInventoryItemFragment =
+				ItemInstance->GetFragmentByClass<UHoldingViewInventoryItemFragment>();
+
+			if (IsValid(HoldingViewInventoryItemFragment))
+			{
+				HoldingViewInventoryItemFragment->StopHolding(ItemInstance);
+			}
+		}
+	}
 }
 
 #if WITH_EDITORONLY_DATA && !NO_LOGGING

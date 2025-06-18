@@ -53,7 +53,10 @@ private:
 	void SetCurrentSlotIndex(int32 NewIndex);
 
 	UFUNCTION()
-	void OnRep_SelectedSlotIndex();
+	void OnRep_SelectedSlotIndex(int32 OldIndex);
+
+	void StartHolding(const int32 Index) const;
+	void StopHolding(const int32 Index) const;
 
 #if WITH_EDITORONLY_DATA
 	// Whether to log the CurrentSlotIndex when it changes

@@ -59,7 +59,10 @@ void AInventoryPickupItem::BeginPlay()
 	Super::BeginPlay();
 
 #if DO_CHECK
-	check(ItemInstance)
+	if (HasAuthority())
+	{
+		check(ItemInstance)
+	}
 #endif
 
 	if (HasAuthority() && !ItemInstance->IsInitialized())

@@ -28,6 +28,11 @@ void UInventoryManagerComponent::BeginPlay()
 
 	if (!GetOwner()->HasAuthority())
 	{
+		for (UInventoryManagerFragment* Fragment : Fragments)
+		{
+			Fragment->OnManagerInitialized();
+		}
+
 		return;
 	}
 
