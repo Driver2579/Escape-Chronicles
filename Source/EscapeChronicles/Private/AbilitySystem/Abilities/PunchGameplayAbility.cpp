@@ -369,7 +369,7 @@ void UPunchGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	bPunchHappened = false;
 	DesiredGameplayEffectClassToApply.Reset();
 
-	if (UsingWeaponFragment.IsValid())
+	if (HasAuthority(&ActivationInfo) && UsingWeaponFragment.IsValid())
 	{
 		UsingWeaponFragment->EffectHit(UsingWeapon.Get());
 	}
