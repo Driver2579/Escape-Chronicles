@@ -7,6 +7,7 @@
 #include "UI/Widgets/UserWidgets/RootContainerWidget.h"
 #include "CommonUIUtils.h"
 #include "PromptWidget.h"
+#include "HUDs/EscapeChroniclesHUD.h"
 #include "RoutableWidget.generated.h"
 
 enum class ERoutableInputMode : uint8;
@@ -27,10 +28,14 @@ public:
 	/**
 	 * Pushes a new widget onto the main content stack
 	 * @param WidgetClass Class of widget to spawn
+	 * @param bOverrideInput Do need to override the input method
+	 * @param OverrideInputMode InputMode to which will be overrides if necessary
+	 * @param bOverrideCursorVisible CursorVisible to which will be overrides if necessary
 	 * @return Pointer to created widget or nullptr on failure
 	 */
 	template <typename T = URoutableWidget>
-	T* PushWidget(const TSubclassOf<URoutableWidget> WidgetClass)
+	T* PushWidget(const TSubclassOf<URoutableWidget> WidgetClass, const bool bOverrideInput = false,
+		const ERouteInputMode OverrideInputMode = ERouteInputMode::UI, const bool bOverrideCursorVisible = true)
 	{
 		const URootContainerWidget* RootWidget = GetOwningRootWidget();
 		
@@ -46,7 +51,19 @@ public:
 			return nullptr;
 		}
 	
-		return ContentStack->AddWidget<T>(WidgetClass);
+		T* Result = ContentStack->AddWidget<T>(WidgetClass);
+
+		if (bOverrideInput)
+		{
+			const APlayerController* PlayerController = GetOwningPlayer();
+
+			if (ensureAlways(PlayerController))
+			{
+				PlayerController->GetHUD<AEscapeChroniclesHUD>()->SetInputMode(OverrideInputMode, bOverrideCursorVisible);
+			}
+		}
+
+		return Result;
 	}
 
 	/**

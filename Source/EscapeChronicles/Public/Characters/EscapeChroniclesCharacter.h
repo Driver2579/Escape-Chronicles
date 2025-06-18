@@ -5,13 +5,15 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
-#include "Interfaces/Saveable.h"
 #include "ActiveGameplayEffectHandle.h"
+#include "Interfaces/Saveable.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
+#include "Components/ActorComponents/LootableComponent.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UCarryCharacterComponent;
 class UInventoryManagerComponent;
 class UBoxComponent;
 class UInteractionManagerComponent;
@@ -56,14 +58,21 @@ public:
 	// Returns InteractionManagerComponent subobject
 	UInteractionManagerComponent* GetInteractionManagerComponent() const { return InteractionManagerComponent; }
 
+	UCarryCharacterComponent* GetCarryCharacterComponent() const { return CarryCharacterComponent; }
+
 	// Returns CharacterMoverComponent subobject
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
+	ULootableComponent* GetLootableComponent() const { return LootableComponent; }
+
+	USceneComponent* GetInitialMeshAttachParent() const { return InitialMeshAttachParent.Get(); }
+	FTransform GetInitialMeshTransform() const { return InitialMeshTransform; }
+	
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
@@ -74,6 +83,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
+
+	UFUNCTION(BlueprintCallable)
+	bool HasAnyMeshControllingStateTags() const;
+
+	virtual void OnPreSaveObject() override;
 
 	UFUNCTION(BlueprintCallable)
 	bool IsHoldingItem() const { return bHoldingItem; }
@@ -118,6 +132,8 @@ public:
 	void ResetGroundSpeedMode(const EGroundSpeedMode GroundSpeedModeOverrideToReset);
 
 protected:
+	virtual void PostInitializeComponents() override;
+
 	virtual void BeginPlay() override;
 
 	virtual void OnPlayerStateChanged(APlayerState* NewPlayerState, APlayerState* OldPlayerState) override;
@@ -143,6 +159,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	/**
+	 * If a character has at least one such tag, it means that it is in a mesh controlling state. This is useful when
+	 * you need to block a character to process it in a specific way (put it on a chair, enable ragdoll physics).
+	 * This includes:
+	 * - Disabling capsule collision
+	 * - Enabling mesh doll collision
+	 * - Switching to NullMovement
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
+	FGameplayTagContainer MeshControllingStateTags;
+
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
@@ -154,10 +181,6 @@ protected:
 	// ActorAndViewDelta interpolation speed when rotating mesh
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
-
-	// Tags that block mesh rotation
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
-	FGameplayTagContainer BlockTurningTags;
 
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
@@ -241,6 +264,12 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UInventoryManagerComponent> InventoryManagerComponent;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UCarryCharacterComponent> CarryCharacterComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<ULootableComponent> LootableComponent;
+
 	// Movement input (intent or velocity) the last time we had one that wasn't zero
 	FVector LastAffirmativeMoveInput = FVector::ZeroVector;
 
@@ -257,8 +286,11 @@ private:
 	// Whether the mesh is turning now
 	bool bTurning = false;
 
-	// Mesh rotation on BeginPlay
-	FRotator InitialMeshRotation;
+	// Mesh transform on BeginPlay
+	FTransform InitialMeshTransform;
+
+	//  Mesh attach parent on BeginPlay
+	TWeakObjectPtr<USceneComponent> InitialMeshAttachParent;
 
 	// Whether the mesh is turning now
 	bool bHoldingItem = false;
@@ -289,12 +321,19 @@ private:
 	 */
 	void UpdateFaintedState();
 
+	void SetCanBeLooted(bool bValue);
+
 	FName DefaultMeshCollisionProfileName;
 	FName DefaultCapsuleCollisionProfileName;
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
 
-	void OnFaintedGameplayEffectClassLoaded();
+	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
+
+	// Checks if has a tag that block movement and does so
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count);
+
+	void MoveCapsuleToMesh();
 };

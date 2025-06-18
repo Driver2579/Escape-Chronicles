@@ -62,7 +62,13 @@ public:
 
 	// Returns to the root state of the HUD 
 	void GoToRoot() const;
-	
+
+	/**
+	 * Updates the player's input mode and cursor visibility.
+	 * @param NewInputMode Desired input mode.
+	 * @param bNewCursorVisible Whether the cursor should be visible.
+	 */
+		void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 protected:
 	virtual void BeginPlay() override;
 	
@@ -90,11 +96,4 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, FHUDRoute> Routes;
-
-	/**
-	 * Updates the player's input mode and cursor visibility.
-	 * @param NewInputMode Desired input mode.
-	 * @param bNewCursorVisible Whether the cursor should be visible.
-	 */
-	void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 };

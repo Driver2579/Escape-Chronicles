@@ -5,6 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
+#include "Interfaces/StoringItemInstances.h"
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
@@ -16,8 +17,8 @@ class UInventoryManagerFragment;
  * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
  */
-UCLASS(Blueprintable, Const)
-class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent
+UCLASS(Blueprintable, Const, meta=(BlueprintSpawnableComponent))
+class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
 	
@@ -26,7 +27,7 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	const FInventorySlotsTypedArrayContainer& GetInventoryContent() { return InventoryContent; }
+	const FInventorySlotsTypedArrayContainer& GetInventoryContent() const { return InventoryContent; }
 
 	// Returns the first fragment of type T, or nullptr if none exists
 	template<typename T>
@@ -58,6 +59,18 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
+	/**
+	 * Method for obtaining data on item location in inventory
+	 * @return true if the search was successful
+	 */
+	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
+		UInventoryItemInstance* ItemInstance) const;
+
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
+
+	// Executes Action for each valid item instance in inventory
+	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+
 	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 
 	// Called when the contents of inventory slot changed
@@ -67,9 +80,6 @@ protected:
 	virtual void BeginPlay() override;
 
 	virtual void ReadyForReplication() override;
-
-	// Executes Action for each valid item instance in inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
 
 #if WITH_EDITORONLY_DATA && !NO_LOGGING
 	// Logs an information about the content of the inventory
@@ -91,11 +101,11 @@ private:
 	TArray<TObjectPtr<UInventoryManagerFragment>> Fragments;
 
 	// Inventory storage with typed slots containers
-	UPROPERTY(ReplicatedUsing="OnRep_InventoryContent")
+	UPROPERTY(Transient, ReplicatedUsing="OnRep_InventoryContent")
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()
-	void OnRep_InventoryContent(FInventorySlotsTypedArrayContainer& Test) const;
+	void OnRep_InventoryContent();
 
 #if WITH_EDITORONLY_DATA
 	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged
