@@ -26,6 +26,7 @@ void UClothingInventoryItemFragment::OnItemAddedToSlot(UInventoryItemInstance* I
 #endif
 
 #if DO_CHECK
+	check(IsValid(InventoryManagerComponent));
 	check(IsValid(ItemInstance));
 #endif
 

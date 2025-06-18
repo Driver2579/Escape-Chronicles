@@ -17,7 +17,7 @@ public:
 	 * Attempts to use an item. If the item was used successfully, it will be removed from the inventory.
 	 * @return True if the item was used successfully, false otherwise.
 	 */
-	bool TryUseItem(UInventoryManagerComponent* InventoryManager, UInventoryItemInstance* ItemInstance,
+	bool TryUseItem(UInventoryManagerComponent* InventoryManagerComponent, UInventoryItemInstance* ItemInstance,
 		const FGameplayTag& SlotTypeTag, const int32 SlotIndex) const;
 
 protected:
@@ -26,8 +26,8 @@ protected:
 	 * without calling the parent function.
 	 * @return Whether the item was used successfully. If true is returned, the item will be removed from the inventory.
 	 */
-	virtual bool OnTriedToUseItem(UInventoryManagerComponent* InventoryManager, UInventoryItemInstance* ItemInstance,
-		const FGameplayTag& SlotTypeTag, const int32 SlotIndex) const
+	virtual bool OnTriedToUseItem(UInventoryManagerComponent* InventoryManagerComponent,
+		UInventoryItemInstance* ItemInstance, const FGameplayTag& SlotTypeTag, const int32 SlotIndex) const
 	{
 		unimplemented();
 
