@@ -18,6 +18,8 @@ struct FStreamableHandle;
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEventChangedDelegate, const FScheduleEventData& OldEventData,
 	const FScheduleEventData& NewEventData);
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentEventInstanceCreatedDelegate, UScheduleEvent* EventInstance);
+
 /**
  * This component handles switching events for the game. There are two types of events in this component: scheduled and
  * non-scheduled events. Scheduled events are events that are switched automatically when the game time changes.
@@ -113,6 +115,23 @@ public:
 
 	// Called when an event that is currently active is changed
 	FOnEventChangedDelegate OnCurrentActiveEventChanged;
+
+	/**
+	 * Calls the given callback if the current scheduled event instance is already created or registers it to be called
+	 * when the current scheduled event instance is created.
+	 * @remark This callback will be called only once. You need to register it again if you want to be notified about
+	 * another event.
+	 */
+	void CallOrRegister_OnScheduledEventInstanceCreated(
+		const FOnCurrentEventInstanceCreatedDelegate::FDelegate& Callback);
+
+	/**
+	 * Calls the given callback if the current active event instance is already created or registers it to be called
+	 * when the current event instance is created.
+	 * @remark This callback will be called only once. You need to register it again if you want to be notified about
+	 * another event.
+	 */
+	void CallOrRegister_OnActiveEventInstanceCreated(const FOnCurrentEventInstanceCreatedDelegate::FDelegate& Callback);
 
 protected:
 	// Called when the game starts
@@ -226,4 +245,7 @@ private:
 	 * after loading the game.
 	 */
 	TArray<FScheduleEventData> EventsStackBeforeLoadingGame;
+
+	FOnCurrentEventInstanceCreatedDelegate OnCurrentScheduledEventInstanceCreated;
+	FOnCurrentEventInstanceCreatedDelegate OnCurrentActiveEventInstanceCreated;
 };

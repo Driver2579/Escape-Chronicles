@@ -250,6 +250,15 @@ bool UScheduleEventWithPresenceMark::CanCheckInPlayer(const AActor* PresenceMark
 			EscapeChroniclesGameplayTags::Role_Prisoner);
 }
 
+bool UScheduleEventWithPresenceMark::IsPlayerCheckIn(const AEscapeChroniclesPlayerState* PlayerToCheck) const
+{
+#if DO_CHECK
+	check(IsValid(PlayerToCheck));
+#endif
+
+	return CheckedInPlayers.Contains(PlayerToCheck->GetUniquePlayerID());
+}
+
 void UScheduleEventWithPresenceMark::NotifyPlayerCheckedIn(AEscapeChroniclesPlayerState* CheckedInPlayer)
 {
 #if DO_CHECK

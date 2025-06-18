@@ -314,6 +314,24 @@ void UScheduleEventManagerComponent::OnEventClassLoaded(const FScheduleEventData
 			AlertScheduleEvent->LoadAlertScheduleEventFromSaveData(*AlertSaveData);
 		}
 	}
+
+	// Broadcast the delegate that the scheduled event instance is created if it's the current scheduled event
+	if (EventData == GetCurrentScheduledEventData())
+	{
+		OnCurrentActiveEventInstanceCreated.Broadcast(EventInstance);
+
+		// The instance is created only once, so clear the delegate
+		OnCurrentActiveEventInstanceCreated.Clear();
+	}
+
+	// Broadcast the delegate that the current scheduled event instance is created if it's the current active event
+	if (EventData == GetCurrentActiveEventDataChecked())
+	{
+		OnCurrentScheduledEventInstanceCreated.Broadcast(EventInstance);
+
+		// The instance is created only once, so clear the delegate
+		OnCurrentScheduledEventInstanceCreated.Clear();
+	}
 }
 
 void UScheduleEventManagerComponent::RemoveEvent(const FGameplayTag& EventTag)
@@ -435,6 +453,40 @@ void UScheduleEventManagerComponent::UnloadOrCancelLoadingEventInstance(const FS
 
 	// Remove the handle from the map if it is in the map
 	LoadEventInstancesHandles.Remove(EventData);
+}
+
+void UScheduleEventManagerComponent::CallOrRegister_OnScheduledEventInstanceCreated(
+	const FOnCurrentEventInstanceCreatedDelegate::FDelegate& Callback)
+{
+	const FScheduleEventData CurrentScheduledEvent = GetCurrentScheduledEventData();
+
+	// If the event instance is already created, then call the callback immediately
+	if (IsValid(CurrentScheduledEvent.GetEventInstance()))
+	{
+		Callback.Execute(CurrentScheduledEvent.GetEventInstance());
+	}
+	// Otherwise, register the callback to be called when the event instance is created
+	else
+	{
+		OnCurrentScheduledEventInstanceCreated.Add(Callback);
+	}
+}
+
+void UScheduleEventManagerComponent::CallOrRegister_OnActiveEventInstanceCreated(
+	const FOnCurrentEventInstanceCreatedDelegate::FDelegate& Callback)
+{
+	const FScheduleEventData CurrentActiveEvent = GetCurrentActiveEventData();
+
+	// If the event instance is already created, then call the callback immediately
+	if (IsValid(CurrentActiveEvent.GetEventInstance()))
+	{
+		Callback.Execute(CurrentActiveEvent.GetEventInstance());
+	}
+	// Otherwise, register the callback to be called when the event instance is created
+	else
+	{
+		OnCurrentScheduledEventInstanceCreated.Add(Callback);
+	}
 }
 
 void UScheduleEventManagerComponent::OnPreSaveObject()

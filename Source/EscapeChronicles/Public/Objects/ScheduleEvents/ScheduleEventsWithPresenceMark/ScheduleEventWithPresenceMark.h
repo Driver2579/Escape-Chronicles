@@ -23,6 +23,8 @@ class ESCAPECHRONICLES_API UScheduleEventWithPresenceMark : public UScheduleEven
 	GENERATED_BODY()
 
 public:
+	bool IsPlayerCheckIn(const AEscapeChroniclesPlayerState* PlayerToCheck) const;
+
 	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerCheckedInDelegate, AEscapeChroniclesPlayerState* CheckedInPlayer);
 
 	FOnPlayerCheckedInDelegate OnPlayerCheckedIn;
