@@ -373,7 +373,7 @@ void UEscapeChroniclesGameInstance::OnDestroySessionComplete(FName SessionName, 
 	}
 
 	// If the session was destroyed successfully, then travel to the main menu if it was requested
-	if (bWasSuccessful && bServerTravelToMainMenu)
+	if (bServerTravelToMainMenu)
 	{
 		// We don't want to be a ListenServer in the main menu, and we want to assert if the travel was failed
 		ensureAlwaysMsgf(ServerTravelByLevelSoftObjectPtr(MainMenuLevel, false),
