@@ -93,6 +93,12 @@ protected:
 	// Called by CollectPlayersThatMissedAnEvent for every player that passed the CanPlayerMissEvent check
 	virtual void NotifyPlayerMissedEvent(AEscapeChroniclesPlayerState* PlayerThatMissedAnEvent);
 
+	// Clears the list of players that have checked in during the event
+	void ClearCheckedInPlayers();
+
+	// Clears the list of players that missed an event
+	void ClearPlayersThatMissedAnEvent();
+
 private:
 	// The class of the trigger that is used to check in players
 	UPROPERTY(EditDefaultsOnly)

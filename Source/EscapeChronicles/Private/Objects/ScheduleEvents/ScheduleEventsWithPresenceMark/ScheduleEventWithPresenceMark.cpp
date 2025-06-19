@@ -432,37 +432,9 @@ void UScheduleEventWithPresenceMark::OnEventEnded(const EScheduleEventEndReason 
 		CollectPlayersThatMissedAnEvent(true);
 	}
 
-	// Unload the missed player gameplay effect class if it's loaded or cancel its loading if it's still loading
-	if (LoadMissedPlayerGameplayEffectClassHandle.IsValid())
-	{
-		LoadMissedPlayerGameplayEffectClassHandle->CancelHandle();
-		LoadMissedPlayerGameplayEffectClassHandle.Reset();
-	}
-
-	// Forget about all the checked-in players
-	CheckedInPlayers.Empty();
-
-	/**
-	 * Remove checked-in gameplay effects that were added by this event from the players that checked in during the
-	 * event because event is over.
-	 */
-	for (const auto& GameplayEffectHandlePair : CheckedInGameplayEffectHandles)
-	{
-		if (GameplayEffectHandlePair.Key.IsValid() && GameplayEffectHandlePair.Value.IsValid())
-		{
-			GameplayEffectHandlePair.Key->RemoveActiveGameplayEffect(GameplayEffectHandlePair.Value, 1);
-		}
-	}
-
-	// Clear an array of gameplay effect handles
-	CheckedInGameplayEffectHandles.Empty();
-
-	// Unload the checked-in gameplay effect class if it's loaded or cancel its loading if it's still loading
-	if (LoadCheckedInGameplayEffectHandle.IsValid())
-	{
-		LoadCheckedInGameplayEffectHandle->CancelHandle();
-		LoadCheckedInGameplayEffectHandle.Reset();
-	}
+	// Forget about all checked-in and not checked-in players
+	ClearPlayersThatMissedAnEvent();
+	ClearCheckedInPlayers();
 
 	Super::OnEventEnded(EndReason);
 }
@@ -600,6 +572,47 @@ void UScheduleEventWithPresenceMark::ApplyMissedPlayerGameplayEffect(
 	AbilitySystemComponent->ApplyGameplayEffectToSelf(
 		MissedPlayerGameplayEffectClass->GetDefaultObject<UGameplayEffect>(), 1,
 		AbilitySystemComponent->MakeEffectContext());
+}
+
+void UScheduleEventWithPresenceMark::ClearCheckedInPlayers()
+{
+	/**
+	 * Remove checked-in gameplay effects that were added by this event from the players that checked in during the
+	 * event because event is over.
+	 */
+	for (const auto& GameplayEffectHandlePair : CheckedInGameplayEffectHandles)
+	{
+		if (GameplayEffectHandlePair.Key.IsValid() && GameplayEffectHandlePair.Value.IsValid())
+		{
+			GameplayEffectHandlePair.Key->RemoveActiveGameplayEffect(GameplayEffectHandlePair.Value, 1);
+		}
+	}
+
+	// Clear an array of gameplay effect handles
+	CheckedInGameplayEffectHandles.Empty();
+
+	// Unload the checked-in gameplay effect class if it's loaded or cancel its loading if it's still loading
+	if (LoadCheckedInGameplayEffectHandle.IsValid())
+	{
+		LoadCheckedInGameplayEffectHandle->CancelHandle();
+		LoadCheckedInGameplayEffectHandle.Reset();
+	}
+
+	// Forget about all the checked-in players
+	CheckedInPlayers.Empty();
+}
+
+void UScheduleEventWithPresenceMark::ClearPlayersThatMissedAnEvent()
+{
+	// Unload the missed player gameplay effect class if it's loaded or cancel its loading if it's still loading
+	if (LoadMissedPlayerGameplayEffectClassHandle.IsValid())
+	{
+		LoadMissedPlayerGameplayEffectClassHandle->CancelHandle();
+		LoadMissedPlayerGameplayEffectClassHandle.Reset();
+	}
+
+	// Forget about all the players that missed the event
+	PlayersThatMissedAnEvent.Empty();
 }
 
 FScheduleEventWithPresenceMarkSaveData UScheduleEventWithPresenceMark::GetScheduleEventWithPresenceMarkSaveData() const

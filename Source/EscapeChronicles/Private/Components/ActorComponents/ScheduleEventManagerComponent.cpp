@@ -355,6 +355,9 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 	check(EventsStack.IsValidIndex(Index));
 #endif
 
+	// Remember the event that is about to be removed because we might want to use it later
+	const FScheduleEventData RemovedEventData = EventsStack[Index];
+
 	// End and unload the event before removing it
 	EndEvent(EventsStack[Index], EndReason, bRemoveSaveData);
 	UnloadOrCancelLoadingEventInstance(EventsStack[Index]);
@@ -362,38 +365,50 @@ void UScheduleEventManagerComponent::RemoveEventByIndex(const int32 Index, const
 	// Once everything related to the event is cleared, remove it from the stack
 	EventsStack.RemoveAt(Index, AllowShrinking);
 
-	// Start or resume the new active event if we should and if it exists
-	if (bStartOrResumeLastEvent && !EventsStack.IsEmpty())
+	// Start or resume the new active event if we should
+	if (bStartOrResumeLastEvent)
 	{
-		/**
-		 * The current active event is the last one in the stack, so it's changed automatically after we removed the
-		 * previous one.
-		 */
-		const FScheduleEventData& CurrentActiveEventData = GetCurrentActiveEventDataChecked();
-
-		UScheduleEvent* EventInstance = CurrentActiveEventData.GetEventInstance();
-
-		// Check if the event instance is created already
-		if (IsValid(EventInstance))
+		// Start or resume the new active event only if we have any events left in the stack
+		if (!EventsStack.IsEmpty())
 		{
-			// Resume the event if it was paused before (which automatically means that it also was started before)
-			if (EventInstance->IsPaused())
+			/**
+			 * The current active event is the last one in the stack, so it's changed automatically after we removed the
+			 * previous one.
+			 */
+			const FScheduleEventData& CurrentActiveEventData = GetCurrentActiveEventDataChecked();
+
+			UScheduleEvent* EventInstance = CurrentActiveEventData.GetEventInstance();
+
+			// Check if the event instance is created already
+			if (IsValid(EventInstance))
 			{
-				EventInstance->ResumeEvent();
+				// Resume the event if it was paused before (which automatically means that it also was started before)
+				if (EventInstance->IsPaused())
+				{
+					EventInstance->ResumeEvent();
+				}
+				// Otherwise, start the event if it was never started before
+				else
+				{
+					EventInstance->StartEvent();
+				}
 			}
-			// Otherwise, start the event if it was never started before
-			else
+			/**
+			 * Otherwise, if the event instance was not created yet, and it was not requested to be loaded, then request
+			 * creating now.
+			 */
+			else if (!LoadEventInstancesHandles.Contains(CurrentActiveEventData))
 			{
-				EventInstance->StartEvent();
+				CreateEventInstanceAndStartOrPauseIt(CurrentActiveEventData);
 			}
+
+			// Notify that the current active event has changed
+			OnCurrentActiveEventChanged.Broadcast(RemovedEventData, CurrentActiveEventData);
 		}
-		/**
-		 * Otherwise, if the event instance was not created yet, and it was not requested to be loaded, then request
-		 * creating now.
-		 */
-		else if (!LoadEventInstancesHandles.Contains(CurrentActiveEventData))
+		// Otherwise, notify that there is no current active event anymore
+		else
 		{
-			CreateEventInstanceAndStartOrPauseIt(CurrentActiveEventData);
+			OnCurrentActiveEventChanged.Broadcast(RemovedEventData, FScheduleEventData());
 		}
 	}
 }

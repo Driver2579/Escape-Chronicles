@@ -100,6 +100,9 @@ private:
 	UPROPERTY(EditAnywhere, Category="AI")
 	bool bAutomaticallyAddAIPerceptionStimuliSourceComponent = true;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UDynamicMesh> OriginalDynamicMeshCopy;
+
 	/**
 	 * A type of tool that will be used to create holes in the mesh. This should be checked before creating holes. Other
 	 * types of tools than the selected one should not be used to create holes in an actor that uses this component.
@@ -119,15 +122,6 @@ private:
 	 * doesn't check if the OwningDynamicMeshActor is valid, and doesn't check if the owner is an authority.
 	 */
 	void AddHoleAtRelativeLocation_Internal(const FVector& HoleRelativeLocation, const float HoleRadius) const;
-
-	/**
-	 * Removes an existing hole at the given relative location.
-	 * @remark You should call this function only for locations that were previously used to create holes.
-	 * @remark This function doesn't remove the given location from the HolesLocations array.
-	 * @remark The OwningDynamicMeshActor must be valid when calling this function.
-	 * @remark This function doesn't check if the owner is an authority.
-	 */
-	void RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const;
 
 	// TODO: Replace the next logic with a FastArraySerializer
 

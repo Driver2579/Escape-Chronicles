@@ -105,7 +105,7 @@ private:
 	FInventorySlotsTypedArrayContainer InventoryContent;
 
 	UFUNCTION()
-	void OnRep_InventoryContent() const;
+	void OnRep_InventoryContent();
 
 #if WITH_EDITORONLY_DATA
 	// If true, then when OnInventoryContentChanged is called, the content of the inventory will be logged

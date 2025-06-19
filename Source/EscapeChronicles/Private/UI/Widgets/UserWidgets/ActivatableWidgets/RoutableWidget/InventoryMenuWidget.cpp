@@ -2,9 +2,16 @@
 
 #include "EscapeChronicles/Public/UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget/InventoryMenuWidget.h"
 
+#include "CommonButtonBase.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 void UInventoryMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	ExitButton->OnClicked().AddWeakLambda(this, [this]
+	{
+		DeactivateWidget();
+	});
 
 	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 
