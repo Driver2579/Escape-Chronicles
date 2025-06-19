@@ -6,6 +6,7 @@
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Components/ActorComponents/InteractableComponent.h"
 #include "Components/ActorComponents/InteractionManagerComponent.h"
+#include "Subsystems/SaveInventoryPickupItemsSubsystem.h"
 
 AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()
 {
@@ -17,6 +18,15 @@ AEscapeChroniclesInventoryPickupItem::AEscapeChroniclesInventoryPickupItem()
 void AEscapeChroniclesInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
+
+	USaveInventoryPickupItemsSubsystem* SaveInventoryPickupItemsSubsystem = GetWorld()->GetSubsystem<
+		USaveInventoryPickupItemsSubsystem>();
+
+	// Register the pickup item in the subsystem as required
+	if (ensureAlways(IsValid(SaveInventoryPickupItemsSubsystem)))
+	{
+		SaveInventoryPickupItemsSubsystem->RegisterPickupItem(this);
+	}
 
 	InteractableComponent->OnInteract.AddUObject(this, &ThisClass::OnInteract);
 }

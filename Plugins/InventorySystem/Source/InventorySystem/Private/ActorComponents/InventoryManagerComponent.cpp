@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ActorComponents/InventoryManagerComponent.h"
+
 #include "InventorySystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryManagerFragment.h"
@@ -267,6 +268,18 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 	OnContentChanged.Broadcast();
 
 	return true;
+}
+
+void UInventoryManagerComponent::ClearInventory()
+{
+	// Remove all items
+	for (const FInventorySlotsTypedArray& Slots : GetInventoryContent().GetItems())
+	{
+		for (int32 i = 0; i < Slots.Array.GetItems().Num(); ++i)
+		{
+			DeleteItem(i, Slots.TypeTag);
+		}
+	}
 }
 
 void UInventoryManagerComponent::OnRep_InventoryContent()
