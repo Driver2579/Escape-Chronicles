@@ -11,12 +11,12 @@ class INVENTORYSYSTEM_API UInventoryManagerCraftItemsFragment : public UInventor
 	GENERATED_BODY()
 
 public:
+	const UDataTable* GetAvailableCraftList() const { return AvailableCraftListDataTable; }
+
 	UFUNCTION(Server, Reliable)
 	void Server_Craft(const FName CraftName);
 
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<const UDataTable> AvailableCraftListDataTable;
-
-	
 };
