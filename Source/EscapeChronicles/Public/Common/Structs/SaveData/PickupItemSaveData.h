@@ -5,6 +5,8 @@
 #include "InventorySlotsSaveData.h"
 #include "PickupItemSaveData.generated.h"
 
+class AEscapeChroniclesInventoryPickupItem;
+
 // Represents the save data of a pickup item in the world
 USTRUCT()
 struct FPickupItemSaveData
