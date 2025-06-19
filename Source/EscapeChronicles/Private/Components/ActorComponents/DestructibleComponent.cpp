@@ -79,6 +79,13 @@ void UDestructibleComponent::BeginPlay()
 
 	// We have to use the complex collision to update collision based on the mesh changes
 	OwningDynamicMeshActor->GetDynamicMeshComponent()->EnableComplexAsSimpleCollision();
+
+	/**
+	 * Duplicate the dynamic mesh to keep a copy of the original mesh that will be used to restore the mesh after the
+	 * current one gets modified.
+	 */
+	const UDynamicMesh* DynamicMesh = OwningDynamicMeshActor->GetDynamicMeshComponent()->GetDynamicMesh();
+	OriginalDynamicMeshCopy = DuplicateObject<UDynamicMesh>(DynamicMesh, DynamicMesh->GetOuter());
 }
 
 UDynamicMesh* UDestructibleComponent::AllocateDestructToolMeshChecked(const FVector& HoleRelativeLocation,
@@ -196,44 +203,17 @@ void UDestructibleComponent::ClearAllHoles()
 		return;
 	}
 
-	// Remove all holes at the locations that were used to create them
-	for (const FDynamicMeshHoleData& Hole : Holes)
-	{
-		RemoveHoleAtRelativeLocation_Internal(Hole);
-	}
+	// Replace the mesh with an original copy to remove all holes
+	OwningDynamicMeshActor->GetDynamicMeshComponent()->SetDynamicMesh(OriginalDynamicMeshCopy);
+
+	/**
+	 * Since the mesh was replaced with a pointer to the original mesh, we need to duplicate it again to get a new
+	 * pointer.
+	 */
+	OriginalDynamicMeshCopy = DuplicateObject(OriginalDynamicMeshCopy, OriginalDynamicMeshCopy->GetOuter());
 
 	// Clear the list of holes locations because we filled all of them back
 	Holes.Empty();
-}
-
-void UDestructibleComponent::RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const
-{
-#if DO_CHECK
-	check(OwningDynamicMeshActor.IsValid());
-#endif
-
-#if DO_ENSURE
-	ensureAlways(Holes.Contains(Hole));
-#endif
-
-	UDynamicMesh* DestructToolMesh = AllocateDestructToolMeshChecked(Hole.RelativeLocation, Hole.Radius);
-
-#if DO_ENSURE
-	ensureAlways(IsValid(DestructToolMesh));
-#endif
-
-	UDynamicMeshComponent* DynamicMeshComponent = OwningDynamicMeshActor->GetDynamicMeshComponent();
-
-	/**
-	 * Apply the mesh boolean operation to add the DestructToolMesh to the current mesh. We basically reverse the
-	 * subtraction operation.
-	 */
-	UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshBoolean(DynamicMeshComponent->GetDynamicMesh(),
-		FTransform::Identity, DestructToolMesh, FTransform::Identity,
-		EGeometryScriptBooleanOperation::Union, FGeometryScriptMeshBooleanOptions());
-
-	// Recalculate the dynamic mesh specifically at the hole location and radius
-	OwningDynamicMeshActor->ReleaseComputeMesh(DestructToolMesh);
 }
 
 void UDestructibleComponent::OnPreLoadObject()
@@ -263,16 +243,29 @@ void UDestructibleComponent::OnRep_Holes(const TArray<FDynamicMeshHoleData>& Old
 		return;
 	}
 
-	// Remove all holes that were present in the old Holes list but not in the new one
+	/**
+	 * Check if there is any hole in the old Holes list that is not present in the current Holes list. If so, then we
+	 * need to rebuild all holes from scratch.
+	 */
 	for (const FDynamicMeshHoleData& OldHole : OldHoles)
 	{
-		if (!Holes.Contains(OldHole))
+		if (Holes.Contains(OldHole))
 		{
-			RemoveHoleAtRelativeLocation_Internal(OldHole);
+			continue;
 		}
+
+		ClearAllHoles();
+
+		for (const FDynamicMeshHoleData& NewHole : Holes)
+		{
+			AddHoleAtRelativeLocation_Internal(NewHole.RelativeLocation, NewHole.Radius);
+		}
+
+		// We have already rebuilt all holes, so we don't need to trigger the next logic
+		return;
 	}
 
-	// Add all new holes that were not present in the old Holes list
+	// Otherwise, just add new holes that were not present in the old Holes list
 	for (const FDynamicMeshHoleData& NewHole : Holes)
 	{
 		if (!OldHoles.Contains(NewHole))
