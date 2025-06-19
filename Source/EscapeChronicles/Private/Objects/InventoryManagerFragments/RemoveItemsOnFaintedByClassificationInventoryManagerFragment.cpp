@@ -62,17 +62,29 @@ void URemoveItemsOnFaintedByClassificationInventoryManagerFragment::OnOwningPlay
 	// Subscribe to the fainted event on the new PlayerState if it exists
 	if (IsValid(CastedNewPlayerState))
 	{
+		UAbilitySystemComponent* AbilitySystemComponent = CastedNewPlayerState->GetAbilitySystemComponent();
+
 		OnFaintedGameplayTagChangedDelegateHandle =
-			CastedNewPlayerState->GetAbilitySystemComponent()->RegisterAndCallGameplayTagEvent(
-				EscapeChroniclesGameplayTags::Status_Fainted,
+			AbilitySystemComponent->RegisterAndCallGameplayTagEvent(EscapeChroniclesGameplayTags::Status_Fainted,
 				FOnGameplayEffectTagCountChanged::FDelegate::CreateUObject(this,
-					&ThisClass::OnFaintedGameplayTagChanged));
+					&ThisClass::OnFaintedGameplayTagChanged, AbilitySystemComponent));
 	}
 }
 
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void URemoveItemsOnFaintedByClassificationInventoryManagerFragment::OnFaintedGameplayTagChanged(
-	FGameplayTag GameplayTag, int32 NewCount) const
+	FGameplayTag GameplayTag, int32 NewCount, UAbilitySystemComponent* AbilitySystemComponent) const
 {
+#if DO_CHECK
+	check(IsValid(AbilitySystemComponent));
+#endif
+
+	// Don't do anything if the character has any of the immunity gameplay tags
+	if (AbilitySystemComponent->HasAnyMatchingGameplayTags(ImmunityTags))
+	{
+		return;
+	}
+
 	const bool bFainted = NewCount > 0;
 
 	// Don't do anything if the character isn't fainted
