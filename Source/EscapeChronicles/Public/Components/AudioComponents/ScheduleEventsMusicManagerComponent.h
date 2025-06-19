@@ -59,13 +59,14 @@ private:
 	void OnCurrentEventMusicLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	// Plays the SwitchEventSound and plays the current event music once the SwitchEventSound has finished playing
-	void OnSwitchEventSoundLoaded();
+	void OnSwitchEventSoundLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	TWeakObjectPtr<UAudioComponent> SwitchEventAudioComponent;
 	FDelegateHandle OnSwitchEventSoundFinishedPlayingDelegateHandle;
 
 	// Plays the current event music if it's loaded already
-	void OnSwitchEventSoundFinishedPlaying(UAudioComponent* AudioComponent);
+	void OnSwitchEventSoundFinishedPlaying(UAudioComponent* AudioComponent,
+		TSharedPtr<FStreamableHandle> LoadSoundHandle);
 
 	// Whether the SwitchEventSound has been played since the last event switch
 	bool bSwitchEventSoundPlayed = false;

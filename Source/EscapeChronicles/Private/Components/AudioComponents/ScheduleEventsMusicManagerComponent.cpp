@@ -94,12 +94,12 @@ void UScheduleEventsMusicManagerComponent::PlayMusicAndSoundForEvent(const FGame
 		{
 			LoadSwitchEventSoundHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 				SwitchEventSound.ToSoftObjectPath(),
-				FStreamableDelegate::CreateUObject(this, &ThisClass::OnSwitchEventSoundLoaded));
+				FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnSwitchEventSoundLoaded));
 		}
 		// If the sound is already loaded, we can just play it immediately
 		else if (SwitchEventSound.IsValid())
 		{
-			OnSwitchEventSoundLoaded();
+			OnSwitchEventSoundLoaded(LoadSwitchEventSoundHandle);
 		}
 	}
 
@@ -146,7 +146,7 @@ void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<
 	}
 }
 
-void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundLoaded()
+void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)
 {
 #if DO_CHECK
 	check(SwitchEventSound.IsValid());
@@ -163,12 +163,13 @@ void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundLoaded()
 
 	// Listen for the sound to finish playing
 	OnSwitchEventSoundFinishedPlayingDelegateHandle = SwitchEventAudioComponent->OnAudioFinishedNative.AddUObject(this,
-		&ThisClass::OnSwitchEventSoundFinishedPlaying);
+		&ThisClass::OnSwitchEventSoundFinishedPlaying, LoadObjectHandle);
 
 	SwitchEventAudioComponent->Play();
 }
 
-void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundFinishedPlaying(UAudioComponent* AudioComponent)
+void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundFinishedPlaying(UAudioComponent* AudioComponent,
+	TSharedPtr<FStreamableHandle> LoadSoundHandle)
 {
 	/**
 	 * Remember that the SwitchEventSound has been played so we can play the music immediately once it's loaded if it
@@ -177,12 +178,12 @@ void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundFinishedPlaying(UAu
 	bSwitchEventSoundPlayed = true;
 
 #if DO_CHECK
-	check(LoadSwitchEventSoundHandle.IsValid());
+	check(LoadSoundHandle.IsValid());
 #endif
 
 	// Unload the sound because it has been played already
-	LoadSwitchEventSoundHandle->ReleaseHandle();
-	LoadSwitchEventSoundHandle.Reset();
+	LoadSoundHandle->ReleaseHandle();
+	LoadSoundHandle.Reset();
 
 	// Don't play the music if it isn't loaded yet (or if it isn't loading at all)
 	if (!LoadCurrentEventMusicHandle.IsValid() || LoadCurrentEventMusicHandle->IsLoadingInProgress())
