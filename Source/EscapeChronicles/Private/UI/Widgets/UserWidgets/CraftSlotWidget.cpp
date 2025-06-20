@@ -30,7 +30,7 @@ void UCraftSlotWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!AssociatedRowData)
+	if (!AssociatedRowData || !ensureAlways(AssociatedRowData->ResultItemDefinition))
 	{
 		return;
 	}
