@@ -25,8 +25,10 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
-	
+
 	virtual void NativeConstruct() override;
+
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 	virtual void NativeOnClicked() override;
 
@@ -42,6 +44,4 @@ private:
 
 	const FName* AssociatedRowName;
 	const FInventoryManagerCraftData* AssociatedRowData;
-
-	void UpdateEnabled();
 };

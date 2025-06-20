@@ -1,14 +1,16 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/Widgets/UserWidgets/CraftSlotWidget.h"
-
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragments/IconInventoryItemFragment.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerCraftItemsFragment.h"
+#include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
+#include "UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/ConfirmationPopup.h"
+#include "UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/InformPopup.h"
 
 void UCraftSlotWidget::SetAssociate(const FName& InAssociatedRowName,
-	const FInventoryManagerCraftData& InAssociatedRowData)
+                                    const FInventoryManagerCraftData& InAssociatedRowData)
 {
 	AssociatedRowName = &InAssociatedRowName;
 	AssociatedRowData = &InAssociatedRowData;
@@ -18,21 +20,10 @@ void UCraftSlotWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
-
-	if (!ensureAlways(IsValid(Character)))
+	if (Data->ToolTipWidget)
 	{
-		return;
+		SetToolTip(Data->ToolTipWidget);
 	}
-
-	UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
-
-	if (!ensureAlways(IsValid(Inventory)))
-	{
-		return;
-	}
-
-	Inventory->OnContentChanged.AddUObject(this, &ThisClass::UpdateEnabled);
 }
 
 void UCraftSlotWidget::NativeConstruct()
@@ -54,21 +45,37 @@ void UCraftSlotWidget::NativeConstruct()
 		{
 			ItemInstanceIcon->SetBrush(IconFragment->GetIcon());
 
-			UpdateEnabled();
-
 			return;
 		}
 	}
 
 	ItemInstanceIcon->SetBrush(Data->InvalidItemInstanceBrush);
+}
 
-	UpdateEnabled();
+void UCraftSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+
+	UHintBaseWidget* ToolTip = Cast<UHintBaseWidget>(GetToolTip());
+
+	if (IsValid(ToolTip))
+	{
+		ToolTip->SetTitleText(FText::FromName(GetAssociatedRowName()));
+		ToolTip->SetMainText(FText::FromString(""));
+	}
 }
 
 void UCraftSlotWidget::NativeOnClicked()
 {
 	Super::NativeOnClicked();
 
+	URoutableWidget* RoutableParent = GetTypedOuter<URoutableWidget>();
+
+	if (!ensureAlways(IsValid(RoutableParent)))
+	{
+		return;
+	}
+
 	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 
 	if (!ensureAlways(IsValid(Character)))
@@ -91,32 +98,28 @@ void UCraftSlotWidget::NativeOnClicked()
 		return;
 	}
 
-	CraftItemsFragment->Server_Craft(GetAssociatedRowName());
-}
+	if (!CraftItemsFragment->IsCraftPossible(GetAssociatedRowName()))
+	{
+		const UInformPopup* InformPopup = RoutableParent->PushPrompt<UInformPopup>(Data->InformPopupClass);
 
-void UCraftSlotWidget::UpdateEnabled()
-{
-	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
+		if (ensureAlways(IsValid(InformPopup)))
+		{
+			InformPopup->SetDisplayedText(Data->CraftIsNotPossibleInformText);
+		}
 
-	if (!ensureAlways(IsValid(Character)))
+		return;
+	}
+	
+	UConfirmationPopup* ConfirmationExitWidget = RoutableParent->PushPrompt<UConfirmationPopup>(Data->ConfirmationPopupClass);
+
+	if (!ensureAlways(IsValid(ConfirmationExitWidget)))
 	{
 		return;
 	}
 
-	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
-
-	if (!ensureAlways(IsValid(Inventory)))
+	ConfirmationExitWidget->SetDisplayedText(Data->CraftConfirmationText);
+	ConfirmationExitWidget->OnResult.AddWeakLambda(this, [this, CraftItemsFragment](bool bConfirmed)
 	{
-		return;
-	}
-
-	UInventoryManagerCraftItemsFragment* CraftItemsFragment =
-		Inventory->GetFragmentByClass<UInventoryManagerCraftItemsFragment>();
-
-	if (!ensureAlways(IsValid(CraftItemsFragment)))
-	{
-		return;
-	}
-
-	SetIsEnabled(CraftItemsFragment->IsCraftPossible(GetAssociatedRowName()));
+		if (bConfirmed) CraftItemsFragment->Server_Craft(GetAssociatedRowName());
+	});
 }

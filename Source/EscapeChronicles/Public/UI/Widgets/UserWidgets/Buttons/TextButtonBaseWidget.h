@@ -14,16 +14,16 @@ class ESCAPECHRONICLES_API UTextButtonBaseWidget : public UCommonButtonBase
 
 public:
 	const FText& GetText() { return ButtonText; }
-	
+
 protected:
 	virtual void NativePreConstruct() override;
-	
+
 private:
 	// The text displayed on the button
-	UPROPERTY(EditDefaultsOnly)  
+	UPROPERTY(EditAnywhere)
 	FText ButtonText;
 
 	// Bound text block component that renders ButtonText
-	UPROPERTY(meta=(BindWidget))  
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<class UTextBlock> DisplayedText;
 };
