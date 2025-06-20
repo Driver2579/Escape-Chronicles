@@ -3,21 +3,22 @@
 #include "Objects/InventoryManagerFragments/InventoryManagerCraftItemsFragment.h"
 #include "Common/Structs/TableRowBases/InventoryManagerCraftData.h"
 
-void UInventoryManagerCraftItemsFragment::Server_Craft_Implementation(const FName CraftName)
+
+bool UInventoryManagerCraftItemsFragment::IsCraftPossible(const FName& CraftName)
 {
 	FInventoryManagerCraftData* InventoryManagerCraftData =
-			AvailableCraftListDataTable->FindRow<FInventoryManagerCraftData>(CraftName, "");
+		AvailableCraftListDataTable->FindRow<FInventoryManagerCraftData>(CraftName, "");
 
 	if (!InventoryManagerCraftData)
 	{
-		return;
+		return false;
 	}
 
-	UInventoryManagerComponent* Inventory = GetInventoryManager();
+	const UInventoryManagerComponent* Inventory = GetInventoryManager();
 
 	if (!ensureAlways(IsValid(Inventory)))
 	{
-		return;
+		return false;
 	}
 
 	TArray<UInventoryItemInstance*> InventoryItemInstances;
@@ -28,27 +29,61 @@ void UInventoryManagerCraftItemsFragment::Server_Craft_Implementation(const FNam
 		InventoryItemInstances.Add(ItemInstance);
 	});
 
-	TFunction<void(const TSubclassOf<UInventoryItemDefinition>&)> MoveMatchingItemInstance =
-		[&InventoryItemInstances, &ItemInstancesToUse](const TSubclassOf<UInventoryItemDefinition>& RequiredDefinition)
-		{
-			for (UInventoryItemInstance* InventoryItemInstance : InventoryItemInstances)
-			{
-				if (InventoryItemInstance->GetDefinition() == RequiredDefinition)
-				{
-					ItemInstancesToUse.Add(InventoryItemInstance);
-					InventoryItemInstances.Remove(InventoryItemInstance);
-
-					return;
-				}
-			}
-		};
-
-	for (const FCraftRequirement& CraftRequirement : InventoryManagerCraftData->MaterialsItemDefinition)
+	for (const FCraftRequirement& CraftRequirement : InventoryManagerCraftData->ItemMaterials)
 	{
-		for (int32 Index = 0; 0 < CraftRequirement.Number; ++Index)
+		if (!ensureAlways(IsValid(CraftRequirement.ItemDefinitionClass)))
 		{
-			MoveMatchingItemInstance(CraftRequirement.ItemDefinitionClass);
+			continue;
+		}
+
+		for (int32 Index = 0; Index < CraftRequirement.Number; ++Index)
+		{
+			UInventoryItemInstance* MatchingItemInstance = GetMatchingItemInstance(CraftRequirement,
+					InventoryItemInstances);
+
+			if (!MatchingItemInstance)
+			{
+				return false;
+			}
+
+			InventoryItemInstances.Remove(MatchingItemInstance);
+
+			if (CraftRequirement.bConsumeResource)
+			{
+				ItemInstancesToUse.Add(MatchingItemInstance);
+			}
 		}
 	}
+
+	return true;
+}
+
+UInventoryItemInstance* UInventoryManagerCraftItemsFragment::GetMatchingItemInstance(
+	const FCraftRequirement& CraftRequirement, const TArray<UInventoryItemInstance*>& ItemInstances)
+{
+	for (UInventoryItemInstance* InventoryItemInstance : ItemInstances)
+	{
+#if DO_CHECK
+		check(InventoryItemInstance->IsInitialized());
+		check(IsValid(InventoryItemInstance->GetDefinition()));
+#endif
+
+		const bool bIsMatching =
+			InventoryItemInstance->GetDefinition() == CraftRequirement.ItemDefinitionClass &&
+				InventoryItemInstance->GetInstanceStats_Mutable().HasAllMatchingStats(
+					CraftRequirement.InstanceStatsOverride);
+
+		if (bIsMatching)
+		{
+			return InventoryItemInstance;
+		}
+	}
+
+	return nullptr;
+}
+
+void UInventoryManagerCraftItemsFragment::Server_Craft_Implementation(const FName CraftName)
+{
+	
 
 }

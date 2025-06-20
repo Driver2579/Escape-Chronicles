@@ -24,6 +24,8 @@ public:
 	void SetAssociate(const FName& InAssociatedRowName, const FInventoryManagerCraftData& InAssociatedRowData);
 
 protected:
+	virtual void NativeOnInitialized() override;
+	
 	virtual void NativeConstruct() override;
 
 	virtual void NativeOnClicked() override;
@@ -41,4 +43,5 @@ private:
 	const FName* AssociatedRowName;
 	const FInventoryManagerCraftData* AssociatedRowData;
 
+	void UpdateEnabled();
 };

@@ -53,10 +53,14 @@ protected:
 			return;
 		}
 
-		//TFunctionRef<void (const FName& Key, const T& Value)> Predicate
 		AvailableCraftList->ForeachRow<FInventoryManagerCraftData>("",
 			[this](const FName& Key, const FInventoryManagerCraftData& Value)
 			{
+				if (!ensureAlways(Value.ItemMaterials.Num() > 0))
+				{
+					return;
+				}
+
 				UCraftSlotWidget* NewSlotWidget = CreateWidget<UCraftSlotWidget>(this, SlotClass);
 
 				SlotsContainer->AddChildToWrapBox(NewSlotWidget);

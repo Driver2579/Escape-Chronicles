@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Common/Structs/TableRowBases/InventoryManagerCraftData.h"
 #include "Objects/InventoryManagerFragment.h"
 #include "InventoryManagerCraftItemsFragment.generated.h"
 
@@ -13,10 +14,15 @@ class INVENTORYSYSTEM_API UInventoryManagerCraftItemsFragment : public UInventor
 public:
 	const UDataTable* GetAvailableCraftList() const { return AvailableCraftListDataTable; }
 
+	bool IsCraftPossible(const FName& CraftName);
+
 	UFUNCTION(Server, Reliable)
 	void Server_Craft(const FName CraftName);
 
 private:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<const UDataTable> AvailableCraftListDataTable;
+
+	static UInventoryItemInstance* GetMatchingItemInstance(const FCraftRequirement& CraftRequirement,
+		const TArray<UInventoryItemInstance*>& ItemInstances);
 };
