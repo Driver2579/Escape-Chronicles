@@ -7,6 +7,8 @@
 #include "GeometryScript/MeshBooleanFunctions.h"
 #include "GeometryScript/MeshPrimitiveFunctions.h"
 #include "Net/UnrealNetwork.h"
+#include "Perception/AIPerceptionStimuliSourceComponent.h"
+#include "Perception/AISense_Sight.h"
 
 UDestructibleComponent::UDestructibleComponent()
 {
@@ -43,14 +45,47 @@ void UDestructibleComponent::BeginPlay()
 		OwningDynamicMeshActor->Tags.AddUnique(SaveableActorTag);
 	}
 
-	// Make the owner replicated if it was requested
-	if (bAutomaticallyMakeActorReplicated && OwningDynamicMeshActor->HasAuthority())
+	if (OwningDynamicMeshActor->HasAuthority())
 	{
-		OwningDynamicMeshActor->SetReplicates(true);
+		// Make the owner replicated if it was requested
+		if (bAutomaticallyMakeActorReplicated)
+		{
+			OwningDynamicMeshActor->SetReplicates(true);
+		}
+
+		/**
+		 * We should create an AIPerceptionStimuliSourceComponent if it was requested and if the owner doesn't already
+		 * have one.
+		 */
+		const bool bCreateAIPerceptionStimuliSourceComponent = bAutomaticallyAddAIPerceptionStimuliSourceComponent &&
+			!OwningDynamicMeshActor->FindComponentByClass<UAIPerceptionStimuliSourceComponent>();
+
+		// Create an AIPerceptionStimuliSourceComponent if we should and register it for the sight sense
+		if (bCreateAIPerceptionStimuliSourceComponent)
+		{
+			UAIPerceptionStimuliSourceComponent* AIPerceptionStimuliSourceComponent =
+				NewObject<UAIPerceptionStimuliSourceComponent>(OwningDynamicMeshActor.Get());
+
+#if DO_CHECK
+			check(IsValid(AIPerceptionStimuliSourceComponent));
+#endif
+
+			AIPerceptionStimuliSourceComponent->RegisterComponent();
+
+			AIPerceptionStimuliSourceComponent->RegisterWithPerceptionSystem();
+			AIPerceptionStimuliSourceComponent->RegisterForSense(UAISense_Sight::StaticClass());
+		}
 	}
 
 	// We have to use the complex collision to update collision based on the mesh changes
 	OwningDynamicMeshActor->GetDynamicMeshComponent()->EnableComplexAsSimpleCollision();
+
+	/**
+	 * Duplicate the dynamic mesh to keep a copy of the original mesh that will be used to restore the mesh after the
+	 * current one gets modified.
+	 */
+	const UDynamicMesh* DynamicMesh = OwningDynamicMeshActor->GetDynamicMeshComponent()->GetDynamicMesh();
+	OriginalDynamicMeshCopy = DuplicateObject<UDynamicMesh>(DynamicMesh, DynamicMesh->GetOuter());
 }
 
 UDynamicMesh* UDestructibleComponent::AllocateDestructToolMeshChecked(const FVector& HoleRelativeLocation,
@@ -79,6 +114,16 @@ UDynamicMesh* UDestructibleComponent::AllocateDestructToolMeshChecked(const FVec
 		ToolTransform, Radius);
 
 	return DestructToolMesh;
+}
+
+void UDestructibleComponent::GetHoleWorldLocation(const FVector& HoleRelativeLocation, FVector& OutWorldLocation) const
+{
+	// Convert the relative location of the hole into a world location based on the mesh's world transform
+	if (ensureAlways(OwningDynamicMeshActor.IsValid()))
+	{
+		OutWorldLocation = OwningDynamicMeshActor->GetDynamicMeshComponent()->GetComponentTransform().TransformPosition(
+			HoleRelativeLocation);
+	}
 }
 
 void UDestructibleComponent::AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius)
@@ -158,44 +203,17 @@ void UDestructibleComponent::ClearAllHoles()
 		return;
 	}
 
-	// Remove all holes at the locations that were used to create them
-	for (const FDynamicMeshHoleData& Hole : Holes)
-	{
-		RemoveHoleAtRelativeLocation_Internal(Hole);
-	}
+	// Replace the mesh with an original copy to remove all holes
+	OwningDynamicMeshActor->GetDynamicMeshComponent()->SetDynamicMesh(OriginalDynamicMeshCopy);
+
+	/**
+	 * Since the mesh was replaced with a pointer to the original mesh, we need to duplicate it again to get a new
+	 * pointer.
+	 */
+	OriginalDynamicMeshCopy = DuplicateObject(OriginalDynamicMeshCopy, OriginalDynamicMeshCopy->GetOuter());
 
 	// Clear the list of holes locations because we filled all of them back
 	Holes.Empty();
-}
-
-void UDestructibleComponent::RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const
-{
-#if DO_CHECK
-	check(OwningDynamicMeshActor.IsValid());
-#endif
-
-#if DO_ENSURE
-	ensureAlways(Holes.Contains(Hole));
-#endif
-
-	UDynamicMesh* DestructToolMesh = AllocateDestructToolMeshChecked(Hole.RelativeLocation, Hole.Radius);
-
-#if DO_ENSURE
-	ensureAlways(IsValid(DestructToolMesh));
-#endif
-
-	UDynamicMeshComponent* DynamicMeshComponent = OwningDynamicMeshActor->GetDynamicMeshComponent();
-
-	/**
-	 * Apply the mesh boolean operation to add the DestructToolMesh to the current mesh. We basically reverse the
-	 * subtraction operation.
-	 */
-	UGeometryScriptLibrary_MeshBooleanFunctions::ApplyMeshBoolean(DynamicMeshComponent->GetDynamicMesh(),
-		FTransform::Identity, DestructToolMesh, FTransform::Identity,
-		EGeometryScriptBooleanOperation::Union, FGeometryScriptMeshBooleanOptions());
-
-	// Recalculate the dynamic mesh specifically at the hole location and radius
-	OwningDynamicMeshActor->ReleaseComputeMesh(DestructToolMesh);
 }
 
 void UDestructibleComponent::OnPreLoadObject()
@@ -225,16 +243,29 @@ void UDestructibleComponent::OnRep_Holes(const TArray<FDynamicMeshHoleData>& Old
 		return;
 	}
 
-	// Remove all holes that were present in the old Holes list but not in the new one
+	/**
+	 * Check if there is any hole in the old Holes list that is not present in the current Holes list. If so, then we
+	 * need to rebuild all holes from scratch.
+	 */
 	for (const FDynamicMeshHoleData& OldHole : OldHoles)
 	{
-		if (!Holes.Contains(OldHole))
+		if (Holes.Contains(OldHole))
 		{
-			RemoveHoleAtRelativeLocation_Internal(OldHole);
+			continue;
 		}
+
+		ClearAllHoles();
+
+		for (const FDynamicMeshHoleData& NewHole : Holes)
+		{
+			AddHoleAtRelativeLocation_Internal(NewHole.RelativeLocation, NewHole.Radius);
+		}
+
+		// We have already rebuilt all holes, so we don't need to trigger the next logic
+		return;
 	}
 
-	// Add all new holes that were not present in the old Holes list
+	// Otherwise, just add new holes that were not present in the old Holes list
 	for (const FDynamicMeshHoleData& NewHole : Holes)
 	{
 		if (!OldHoles.Contains(NewHole))

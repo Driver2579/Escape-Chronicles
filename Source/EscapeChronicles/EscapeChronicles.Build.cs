@@ -8,7 +8,7 @@ public class EscapeChronicles : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[]
+		PublicDependencyModuleNames.AddRange(new[]
 		{
 			"Core",
 			"CoreUObject",
@@ -27,11 +27,18 @@ public class EscapeChronicles : ModuleRules
 			"Slate",
 			"SlateCore",
 			"GeometryFramework",
+			"OnlineSubsystem",
+			"StateTreeModule",
+			"GameplayStateTreeModule",
+			"SmartObjectsModule",
+			"NavigationSystem"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[]
+		PrivateDependencyModuleNames.AddRange(new[]
 		{
-			"GeometryScriptingCore"
+			"GeometryScriptingCore",
+			"OnlineSubsystemUtils",
+			"GameplayBehaviorSmartObjectsModule"
 		});
 	}
 }

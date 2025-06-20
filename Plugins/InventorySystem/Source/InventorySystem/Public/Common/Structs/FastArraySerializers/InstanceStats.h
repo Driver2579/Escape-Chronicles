@@ -6,9 +6,12 @@
 #include "Net/Serialization/FastArraySerializer.h"
 #include "InstanceStats.generated.h"
 
-// Represents a single instance stat as a key-value pair in the instance stats container
+/**
+ * Represents a single instance stat as a key-value pair in the instance stats container. It also supports being saved
+ * to the file.
+ */
 USTRUCT(BlueprintType)
-struct FInstanceStatsItem : public FFastArraySerializerItem
+struct INVENTORYSYSTEM_API FInstanceStatsItem : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
@@ -31,20 +34,20 @@ struct FInstanceStatsItem : public FFastArraySerializerItem
 	}
 
 	// Unique key for this stat item
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, SaveGame)
 	FGameplayTag Tag;
 
 	// Value stored by tag
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, SaveGame)
 	float Value = 0;
 };
 
 /**
  * Networked container for FInstanceStatsItem elements with efficient delta serialization. Provides storage and access
- * to stat using FInstanceStatsItem.
+ * to stat using FInstanceStatsItem. It also supports being saved to the file.
  */
 USTRUCT(BlueprintType)
-struct FInstanceStats : public FFastArraySerializer
+struct INVENTORYSYSTEM_API FInstanceStats : public FFastArraySerializer
 {
 	GENERATED_BODY()
 
@@ -56,6 +59,11 @@ struct FInstanceStats : public FFastArraySerializer
 	const FInstanceStatsItem* GetStat(const FGameplayTag& InTag) const
 	{
 		return Array.FindByKey(InTag);
+	}
+
+	bool HasStat(const FGameplayTag& InTag) const
+	{
+		return GetStat(InTag) != nullptr;
 	}
 
 	void SetStat(const FInstanceStatsItem& InStat)
@@ -92,9 +100,12 @@ struct FInstanceStats : public FFastArraySerializer
 		}
 	}
 
-	bool HasStat(const FGameplayTag& InTag) const
+	FInstanceStats& operator=(const FInstanceStats& Other)
 	{
-		return GetStat(InTag) != nullptr;
+		Array = Other.Array;
+		MarkArrayDirty();
+
+		return *this;
 	}
 
 	bool HasMatchingStat(const FInstanceStatsItem& InStat) const
@@ -124,7 +135,7 @@ struct FInstanceStats : public FFastArraySerializer
 
 private:
 	// Internal array storing all stat items 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, SaveGame)
 	TArray<FInstanceStatsItem> Array;
 };
 

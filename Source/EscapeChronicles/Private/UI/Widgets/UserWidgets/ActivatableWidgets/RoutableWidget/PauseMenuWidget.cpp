@@ -5,6 +5,8 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "UI/Widgets/UserWidgets/Buttons/TextButtonBaseWidget.h"
 #include "EscapeChronicles/Public/UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/ConfirmationPopup.h"
+#include "GameInstances/EscapeChroniclesGameInstance.h"
+#include "HUDs/EscapeChroniclesHUD.h"
 
 void UPauseMenuWidget::NativeOnInitialized()
 {
@@ -15,9 +17,9 @@ void UPauseMenuWidget::NativeOnInitialized()
 		ContinueButton->OnClicked().AddUObject(this, &ThisClass::OnContinueButtonClicked);
 	}
 
-	if (ensureAlways(OptionsButton))
+	if (ensureAlways(SettingsButton))
 	{
-		OptionsButton->OnClicked().AddUObject(this, &ThisClass::OnOptionsButtonClicked);
+		SettingsButton->OnClicked().AddUObject(this, &ThisClass::OnSettingsButtonClicked);
 	}
 
 	if (ensureAlways(ExitButton))
@@ -31,10 +33,22 @@ void UPauseMenuWidget::OnContinueButtonClicked()
 	DeactivateWidget();
 }
 
-void UPauseMenuWidget::OnOptionsButtonClicked()
+void UPauseMenuWidget::OnSettingsButtonClicked() const
 {
-	// TODO: Make the implementation
-	unimplemented();
+#if DO_CHECK
+	check(IsValid(GetOwningPlayer()));
+#endif
+
+	AEscapeChroniclesHUD* HUD = GetOwningPlayer()->GetHUD<AEscapeChroniclesHUD>();
+
+	if (ensureAlways(IsValid(HUD)))
+	{
+#if DO_ENSURE
+		ensureAlways(SettingsMenuRouteTag.IsValid());
+#endif
+
+		HUD->GoTo(SettingsMenuRouteTag);
+	}
 }
 
 void UPauseMenuWidget::OnExitButtonClicked()
@@ -47,20 +61,16 @@ void UPauseMenuWidget::OnExitButtonClicked()
 	}
 
 	ConfirmationExitWidget->SetDisplayedText(ExitConfirmationWidgetText);
-	
+
+	// Close the session and travel to the main menu if the user confirms the exit
 	ConfirmationExitWidget->OnResult.AddWeakLambda(this, [this](bool bConfirmed)
 	{
-		if (!bConfirmed)
+		if (bConfirmed)
 		{
-			return;
-		}
-		
-		// TODO: Make an exit to the main menu
-		APlayerController* OwningPlayerController = GetOwningPlayer();
-				
-		if (IsValid(OwningPlayerController))
-		{
-			OwningPlayerController->ConsoleCommand("quit");	
+			UEscapeChroniclesGameInstance* GameInstance = GetWorld()->GetGameInstanceChecked<
+				UEscapeChroniclesGameInstance>();
+
+			GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
 		}
 	});
 }

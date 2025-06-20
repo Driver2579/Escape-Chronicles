@@ -52,6 +52,12 @@ public:
 
 	EDestructiveToolType GetDestructiveToolType() const { return DestructiveToolType; }
 
+	/**
+	 * Converts the given relative location of the hole in the mesh to a world location based on the mesh's world
+	 * transform.
+	 */
+	void GetHoleWorldLocation(const FVector& HoleRelativeLocation, FVector& OutWorldLocation) const;
+
 	// Adds a hole of the given radius at the given world location converting to a relative location of the mesh
 	void AddHoleAtWorldLocation(const FVector& HoleWorldLocation, const float HoleRadius);
 
@@ -87,6 +93,17 @@ private:
 	bool bAutomaticallyMakeActorReplicated = true;
 
 	/**
+	 * Whether the component should automatically add a UAIPerceptionStimuliSourceComponent to the actor at the
+	 * beginning of the game with a registered sight sense.
+	 * @remark The component will be added only if the actor has authority.
+	 */
+	UPROPERTY(EditAnywhere, Category="AI")
+	bool bAutomaticallyAddAIPerceptionStimuliSourceComponent = true;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UDynamicMesh> OriginalDynamicMeshCopy;
+
+	/**
 	 * A type of tool that will be used to create holes in the mesh. This should be checked before creating holes. Other
 	 * types of tools than the selected one should not be used to create holes in an actor that uses this component.
 	 */
@@ -105,15 +122,6 @@ private:
 	 * doesn't check if the OwningDynamicMeshActor is valid, and doesn't check if the owner is an authority.
 	 */
 	void AddHoleAtRelativeLocation_Internal(const FVector& HoleRelativeLocation, const float HoleRadius) const;
-
-	/**
-	 * Removes an existing hole at the given relative location.
-	 * @remark You should call this function only for locations that were previously used to create holes.
-	 * @remark This function doesn't remove the given location from the HolesLocations array.
-	 * @remark The OwningDynamicMeshActor must be valid when calling this function.
-	 * @remark This function doesn't check if the owner is an authority.
-	 */
-	void RemoveHoleAtRelativeLocation_Internal(const FDynamicMeshHoleData& Hole) const;
 
 	// TODO: Replace the next logic with a FastArraySerializer
 

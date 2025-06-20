@@ -20,10 +20,10 @@ protected:
 
 private:
 	// The text displayed on the button
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Content")  
 	FText ButtonText;
 
 	// Bound text block component that renders ButtonText
-	UPROPERTY(meta=(BindWidget))
+	UPROPERTY(Transient, meta=(BindWidget))  
 	TObjectPtr<class UTextBlock> DisplayedText;
 };

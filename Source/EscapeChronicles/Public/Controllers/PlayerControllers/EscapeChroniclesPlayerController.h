@@ -6,8 +6,10 @@
 #include "GameFramework/PlayerController.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "Common/Delegates/PlayerStateDelegates.h"
 #include "EscapeChroniclesPlayerController.generated.h"
 
+class AEscapeChroniclesPlayerState;
 class UEscapeChroniclesAbilitySystemComponent;
 class AEscapeChroniclesCharacter;
 class UInputConfig;
@@ -20,6 +22,8 @@ class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerCon
 	GENERATED_BODY()
 
 public:
+	AEscapeChroniclesPlayerController();
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 
@@ -27,6 +31,8 @@ public:
 
 	virtual void InitPlayerState() override;
 	virtual void OnRep_PlayerState() override;
+
+	void CallOrRegister_OnPlayerStateInitialized(const FOnPlayerStateInitializedDelegate::FDelegate& Callback);
 
 	// Adds all input mapping contexts and binds all input actions in the given input config
 	void BindInputConfig(UEnhancedInputComponent* EnhancedInputComponent, const UInputConfig* InputConfig);
@@ -44,7 +50,9 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<class AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+	TSubclassOf<AEscapeChroniclesPlayerState> PlayerStateClassOverride;
+
+	FOnPlayerStateInitializedDelegate OnPlayerStateInitialized;
 
 	bool bBindInputConfigsOnPlayerStateInitialized = false;
 

@@ -41,6 +41,31 @@ void UInventoryItemInstance::Initialize(const TSubclassOf<UInventoryItemDefiniti
 	bInitialized = true;
 }
 
+UInventoryItemFragment* UInventoryItemInstance::GetFragmentByClass(
+	const TSubclassOf<UInventoryItemFragment>& FragmentClass) const
+{
+	if (!Definition)
+	{
+		return nullptr;
+	}
+
+	const UInventoryItemDefinition* DefinitionDefaultObject = Definition->GetDefaultObject<UInventoryItemDefinition>();
+
+	for (UInventoryItemFragment* Fragment : DefinitionDefaultObject->GetFragments())
+	{
+#if DO_CHECK
+		check(IsValid(Fragment));
+#endif
+
+		if (Fragment->IsA(FragmentClass))
+		{
+			return Fragment;
+		}
+	}
+
+	return nullptr;
+}
+
 UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 {
 	if (!IsValid(Outer))

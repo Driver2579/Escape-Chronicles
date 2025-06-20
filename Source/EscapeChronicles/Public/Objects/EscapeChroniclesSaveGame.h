@@ -111,19 +111,62 @@ public:
 		OfflinePlayersSaveData.Empty();
 	}
 
-	const TMap<FUniquePlayerID, FPlayerSaveData>& GetBotsSaveData() const { return BotsSaveData; }
+	const TMap<FUniquePlayerID, FPlayerSaveData>& GetPrisonerBotsSaveData() const { return PrisonerBotsSaveData; }
+	const TMap<FUniquePlayerID, FPlayerSaveData>& GetGuardBotsSaveData() const { return GuardBotsSaveData; }
+	const TMap<FUniquePlayerID, FPlayerSaveData>& GetMedicBotsSaveData() const { return MedicBotsSaveData; }
 
-	FPlayerSaveData* FindBotSaveData(const FUniquePlayerID& UniquePlayerID)
+	const FPlayerSaveData* FindPrisonerBotSaveData(const FUniquePlayerID& UniquePlayerID) const
 	{
-		return BotsSaveData.Find(UniquePlayerID);
+		return PrisonerBotsSaveData.Find(UniquePlayerID);
 	}
 
-	// Should be used only for bots (without NetID)
-	void AddBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData);
+	const FPlayerSaveData* FindGuardBotSaveData(const FUniquePlayerID& UniquePlayerID) const
+	{
+		return GuardBotsSaveData.Find(UniquePlayerID);
+	}
 
+	const FPlayerSaveData* FindMedicBotSaveData(const FUniquePlayerID& UniquePlayerID) const
+	{
+		return MedicBotsSaveData.Find(UniquePlayerID);
+	}
+
+	// Should be used only for bots (without NetID) that are prisoners
+	void AddPrisonerBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData)
+	{
+#if DO_CHECK || DO_ENSURE
+		CheckBotCanBeSaved(UniquePlayerID);
+#endif
+
+		// Add the new data
+		PrisonerBotsSaveData.Add(UniquePlayerID, SavedBotData);
+	}
+
+	// Should be used only for bots (without NetID) that are guards
+	void AddGuardBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData)
+	{
+#if DO_CHECK || DO_ENSURE
+		CheckBotCanBeSaved(UniquePlayerID);
+#endif
+
+		// Add the new data
+		GuardBotsSaveData.Add(UniquePlayerID, SavedBotData);
+	}
+
+	// Should be used only for bots (without NetID) that are medics
+	void AddMedicBotSaveData(const FUniquePlayerID& UniquePlayerID, const FPlayerSaveData& SavedBotData)
+	{
+#if DO_CHECK || DO_ENSURE
+		CheckBotCanBeSaved(UniquePlayerID);
+#endif
+
+		MedicBotsSaveData.Add(UniquePlayerID, SavedBotData);
+	}
+
+	// Clears both PrisonerBotsSaveData and GuardBotsSaveData
 	void ClearBotsSaveData()
 	{
-		BotsSaveData.Empty();
+		PrisonerBotsSaveData.Empty();
+		GuardBotsSaveData.Empty();
 	}
 
 private:
@@ -173,10 +216,39 @@ private:
 	TMap<FUniquePlayerID, FPlayerSaveData> OfflinePlayersSaveData;
 
 	/**
-	 * Map of saved bots.
+	 * Map of saved prisoner bots.
 	 * @tparam KeyType Unique ID of the bot (NetID should be empty).
 	 * @tparam ValueType Save data for the associated bot.
 	 */
 	UPROPERTY()
-	TMap<FUniquePlayerID, FPlayerSaveData> BotsSaveData;
+	TMap<FUniquePlayerID, FPlayerSaveData> PrisonerBotsSaveData;
+
+	/**
+	 * Map of saved guard bots.
+	 * @tparam KeyType Unique ID of the bot (NetID should be empty).
+	 * @tparam ValueType Save data for the associated bot.
+	 */
+	UPROPERTY()
+	TMap<FUniquePlayerID, FPlayerSaveData> GuardBotsSaveData;
+
+	/**
+	 * Map of saved medic bots.
+	 * @tparam KeyType Unique ID of the bot (NetID should be empty).
+	 * @tparam ValueType Save data for the associated bot.
+	 */
+	UPROPERTY()
+	TMap<FUniquePlayerID, FPlayerSaveData> MedicBotsSaveData;
+
+#if DO_CHECK || DO_ENSURE
+	static void CheckBotCanBeSaved(const FUniquePlayerID& UniquePlayerID)
+	{
+#if DO_CHECK
+		check(UniquePlayerID.IsValid());
+#endif
+
+#if DO_ENSURE
+		ensureAlwaysMsgf(UniquePlayerID.NetID.IsEmpty(), TEXT("Bots must NOT contain the NetID!"));
+#endif
+	}
+#endif
 };

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
+#include "GameplayTagContainer.h"
 #include "PauseMenuWidget.generated.h"
 
 class UTextButtonBaseWidget;
@@ -18,19 +19,13 @@ protected:
 	virtual void NativeOnInitialized() override;
 	
 private:
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")
-	FText ExitConfirmationWidgetText;
-	
-	UPROPERTY(EditDefaultsOnly, Category="Exiting")
-	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
-
 	// Button to resume gameplay 
 	UPROPERTY(meta=(BindWidget))  
 	TObjectPtr<UTextButtonBaseWidget> ContinueButton;
 
-	// Button to open options submenu 
+	// Button to open settings submenu 
 	UPROPERTY(meta=(BindWidget))  
-	TObjectPtr<UTextButtonBaseWidget> OptionsButton;
+	TObjectPtr<UTextButtonBaseWidget> SettingsButton;
 
 	// Button to initiate exit flow 
 	UPROPERTY(meta=(BindWidget))  
@@ -39,8 +34,20 @@ private:
 	UFUNCTION()
 	void OnContinueButtonClicked();
 
+	// Gameplay tag of the settings menu's route
+	UPROPERTY(EditDefaultsOnly, Category="Routes")
+	FGameplayTag SettingsMenuRouteTag;
+
 	UFUNCTION()
-	void OnOptionsButtonClicked();
+	void OnSettingsButtonClicked() const;
+
+	// A widget that will be shown when the user clicks the exit button
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	TSubclassOf<class UConfirmationPopup> ExitConfirmationWidgetClass;
+
+	// Text that will be displayed in the exit confirmation widget
+	UPROPERTY(EditDefaultsOnly, Category="Exit")  
+	FText ExitConfirmationWidgetText;
 
 	UFUNCTION()
 	void OnExitButtonClicked();

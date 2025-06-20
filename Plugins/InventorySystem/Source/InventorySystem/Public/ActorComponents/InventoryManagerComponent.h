@@ -59,6 +59,9 @@ public:
 	bool DeleteItem(const int32 SlotIndex,
 		const FGameplayTag& SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main);
 
+	// Removes all items from the inventory
+	void ClearInventory();
+
 	/**
 	 * Method for obtaining data on item location in inventory
 	 * @return true if the search was successful

@@ -7,6 +7,7 @@
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Engine/AssetManager.h"
 #include "Net/UnrealNetwork.h"
+#include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 UCarryCharacterComponent::UCarryCharacterComponent()
 {
@@ -20,7 +21,7 @@ void UCarryCharacterComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ThisClass, CarriedCharacter);
 }
 
-void UCarryCharacterComponent::SetCarriedCharacter(AEscapeChroniclesCharacter* InCarriedCharacter)
+bool UCarryCharacterComponent::SetCarriedCharacter(AEscapeChroniclesCharacter* InCarriedCharacter)
 {
 	// Check if the new character has the required tags
 	if (InCarriedCharacter != nullptr)
@@ -30,7 +31,7 @@ void UCarryCharacterComponent::SetCarriedCharacter(AEscapeChroniclesCharacter* I
 
 		if (!AbilitySystemComponent->HasAnyMatchingGameplayTags(CarryableCharacterTags))
 		{
-			return;
+			return false;
 		}
 	}
 
@@ -38,41 +39,40 @@ void UCarryCharacterComponent::SetCarriedCharacter(AEscapeChroniclesCharacter* I
 	const AActor* Owner = GetOwner();
 	if (!ensureAlways(IsValid(Owner)) || !ensureAlways(Owner->HasAuthority()))
 	{
-		return;
+		return false;
 	}
 
 	// === Update CarriedCharacter and trigger replacement logic ===
 
-	const AEscapeChroniclesCharacter* OldCarriedCharacter = CarriedCharacter;
+	AEscapeChroniclesCharacter* OldCarriedCharacter = CarriedCharacter;
 
-	CarriedCharacter = InCarriedCharacter;
+	if (ReplaceCarriedCharacter(OldCarriedCharacter, InCarriedCharacter))
+	{
+		CarriedCharacter = InCarriedCharacter;
 
-	ReplaceCarriedCharacter(OldCarriedCharacter, InCarriedCharacter);
+		return true;
+	}
+
+	CarriedCharacter = nullptr;
+
+	return false;
 }
 
-void UCarryCharacterComponent::ReplaceCarriedCharacter(const AEscapeChroniclesCharacter* OldCarriedCharacter,
-	const AEscapeChroniclesCharacter* NewCarriedCharacter)
+bool UCarryCharacterComponent::ReplaceCarriedCharacter(AEscapeChroniclesCharacter* OldCarriedCharacter,
+	AEscapeChroniclesCharacter* NewCarriedCharacter)
 {
 	// Drop the old character if it exists
 	if (IsValid(OldCarriedCharacter))
 	{
-		USkeletalMeshComponent* OldCarriedCharacterMesh = OldCarriedCharacter->GetMesh();
-
-		if (ensureAlways(OldCarriedCharacterMesh))
-		{
-			DropCharacter(OldCarriedCharacterMesh);
-		}
+		DropCharacter(OldCarriedCharacter);
 	}
+
+	bool bPickupCharacterResult = true;
 
 	// Pick up the new character if specified
 	if (IsValid(NewCarriedCharacter))
 	{
-		USkeletalMeshComponent* NewCarriedCharacterMesh = NewCarriedCharacter->GetMesh();
-
-		if (ensureAlways(NewCarriedCharacterMesh))
-		{
-			PickupCharacter(NewCarriedCharacterMesh);
-		}
+		bPickupCharacterResult = PickupCharacter(NewCarriedCharacter);
 	}
 
 	// Cancel animation loading if no new character is set
@@ -81,12 +81,44 @@ void UCarryCharacterComponent::ReplaceCarriedCharacter(const AEscapeChroniclesCh
 		CarryAnimMontagesLoadedHandle->CancelHandle();
 		CarryAnimMontagesLoadedHandle.Reset();
 	}
+
+	return bPickupCharacterResult;
 }
 
-void UCarryCharacterComponent::PickupCharacter(USkeletalMeshComponent* CarriedCharacterMesh)
+bool UCarryCharacterComponent::PickupCharacter(AEscapeChroniclesCharacter* InCarriedCharacter)
 {
+#if DO_CHECK
+	check(IsValid(InCarriedCharacter));
+#endif
+
 	// Cache the mesh for animation
-	CachedCarriedCharacterMesh = CarriedCharacterMesh;
+	CachedCarriedCharacterMesh = InCarriedCharacter->GetMesh();
+
+	if (!ensureAlways(CachedCarriedCharacterMesh.IsValid()))
+	{
+		return false;
+	}
+
+	AEscapeChroniclesCharacter* CarryingCharacter = GetOwner<AEscapeChroniclesCharacter>();
+
+	if (!ensureAlways(IsValid(CarryingCharacter)))
+	{
+		return false;
+	}
+
+	AEscapeChroniclesPlayerState* CarriedCharacterPlayerState = InCarriedCharacter->GetPlayerState<
+		AEscapeChroniclesPlayerState>();
+
+	if (ensureAlways(IsValid(CarriedCharacterPlayerState)))
+	{
+		// Return false if the character is already being carried by another character
+		if (IsValid(CarriedCharacterPlayerState->GetCarryingCharacter()))
+		{
+			return false;
+		}
+
+		CarriedCharacterPlayerState->SetCarryingCharacter(CarryingCharacter);
+	}
 
 	// === Load and play animation ===
 
@@ -105,6 +137,8 @@ void UCarryCharacterComponent::PickupCharacter(USkeletalMeshComponent* CarriedCh
 		CarryAnimMontagesLoadedHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(AnimMontagesToLoad,
 			FStreamableDelegate::CreateUObject(this, &ThisClass::OnCarryAnimMontagesLoaded));
 	}
+
+	return true;
 }
 
 void UCarryCharacterComponent::OnCarryAnimMontagesLoaded()
@@ -156,11 +190,18 @@ void UCarryCharacterComponent::OnCarryAnimMontagesLoaded()
 	CachedCarriedCharacterMesh->SetRelativeTransform(AttachSocketTransform);
 }
 
-void UCarryCharacterComponent::DropCharacter(USkeletalMeshComponent* CarriedCharacterMesh) const
+void UCarryCharacterComponent::DropCharacter(AEscapeChroniclesCharacter* InCarriedCharacter) const
 {
 #if DO_CHECK
-	check(IsValid(CarriedCharacterMesh));
+	check(IsValid(InCarriedCharacter));
 #endif
+
+	USkeletalMeshComponent* CarriedCharacterMesh = InCarriedCharacter->GetMesh();
+
+	if (!ensureAlways(IsValid(CarriedCharacterMesh)))
+	{
+		return;
+	}
 
 	// Enable physics and detach the mesh
 	CarriedCharacterMesh->SetSimulatePhysics(true);
@@ -173,7 +214,13 @@ void UCarryCharacterComponent::DropCharacter(USkeletalMeshComponent* CarriedChar
 		CarriedCharacterAnimInstance->Montage_Stop(0);
 	}
 
-	// === Stop the carrying character's animation ===
+	AEscapeChroniclesPlayerState* CarriedCharacterPlayerState = InCarriedCharacter->GetPlayerState<
+		AEscapeChroniclesPlayerState>();
+
+	if (ensureAlways(IsValid(CarriedCharacterPlayerState)))
+	{
+		CarriedCharacterPlayerState->SetCarryingCharacter(nullptr);
+	}
 
 	const AEscapeChroniclesCharacter* CarryingCharacter = GetOwner<AEscapeChroniclesCharacter>();
 
@@ -181,6 +228,8 @@ void UCarryCharacterComponent::DropCharacter(USkeletalMeshComponent* CarriedChar
 	{
 		return;
 	}
+
+	// === Stop the carrying character's animation ===
 	
 	const USkeletalMeshComponent* CarryingCharacterMesh = CarryingCharacter->GetMesh();
 
@@ -194,4 +243,6 @@ void UCarryCharacterComponent::DropCharacter(USkeletalMeshComponent* CarriedChar
 	{
 		CarryingCharacterAnimInstance->Montage_Stop(0);
 	}
+
+	return;
 }
