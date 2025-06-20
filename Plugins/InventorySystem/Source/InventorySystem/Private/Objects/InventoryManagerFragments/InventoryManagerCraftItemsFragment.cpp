@@ -3,8 +3,8 @@
 #include "Objects/InventoryManagerFragments/InventoryManagerCraftItemsFragment.h"
 #include "Common/Structs/TableRowBases/InventoryManagerCraftData.h"
 
-
-bool UInventoryManagerCraftItemsFragment::IsCraftPossible(const FName& CraftName)
+bool UInventoryManagerCraftItemsFragment::IsCraftPossible(const FName& CraftName,
+	TArray<UInventoryItemInstance*>* OutMaterials)
 {
 	FInventoryManagerCraftData* InventoryManagerCraftData =
 		AvailableCraftListDataTable->FindRow<FInventoryManagerCraftData>(CraftName, "");
@@ -55,6 +55,11 @@ bool UInventoryManagerCraftItemsFragment::IsCraftPossible(const FName& CraftName
 		}
 	}
 
+	if (OutMaterials)
+	{
+		*OutMaterials = ItemInstancesToUse;
+	}
+
 	return true;
 }
 
@@ -84,6 +89,49 @@ UInventoryItemInstance* UInventoryManagerCraftItemsFragment::GetMatchingItemInst
 
 void UInventoryManagerCraftItemsFragment::Server_Craft_Implementation(const FName CraftName)
 {
-	
+	TArray<UInventoryItemInstance*> Materials;
 
+	if (!IsCraftPossible(CraftName, &Materials))
+	{
+		return;
+	}
+
+	UInventoryManagerComponent* Inventory = GetInventoryManager();
+
+	if (!ensureAlways(IsValid(Inventory)))
+	{
+		return;
+	}
+
+	for (UInventoryItemInstance* ItemInstance : Materials)
+	{
+#if DO_CHECK
+		check(IsValid(ItemInstance));
+		check(ItemInstance->IsInitialized());
+#endif
+
+		FGameplayTag OutSlotsType;
+		int32 OutSlotIndex;
+		Inventory->GetItemInstanceContainerAndIndex(OutSlotsType, OutSlotIndex, ItemInstance);
+
+		ensureAlways(Inventory->DeleteItem(OutSlotIndex, OutSlotsType));
+	}
+
+	const FInventoryManagerCraftData* InventoryManagerCraftData =
+	AvailableCraftListDataTable->FindRow<FInventoryManagerCraftData>(CraftName, "");
+
+	if (!ensureAlways(InventoryManagerCraftData))
+	{
+		return;
+	}
+
+	UInventoryItemInstance* ItemInstance = NewObject<UInventoryItemInstance>();
+	ItemInstance->Initialize(InventoryManagerCraftData->ResultItemDefinition);
+
+	for (const FInstanceStatsItem& Stat : InventoryManagerCraftData->ResultInstanceStatsOverride.GetAllStats())
+	{
+		ItemInstance->GetInstanceStats_Mutable().SetStat(Stat);
+	}
+
+	ensureAlways(Inventory->AddItem(ItemInstance));
 }

@@ -69,7 +69,29 @@ void UCraftSlotWidget::NativeOnClicked()
 {
 	Super::NativeOnClicked();
 
-	
+	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
+
+	if (!ensureAlways(IsValid(Character)))
+	{
+		return;
+	}
+
+	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
+
+	if (!ensureAlways(IsValid(Inventory)))
+	{
+		return;
+	}
+
+	UInventoryManagerCraftItemsFragment* CraftItemsFragment =
+		Inventory->GetFragmentByClass<UInventoryManagerCraftItemsFragment>();
+
+	if (!ensureAlways(IsValid(CraftItemsFragment)))
+	{
+		return;
+	}
+
+	CraftItemsFragment->Server_Craft(GetAssociatedRowName());
 }
 
 void UCraftSlotWidget::UpdateEnabled()

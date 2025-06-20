@@ -14,7 +14,7 @@ class INVENTORYSYSTEM_API UInventoryManagerCraftItemsFragment : public UInventor
 public:
 	const UDataTable* GetAvailableCraftList() const { return AvailableCraftListDataTable; }
 
-	bool IsCraftPossible(const FName& CraftName);
+	bool IsCraftPossible(const FName& CraftName, TArray<UInventoryItemInstance*>* OutMaterials = nullptr);
 
 	UFUNCTION(Server, Reliable)
 	void Server_Craft(const FName CraftName);
