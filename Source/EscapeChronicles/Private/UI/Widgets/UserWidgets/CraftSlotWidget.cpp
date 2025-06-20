@@ -10,7 +10,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/Prompts/InformPopup.h"
 
 void UCraftSlotWidget::SetAssociate(const FName& InAssociatedRowName,
-                                    const FInventoryManagerCraftData& InAssociatedRowData)
+	const FInventoryManagerCraftData& InAssociatedRowData)
 {
 	AssociatedRowName = &InAssociatedRowName;
 	AssociatedRowData = &InAssociatedRowData;
@@ -58,11 +58,47 @@ void UCraftSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPo
 
 	UHintBaseWidget* ToolTip = Cast<UHintBaseWidget>(GetToolTip());
 
-	if (IsValid(ToolTip))
+	if (!IsValid(ToolTip))
 	{
-		ToolTip->SetTitleText(FText::FromName(GetAssociatedRowName()));
-		ToolTip->SetMainText(FText::FromString(""));
+		return;
 	}
+	
+	FText TitleText =
+		AssociatedRowData->ResultItemDefinition->GetDefaultObject<UInventoryItemDefinition>()->GetName();
+
+	if (AssociatedRowData->ResultNumber > 1)
+	{
+		TitleText = FText::Format(FText::FromString("{0} ({1})"), TitleText, AssociatedRowData->ResultNumber);
+	}
+
+	FText ConsumableText;
+	FText NonConsumableText;
+
+	for (const FCraftRequirement& Material : AssociatedRowData->ItemMaterials)
+	{
+		FText MaterialText = Material.ItemDefinitionClass->GetDefaultObject<UInventoryItemDefinition>()->GetName();
+
+		if (Material.Number > 1)
+		{
+			MaterialText = FText::Format(FText::FromString("{0} x{1}"), MaterialText, Material.Number);
+		}
+
+		if (Material.bConsumeResource)
+		{
+			ConsumableText = ConsumableText.IsEmpty() ? MaterialText :
+				FText::Format(FText::FromString("{0}, {1}"), ConsumableText, MaterialText);
+		}
+		else
+		{
+			NonConsumableText = NonConsumableText.IsEmpty() ? MaterialText :
+				FText::Format(FText::FromString("{0}, {1}"), NonConsumableText, MaterialText);
+		}
+	}
+
+	ToolTip->SetTitleText(TitleText);
+
+	ToolTip->SetMainText(FText::Format(FText::FromString("{0}\nNot Consumed: {1}"), ConsumableText,
+		NonConsumableText));
 }
 
 void UCraftSlotWidget::NativeOnClicked()
