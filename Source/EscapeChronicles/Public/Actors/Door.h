@@ -48,48 +48,37 @@ public:
 	void SetEnterRequiresKey(const bool InEnterRequiresKey)
 	{
 		bEnterRequiresKey = InEnterRequiresKey;
-
-		UpdateConfirmedCharactersPool();
 	}
 	
 	void SetExitRequiresKey(const bool InExitRequiresKey)
 	{
 		bExitRequiresKey = InExitRequiresKey;
-
-		UpdateConfirmedCharactersPool();
 	}
 
-	virtual void OnPostLoadObject() override
-	{
-		UpdateConfirmedCharactersPool();
-	}
+	/**
+	 * TODO: Implement UpdateConfirmedCharactersPool(); and call it in methods: OnPostLoadObject, SetEnterRequiresKey,
+	 * SetExitRequiresKey.
+	 */
 
 protected:
 	virtual void BeginPlay() override;
 
 private:
 	/* 
-	 * Entrance trigger zone. Must be placed only on one door side and MUST NOT overlap with ExitBox.
+	 * Entrance trigger zone. Must be placed only on one door side and MUST NOT overlap with ExitBox, only touch.
 	 * Character presence in this zone means they're on the outside of the door.
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> EnterBox;
 
 	/*
-	 * Exit trigger zone. Must be placed only on one door side and MUST NOT overlap with EnterBox.
+	 * Exit trigger zone. Must be placed only on one door side and MUST NOT overlap with EnterBox, only touch.
 	 * Character presence in this zone means They're on the inside of the door
 	 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> ExitBox;
 
-	// Checks if the door needs to be unlocked. Must be between EnterBox and ExitBox.
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UBoxComponent> DoorwayBoxOverlap;
-
-	/*
-	 * Physical door blocker collider. Blocks passage when active. Automatically disabled during valid access. Should
-	 * fully cover doorway and be inside the DoorwayBoxOverlap.
-	 */
+	// Physical door blocker collider. Blocks passage when active. Automatically disabled during valid access.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UBoxComponent> DoorwayBoxBlock;
 
@@ -110,29 +99,28 @@ private:
 	bool bExitRequiresKey = false;
 
 	UFUNCTION()
-	void OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnEnterBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	UFUNCTION()
-	void OnDoorwayBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
+	void OnExitBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 	UFUNCTION()
-	void OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	void OnDoorwayOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
-	
-	// Returns true if the key is needed in the current position
-	bool IsRequiresKey(const AEscapeChroniclesCharacter* Character) const;
-	
+
 	// Sets whether a character can pass through a door
 	void SetLockDoorway(const AEscapeChroniclesCharacter* Character, bool IsLock) const;
-	
-	// Removes 1 unit of durability if needed
+
+	// Removes 1 unit of durability
 	void UseKey(const AEscapeChroniclesCharacter* Character) const;
 
-	void UpdateConfirmedCharactersPool();
+	// Characters that can potentially enter through the door
+	TArray<TObjectPtr<AEscapeChroniclesCharacter>> EnteringCharactersPool;
 
-	void TryAddCharacterToPool(AEscapeChroniclesCharacter* Character);
+	// Characters that can potentially exit through the door
+	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ExitingCharactersPool;
 
 	// Characters who are in the process of going through the door
 	TArray<TObjectPtr<AEscapeChroniclesCharacter>> ConfirmedCharactersPool;
