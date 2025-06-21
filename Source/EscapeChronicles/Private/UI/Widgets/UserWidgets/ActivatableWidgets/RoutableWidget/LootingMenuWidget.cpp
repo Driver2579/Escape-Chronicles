@@ -41,18 +41,18 @@ void ULootingMenuWidget::NativeConstruct()
 	}
 
 	UInventoryManagerComponent* InLootingInventoryManager = InventoryManagerTransferItemsFragment->GetLootInventory();
-	
+
 	OwningInventoryManager = InOwningInventoryManager;
 	LootingInventoryManager = InLootingInventoryManager;
 
-	OwningInventoryManager->OnContentChanged.AddUObject(this, &ThisClass::OnOwningInventoryContentChanged);
-	LootingInventoryManager->OnContentChanged.AddUObject(this, &ThisClass::OnLootingInventoryContentChanged);
+	OwningInventoryManager->OnContentChanged.AddUObject(this, &ThisClass::UpdateOwningInventoryWidget);
+	LootingInventoryManager->OnContentChanged.AddUObject(this, &ThisClass::UpdateLootingInventoryWidget);
 
-	UpdateOwningInventoryWidget(OwningMainInventoryTypeTag);
-	UpdateLootingInventoryWidget(LootingMainInventoryTypeTag);
+	UpdateOwningInventoryWidget();
+	UpdateLootingInventoryWidget();
 }
 
-void ULootingMenuWidget::UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag) const
+void ULootingMenuWidget::UpdateOwningInventoryWidget() const
 {
 	if (!ensureAlways(OwningInventoryManager.IsValid()))
 	{
@@ -61,15 +61,15 @@ void ULootingMenuWidget::UpdateOwningInventoryWidget(const FGameplayTag& Invento
 
 	const FInventorySlotsTypedArrayContainer& InventoryContent = OwningInventoryManager->GetInventoryContent();
 
-	const int32 InventoryIndex = InventoryContent.IndexOfByTag(InventoryTypeTag);
+	const int32 InventoryIndex = InventoryContent.IndexOfByTag(OwningMainInventoryTypeTag);
 
-	if (ensureAlways(InventoryIndex >= 0 && InventoryIndex < InventoryContent.GetItems().Num()))
+	if (ensureAlways(InventoryContent.GetItems().IsValidIndex(InventoryIndex)))
 	{
 		OwningInventoryWidget->SetAssociate(&InventoryContent[InventoryIndex]);
 	}
 }
 
-void ULootingMenuWidget::UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag) const
+void ULootingMenuWidget::UpdateLootingInventoryWidget() const
 {
 	if (!ensureAlways(LootingInventoryManager.IsValid()))
 	{
@@ -78,10 +78,17 @@ void ULootingMenuWidget::UpdateLootingInventoryWidget(const FGameplayTag& Invent
 
 	const FInventorySlotsTypedArrayContainer& InventoryContent = LootingInventoryManager->GetInventoryContent();
 
-	const int32 InventoryIndex = InventoryContent.IndexOfByTag(InventoryTypeTag);
+	const int32 MainInventoryIndex = InventoryContent.IndexOfByTag(LootingMainInventoryTypeTag);
 
-	if (ensureAlways(InventoryIndex >= 0 && InventoryIndex < InventoryContent.GetItems().Num()))
+	if (ensureAlways(InventoryContent.GetItems().IsValidIndex(MainInventoryIndex)))
 	{
-		LootingInventoryWidget->SetAssociate(&InventoryContent[InventoryIndex]);
+		LootingInventoryWidget->SetAssociate(&InventoryContent[MainInventoryIndex]);
+	}
+
+	const int32 ClothesInventoryIndex = InventoryContent.IndexOfByTag(LootingClothesInventoryTypeTag);
+
+	if (ensureAlways(InventoryContent.GetItems().IsValidIndex(ClothesInventoryIndex)))
+	{
+		LootingClothesWidget->SetAssociate(&InventoryContent[ClothesInventoryIndex]);
 	}
 }

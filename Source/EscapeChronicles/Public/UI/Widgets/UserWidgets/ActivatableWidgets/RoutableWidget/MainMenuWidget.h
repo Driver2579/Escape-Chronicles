@@ -31,7 +31,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category="Sessions")
 	TSoftObjectPtr<UWorld> GameLevel;
 
-	void OnCreateGameButtonClicked() const;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UPromptWidget> LoadingScreenWidgetClass;
+
+	void OnCreateGameButtonClicked();
 
 	void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful) const;
 	void OnStartSessionComplete(FName SessionName, bool bWasSuccessful) const;
