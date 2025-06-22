@@ -3,18 +3,24 @@
 #include "EscapeChronicles/Public/GameModes/EscapeChroniclesGameMode.h"
 
 #include "Components/ActorComponents/PlayerOwnershipComponent.h"
+#include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "EscapeChronicles/Public/Characters/EscapeChroniclesCharacter.h"
+#include "GameState/EscapeChroniclesGameState.h"
 #include "HUDs/EscapeChroniclesHUD.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Subsystems/SaveGameSubsystem.h"
 
 AEscapeChroniclesGameMode::AEscapeChroniclesGameMode()
 {
+	GameStateClass = AEscapeChroniclesGameState::StaticClass();
 	DefaultPawnClass = AEscapeChroniclesCharacter::StaticClass();
 	PlayerControllerClass = AEscapeChroniclesPlayerController::StaticClass();
 	PlayerStateClass = AEscapeChroniclesPlayerState::StaticClass();
 	HUDClass = AEscapeChroniclesHUD::StaticClass();
+
+	ScheduleEventManagerComponent = CreateDefaultSubobject<UScheduleEventManagerComponent>(
+		TEXT("Schedule Event Manager"));
 }
 
 void AEscapeChroniclesGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
@@ -174,6 +180,20 @@ void AEscapeChroniclesGameMode::PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerS
 {
 	// Register the player in the player ownership system because we have a valid UniquePlayerID now
 	UPlayerOwnershipComponent::RegisterPlayer(PlayerState);
+
+	OnPlayerOrBotInitialized.Broadcast(PlayerState);
+}
+
+void AEscapeChroniclesGameMode::Logout(AController* Exiting)
+{
+#if DO_CHECK
+	check(Exiting->PlayerState);
+	check(Exiting->PlayerState->IsA<AEscapeChroniclesPlayerState>());
+#endif
+
+	OnPlayerOrBotLogout.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(Exiting->PlayerState));
+
+	Super::Logout(Exiting);
 }
 
 void AEscapeChroniclesGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)

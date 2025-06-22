@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "InteractableComponent.generated.h"
 
+class UInteractPopupWidget;
 class UInteractionManagerComponent;
 
 // A component that makes an actor interactive
@@ -17,11 +18,18 @@ class INTERACTIONSYSTEM_API UInteractableComponent : public UActorComponent
 public:
 	UInteractableComponent();
 
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
 	const FName& GetHintMeshTag() const { return HintMeshTag; }
 	const FName& GetHintWidgetTag() const { return HintWidgetTag; }
 
 	bool CanInteract() const { return bCanInteract; }
-	void SetCanInteract(const bool bInbCanInteract) { bCanInteract = bInbCanInteract; }
+	void SetCanInteract(const bool bInbCanInteract)
+	{
+		bCanInteract = bInbCanInteract;
+
+		OnCanInteractChanged.Broadcast(bInbCanInteract);
+	}
 
 	// Calls the interaction delegate (InteractDelegate)
 	void Interact(UInteractionManagerComponent* InteractionManagerComponent) const;
@@ -38,6 +46,11 @@ public:
 	// A delegate called when interacting with an actor
 	FOnInteractDelegate OnInteract;
 
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnCanInteractChangedDelegate, bool bCurrentCanInteract);
+
+	// Delegate called when bCanInteract is changed
+	FOnCanInteractChangedDelegate OnCanInteractChanged;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -46,9 +59,12 @@ private:
 	void InitializeHintWidget();
 
 	// Whether interaction is possible
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, ReplicatedUsing="OnRep_CanInteract")
 	bool bCanInteract;
 	
+	UFUNCTION()
+	void OnRep_CanInteract();
+
 	// Tag to find meshes to hint when the interaction hint visibility is true
 	UPROPERTY(EditAnywhere, Category="Hint")
 	FName HintMeshTag = TEXT("HintMesh");
@@ -62,7 +78,7 @@ private:
 	TObjectPtr<UMaterialInterface> OverlayMaterialHint;
 
 	// Widget that is visible when the interaction hint visibility is true
-	TWeakObjectPtr<class UInteractPopupWidget> HintWidget;
+	TWeakObjectPtr<UInteractPopupWidget> HintWidget;
 	
 	// Meshes to hint when the interaction hint visibility is true
 	TArray<TWeakObjectPtr<UMeshComponent>> HintMeshes;

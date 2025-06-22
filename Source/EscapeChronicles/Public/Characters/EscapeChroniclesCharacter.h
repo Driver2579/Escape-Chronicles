@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "MoverSimulationTypes.h"
 #include "AbilitySystemInterface.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "Interfaces/Saveable.h"
 #include "ActiveGameplayEffectHandle.h"
 #include "Common/Enums/Mover/GroundSpeedMode.h"
@@ -60,7 +61,7 @@ public:
 	// Returns NavMoverComponent subobject
 	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
-	virtual UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
+	UInventoryManagerComponent* GetInventoryManagerComponent() const { return InventoryManagerComponent; }
 
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -73,7 +74,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FRotator GetActorAndViewDelta() const { return ActorAndViewDelta; }
 
+	UFUNCTION(BlueprintCallable)
+	bool HasAnyMeshControllingStateTags() const;
+
 	virtual void PostLoad() override;
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPlayerStateChangedDelegate, APlayerState* NewPlayerState,
+		APlayerState* OldPlayerState)
+
+	FOnPlayerStateChangedDelegate OnPlayerStateChangedDelegate;
 
 	virtual FVector GetNavAgentLocation() const override;
 
@@ -138,6 +147,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bMaintainLastInputOrientation = false;
 
+	/**
+	 * If a character has at least one such tag, it means that it is in a mesh controlling state. This is useful when
+	 * you need to block a character to process it in a specific way (put it on a chair, enable ragdoll physics).
+	 * This includes:
+	 * - Disabling capsule collision
+	 * - Enabling mesh doll collision
+	 * - Switching to NullMovement
+	*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Movement")
+	FGameplayTagContainer MeshControllingStateTags;
+
 	// When ActorAndViewDelta is greater than this value, the mesh starts to rotate to reduce it
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float AngleToStartTurning = 90;
@@ -149,10 +169,6 @@ protected:
 	// ActorAndViewDelta interpolation speed when rotating mesh
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
 	float TurningInterpSpeed = 7;
-
-	// Tags that block mesh rotation
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement|Rotation")
-	FGameplayTagContainer BlockTurningTags;
 
 	/**
 	 * This effect is triggered when a character falls unconscious. It must be infinite and give the same tag as
@@ -284,7 +300,10 @@ private:
 
 	TSharedPtr<FStreamableHandle> LoadFaintedGameplayEffectClassHandle;
 
-	void OnFaintedGameplayEffectClassLoaded();
+	void OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
 
 	FActiveGameplayEffectHandle FaintedGameplayEffectHandle;
+	
+	// Checks if has a tag that block movement and does so
+	void UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const;
 };

@@ -3,7 +3,6 @@
 #include "Actors/InventoryPickupItem.h"
 
 #include "ActorComponents/InventoryManagerComponent.h"
-#include "Engine/ActorChannel.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemInstance.h"
 #include "Objects/InventoryItemFragments/PickupInventoryItemFragment.h"
@@ -13,6 +12,7 @@ AInventoryPickupItem::AInventoryPickupItem()
 	PrimaryActorTick.bCanEverTick = false;
 
 	bReplicates = true;
+	bReplicateUsingRegisteredSubObjectList = true;
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetSimulatePhysics(true);
@@ -25,19 +25,6 @@ void AInventoryPickupItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(ThisClass, ItemInstance);
-}
-
-bool AInventoryPickupItem::ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch,
-	FReplicationFlags* RepFlags)
-{
-	bool bParentResult = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
-
-	if (ItemInstance)
-	{
-		bParentResult |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
-	}
-	
-	return bParentResult;
 }
 
 void AInventoryPickupItem::OnConstruction(const FTransform& Transform)
@@ -58,17 +45,22 @@ void AInventoryPickupItem::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (HasAuthority())
+	{
 #if DO_CHECK
-	check(ItemInstance)
+		check(ItemInstance);
 #endif
 
-	if (HasAuthority() && !ItemInstance->IsInitialized())
-	{
-		ItemInstance->Initialize();
+		if (!ItemInstance->IsInitialized())
+		{
+			ItemInstance->Initialize();
+		}
+
+		AddReplicatedSubObject(ItemInstance);
 	}
 }
 
-bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
+bool AInventoryPickupItem::ApplyChangesFromItemInstance()
 {
 	if (!ItemInstance)
 	{
@@ -98,7 +90,7 @@ bool AInventoryPickupItem::ApplyChangesFromItemInstance() const
 	return true;
 }
 
-void AInventoryPickupItem::SetDefaultSettings() const
+void AInventoryPickupItem::SetDefaultSettings()
 {
 	const AInventoryPickupItem* PickupItemCDO = GetClass()->GetDefaultObject<AInventoryPickupItem>();
 
@@ -124,7 +116,13 @@ void AInventoryPickupItem::SetDefaultSettings() const
 	}
 }
 
-void AInventoryPickupItem::TryApplyChangesFromItemInstance() const
+void AInventoryPickupItem::BreakItemInstance(UInventoryItemInstance* ItemInstancee)
+{
+	// This actor is the represents of the item instance. So if the item instance breaks, the actor is also destroyed.
+	Destroy();
+}
+
+void AInventoryPickupItem::TryApplyChangesFromItemInstance()
 {
 	// Try to apply the new settings and fall back to the default ones if failed to apply the new ones
 	if (!ApplyChangesFromItemInstance())
