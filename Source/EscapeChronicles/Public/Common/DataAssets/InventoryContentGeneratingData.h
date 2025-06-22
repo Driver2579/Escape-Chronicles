@@ -3,13 +3,13 @@
 #pragma once
 #include "Common/Structs/FastArraySerializers/InstanceStats.h"
 
-#include "InventoryManagerGeneratingContentData.generated.h"
+#include "InventoryContentGeneratingData.generated.h"
 
 class UInventoryItemDefinition;
 
 // Defines loot generation rules for inventory
 USTRUCT(BlueprintType)
-struct FInventoryManagerGeneratingContentData : public FTableRowBase
+struct FInventoryContentGeneratingData : public FTableRowBase
 {
 	GENERATED_BODY()
 

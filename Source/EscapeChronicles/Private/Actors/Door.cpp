@@ -123,44 +123,6 @@ void ADoor::OnExitBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponen
 	}
 }
 
-void ADoor::Test(AActor* Actor, TArray<AEscapeChroniclesCharacter*>& StartPathPool,
-	TArray<AEscapeChroniclesCharacter*>& EndPathPool, bool bRequiresKey)
-{
-	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(Actor);
-
-	if (!IsValid(Character) || ConfirmedCharactersPool.Contains(Character) || EnteringCharactersPool.Contains(Character))
-	{
-		return;
-	}
-
-	if (EndPathPool.Contains(Character))
-	{
-		if (bRequiresKey && !HasCharacterAccessTag(Character))
-		{
-			if (!HasCharacterMatchingKey(Character))
-			{
-				SetLockDoorway(Character, true);
-
-				return;
-			}
-
-			UseKey(Character);
-		}
-
-		ConfirmedCharactersPool.Add(Character);
-	}
-	else if (HasCharacterEnterAccess(Character))
-	{
-		StartPathPool.Add(Character);
-
-		SetLockDoorway(Character, false);
-	}
-	else
-	{
-		SetLockDoorway(Character, true);
-	}
-}
-
 void ADoor::OnDoorwayOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
