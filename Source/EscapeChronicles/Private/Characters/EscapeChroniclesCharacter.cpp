@@ -993,7 +993,7 @@ void AEscapeChroniclesCharacter::MoveCapsuleToMesh()
 void AEscapeChroniclesCharacter::OnRep_CurrentMesh() const
 {
 	// Update the mesh with a new one but don't reset the animation
-	MeshComponent->SetSkeletalMesh(CurrentMesh, false);
+	MeshComponent->SetSkeletalMesh(CurrentMesh);
 }
 
 void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
@@ -1008,7 +1008,7 @@ void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
 	OriginalMesh = MeshComponent->GetSkeletalMeshAsset();
 
 	// Set the new mesh but don't reset the animation
-	MeshComponent->SetSkeletalMesh(NewMesh, false);
+	MeshComponent->SetSkeletalMesh(NewMesh);
 	CurrentMesh = NewMesh;
 }
 

@@ -6,6 +6,7 @@
 #include "Common/DataAssets/InventoryContentGeneratingData.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
+#include "GameState/EscapeChroniclesGameState.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 
 bool UInventoryContentGenerationSubsystem::ShouldCreateSubsystem(UObject* Outer) const
@@ -28,6 +29,35 @@ void UInventoryContentGenerationSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 		[this](AEscapeChroniclesPlayerState* PlayerState, const bool bLoaded)
 		{
 			if (!DataTableOwnerships.Contains(PlayerState->GetUniquePlayerID())) AssignGeneratingData(PlayerState);
+		});
+
+	AEscapeChroniclesGameState* GameState = InWorld.GetGameState<AEscapeChroniclesGameState>();
+
+	if (!ensureAlways(IsValid(GameState)))
+	{
+		return;
+	}
+
+	GameState->OnCurrentGameDateTimeUpdated.AddWeakLambda(this,
+		[this, GameState](const FGameplayDateTime& OldGameDateTime, const FGameplayDateTime& NewGameDateTime)
+		{
+			for (APlayerState* PlayerState : GameState->PlayerArray)
+			{
+				const AEscapeChroniclesPlayerState* CastedPlayerState = Cast<AEscapeChroniclesPlayerState>(PlayerState);
+
+				const bool bContainsPlayerState = ensureAlways(IsValid(CastedPlayerState)) &&
+					DataTableOwnerships.Contains(CastedPlayerState->GetUniquePlayerID());
+				
+				if (!bContainsPlayerState) continue;
+
+				const TSoftObjectPtr<UDataTable>& DataTable = DataTableOwnerships[CastedPlayerState->GetUniquePlayerID()];
+				const FInventoryContentGenerationEntry& Entry = GenerationEntries[DataTable];
+
+				if (Entry.bRegenerate && Entry.ScheduleRegenerateTime == NewGameDateTime.Time)
+				{
+					GenerateInventoryContent(CastedPlayerState);
+				}
+			}
 		});
 }
 
@@ -54,12 +84,12 @@ void UInventoryContentGenerationSubsystem::AssignGeneratingData(const AEscapeChr
 
 	for (const auto& Entry : GenerationEntries)
 	{
-		const bool bSuitableEntry = Character->IsA(Entry.Key) &&
-			Entry.Value.AvailableNumber > GetCurrentDataTableOwnersNumber(Entry.Value.InventoryContentGeneratingData);
+		const bool bSuitableEntry = Character->IsA(Entry.Value.AvailableOwner) &&
+			Entry.Value.AvailableNumber > GetCurrentDataTableOwnersNumber(Entry.Key);
 
 		if (!bSuitableEntry) continue;
 
-		DataTableOwnerships.Add(PlayerState->GetUniquePlayerID(), Entry.Value.InventoryContentGeneratingData);
+		DataTableOwnerships.Add(PlayerState->GetUniquePlayerID(), Entry.Key);
 
 		GenerateInventoryContent(PlayerState);
 
@@ -67,7 +97,8 @@ void UInventoryContentGenerationSubsystem::AssignGeneratingData(const AEscapeChr
 	}
 }
 
-void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AEscapeChroniclesPlayerState* PlayerState)
+void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AEscapeChroniclesPlayerState* PlayerState,
+	bool bClean)
 {
 	const AEscapeChroniclesCharacter* Character = PlayerState->GetPawn<AEscapeChroniclesCharacter>();
 
@@ -82,6 +113,8 @@ void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AEscap
 	{
 		return;
 	}
+
+	Inventory->ClearInventory();
 
 	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
 
@@ -102,8 +135,7 @@ void UInventoryContentGenerationSubsystem::OnDataTableLoaded(TSharedPtr<FStreama
 	TArray<FInventoryContentGeneratingData*> GeneratingContent;
 	DataTable->GetAllRows("", GeneratingContent);
 
-	UE_LOG(LogTemp, Error, TEXT("InventoryContentGenerationSubsystem::OnDataTableLoaded"));
-	/*// Process each loot table entry
+	// Process each loot table entry
 	for (const FInventoryContentGeneratingData* Row : GeneratingContent)
 	{
 		// Skip if probability check fails
@@ -126,9 +158,9 @@ void UInventoryContentGenerationSubsystem::OnDataTableLoaded(TSharedPtr<FStreama
 				ItemInstance->GetInstanceStats_Mutable().SetStat(Stat);
 			}
 
-			Inventory->AddItem(ItemInstance);
+			Inventory->AddItem(ItemInstance, INDEX_NONE, Row->SlotTypeTag);
 		}
-	}*/
+	}
 
 	if (Handle.IsValid())
 	{

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Common/Structs/GameplayDateTime.h"
 #include "Common/Structs/UniquePlayerID.h"
 #include "Interfaces/Saveable.h"
 #include "Subsystems/WorldSubsystem.h"
@@ -22,10 +23,16 @@ struct FInventoryContentGenerationEntry
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly)
-	TSoftObjectPtr<UDataTable> InventoryContentGeneratingData;
+	TSubclassOf<AEscapeChroniclesCharacter> AvailableOwner;
 
 	UPROPERTY(EditDefaultsOnly)
 	int32 AvailableNumber = 1;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bRegenerate = false;
+
+	UPROPERTY(EditDefaultsOnly, meta=(EditCondition=bRegenerate))
+	FGameplayTime ScheduleRegenerateTime;
 };
 
 UCLASS(Blueprintable, BlueprintType)
@@ -39,7 +46,12 @@ public:
 
 	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 
-	void GenerateInventoryContent(const AEscapeChroniclesPlayerState* PlayerState);
+	/**
+	 * Gives items from the table assigned to the character
+	 * @param PlayerState Character who needs to clear inventory
+	 * @param bClear If I true, first clear the inventory
+	 */
+	void GenerateInventoryContent(const AEscapeChroniclesPlayerState* PlayerState, bool bClear = true);
 
 private:
 	/**
@@ -47,7 +59,7 @@ private:
 	 * @tparam ValueType DataTable ownership information
 	 */
 	UPROPERTY(EditDefaultsOnly)
-	TMap<TSubclassOf<AEscapeChroniclesCharacter>, FInventoryContentGenerationEntry> GenerationEntries;
+	TMap<TSoftObjectPtr<UDataTable>, FInventoryContentGenerationEntry> GenerationEntries;
 
 	UPROPERTY(Transient, SaveGame)
 	TMap<FUniquePlayerID, TSoftObjectPtr<UDataTable>> DataTableOwnerships;
