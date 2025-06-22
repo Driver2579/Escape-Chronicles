@@ -392,6 +392,8 @@ private:
 	UFUNCTION()
 	void OnRep_CurrentMesh() const;
 
+	void SetMesh_Internal(USkeletalMesh* NewMesh) const;
+
 	// Original mesh that was set before it was changed if it was changed
 	UPROPERTY(Transient)
 	TObjectPtr<USkeletalMesh> OriginalMesh;
