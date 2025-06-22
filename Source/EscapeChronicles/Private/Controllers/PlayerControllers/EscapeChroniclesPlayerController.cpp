@@ -72,8 +72,12 @@ void AEscapeChroniclesPlayerController::InitPlayerState()
 		Super::InitPlayerState();
 	}
 
+	if (!PlayerState)
+	{
+		return;
+	}
+
 #if DO_CHECK
-	check(PlayerState);
 	check(PlayerState->IsA<AEscapeChroniclesPlayerState>());
 #endif
 

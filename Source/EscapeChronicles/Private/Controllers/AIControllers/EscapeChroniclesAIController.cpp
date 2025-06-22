@@ -38,48 +38,6 @@ void AEscapeChroniclesAIController::InitPlayerState()
 	{
 		Super::InitPlayerState();
 	}
-
-#if DO_CHECK
-	check(PlayerState);
-	check(PlayerState->IsA<AEscapeChroniclesPlayerState>());
-#endif
-
-	// Broadcast the PlayerState initialization event and clear its subscribers as it will never be called again
-	OnPlayerStateInitialized.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
-	OnPlayerStateInitialized.Clear();
-}
-
-void AEscapeChroniclesAIController::OnRep_PlayerState()
-{
-	Super::OnRep_PlayerState();
-
-#if DO_CHECK
-	check(PlayerState);
-	check(PlayerState->IsA<AEscapeChroniclesPlayerState>());
-#endif
-
-	// Broadcast the PlayerState initialization event and clear its subscribers as it will never be called again
-	OnPlayerStateInitialized.Broadcast(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
-	OnPlayerStateInitialized.Clear();
-}
-
-void AEscapeChroniclesAIController::CallOrRegister_OnPlayerStateInitialized(
-	const FOnPlayerStateInitializedDelegate::FDelegate& Callback)
-{
-	// Execute the given callback now if the PlayerState is already initialized
-	if (PlayerState)
-	{
-#if DO_CHECK
-		check(PlayerState.IsA<AEscapeChroniclesPlayerState>());
-#endif
-
-		Callback.Execute(CastChecked<AEscapeChroniclesPlayerState>(PlayerState));
-	}
-	// Otherwise, register the callback to be executed when the PlayerState is initialized
-	else
-	{
-		OnPlayerStateInitialized.Add(Callback);
-	}
 }
 
 void AEscapeChroniclesAIController::OnBotInitialized(AEscapeChroniclesPlayerState* InitializedPlayerState,

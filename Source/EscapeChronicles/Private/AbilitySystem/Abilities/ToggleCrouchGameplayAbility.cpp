@@ -33,6 +33,8 @@ void UToggleCrouchGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHan
 	if (!ensureAlways(IsValid(Character)))
 	{
 		CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+
+		return;
 	}
 
 	if (!Character->GetCharacterMoverComponent()->IsCrouching())

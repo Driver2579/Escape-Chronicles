@@ -992,8 +992,8 @@ void AEscapeChroniclesCharacter::MoveCapsuleToMesh()
 
 void AEscapeChroniclesCharacter::OnRep_CurrentMesh() const
 {
-	// Update the mesh with a new one but don't reset the animation
-	MeshComponent->SetSkeletalMesh(CurrentMesh);
+	// Update the mesh with a new one
+	SetMesh_Internal(CurrentMesh);
 }
 
 void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
@@ -1007,9 +1007,25 @@ void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
 	// Remember the original mesh to reset it later
 	OriginalMesh = MeshComponent->GetSkeletalMeshAsset();
 
-	// Set the new mesh but don't reset the animation
-	MeshComponent->SetSkeletalMesh(NewMesh);
+	// Set the new mesh
+	SetMesh_Internal(NewMesh);
 	CurrentMesh = NewMesh;
+}
+
+void AEscapeChroniclesCharacter::SetMesh_Internal(USkeletalMesh* NewMesh) const
+{
+	UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance();
+
+	// Remember the current animation montage if any and use its position to restore it later
+	UAnimMontage* CurrentAnimMontage = AnimInstance->GetCurrentActiveMontage();
+	const float CurrentAnimMontagePosition = AnimInstance->Montage_GetPosition(CurrentAnimMontage);
+
+	// Set the new mesh and reset the animation
+	MeshComponent->SetSkeletalMesh(NewMesh);
+
+	// Restore the animation montage if it was playing
+	AnimInstance->Montage_Play(CurrentAnimMontage, 1, EMontagePlayReturnType::MontageLength,
+		CurrentAnimMontagePosition);
 }
 
 void AEscapeChroniclesCharacter::ResetMesh()
@@ -1021,7 +1037,7 @@ void AEscapeChroniclesCharacter::ResetMesh()
 	}
 
 	// Reset the mesh to the original one and forget the pointer to it
-	MeshComponent->SetSkeletalMesh(OriginalMesh);
+	SetMesh_Internal(OriginalMesh);
 	CurrentMesh = OriginalMesh;
 	OriginalMesh = nullptr;
 }

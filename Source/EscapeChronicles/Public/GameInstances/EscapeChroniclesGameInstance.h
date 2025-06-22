@@ -82,6 +82,15 @@ public:
 		ensureAlways(CanKickPlayer(PlayerController));
 #endif
 
+		ClientTravelToMainMenu(PlayerController);
+	}
+
+	void ClientTravelToMainMenu(APlayerController* PlayerController) const
+	{
+#if DO_CHECK
+		check(IsValid(PlayerController));
+#endif
+
 		PlayerController->ClientTravel(GetLevelURLFromSoftObjectPtr(MainMenuLevel), TRAVEL_Absolute);
 	}
 
