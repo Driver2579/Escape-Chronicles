@@ -8,14 +8,29 @@ void AWinTrigger::NotifyActorBeginOverlap(AActor* OtherActor)
 {
 	Super::NotifyActorBeginOverlap(OtherActor);
 
-	if (!HasAuthority()) return;
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	const APawn* OtherPawn = Cast<APawn>(OtherActor);
-	if (!ensureAlways(IsValid(OtherPawn))) return;
+
+	if (!ensureAlways(IsValid(OtherPawn)))
+	{
+		return;
+	}
 
 	const APlayerController* Controller = OtherPawn->GetController<APlayerController>();
-	if (!ensureAlways(IsValid(Controller))) return;
+
+	if (!IsValid(Controller))
+	{
+		return;
+	}
 
 	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
-	if (ensureAlways(IsValid(GameState))) GameState->NetMulticast_WinGame();
+
+	if (ensureAlways(IsValid(GameState)))
+	{
+		GameState->NetMulticast_WinGame();
+	}
 }
