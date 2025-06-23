@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include "CoreMinimal.h"
 #include "Common/Structs/FastArraySerializers/InstanceStats.h"
+#include "InventorySystemGameplayTags.h"
 #include "InventoryContentGeneratingData.generated.h"
 
 class UInventoryItemDefinition;
