@@ -20,42 +20,10 @@ public:
 		return AssociatedInventorySlotsTypedArray;
 	}
 
-	void SetAssociate(const FInventorySlotsTypedArray* InventorySlotsTypedArray)
-	{
-		AssociatedInventorySlotsTypedArray = InventorySlotsTypedArray;
-
-		const TArray<FInventorySlot>& Slots = InventorySlotsTypedArray->Array.GetItems();
-		
-		if (Slots.Num() != SlotsContainer->GetChildrenCount())
-		{
-			ConstructSlots(Slots);
-
-			return;
-		}
-
-		for (int32 Index = 0; Index < Slots.Num(); ++Index)
-		{
-			check(Index >= 0 && Index < SlotsContainer->GetChildrenCount() && Index < Slots.Num());
-
-			UItemSlotWidget* ItemSlotWidget = Cast<UItemSlotWidget>(SlotsContainer->GetChildAt(Index));
-
-			ItemSlotWidget->SetAssociate(&Slots[Index], Index);
-		}
-	}
+	void SetAssociate(const FInventorySlotsTypedArray* InventorySlotsTypedArray);
 
 protected:
-	virtual void ConstructSlots(const TArray<FInventorySlot>& InventorySlots)
-	{
-		SlotsContainer->ClearChildren();
-
-		for (int32 Index = 0; Index < InventorySlots.Num(); ++Index)
-		{
-			UItemSlotWidget* NewSlotWidget = CreateWidget<UItemSlotWidget>(this, SlotClass);
-
-			SlotsContainer->AddChildToStackBox(NewSlotWidget);
-			NewSlotWidget->SetAssociate(&InventorySlots[Index], Index);
-		}
-	}
+	virtual void ConstructSlots(const TArray<FInventorySlot>& InventorySlots);
 
 private:
 	UPROPERTY(Transient, meta=(BindWidget))

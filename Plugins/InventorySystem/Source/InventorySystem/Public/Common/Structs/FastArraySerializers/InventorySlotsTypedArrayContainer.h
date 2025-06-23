@@ -14,7 +14,7 @@ struct FInventorySlotsTypedArrayContainer;
 
 // Typifies an array of slots with tag
 USTRUCT()
-struct FInventorySlotsTypedArray : public FFastArraySerializerItem
+struct INVENTORYSYSTEM_API FInventorySlotsTypedArray : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 

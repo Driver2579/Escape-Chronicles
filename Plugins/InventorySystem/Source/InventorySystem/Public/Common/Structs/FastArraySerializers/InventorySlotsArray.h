@@ -11,7 +11,7 @@ struct FInventorySlotsArray;
 
 // A single slot in an inventory
 USTRUCT()
-struct FInventorySlot : public FFastArraySerializerItem
+struct INVENTORYSYSTEM_API FInventorySlot : public FFastArraySerializerItem
 {
 	GENERATED_BODY()
 
