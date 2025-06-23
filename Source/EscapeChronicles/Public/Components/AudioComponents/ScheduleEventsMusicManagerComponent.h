@@ -45,6 +45,10 @@ private:
 	UPROPERTY(EditAnywhere, Category="Sound")
 	TSoftObjectPtr<USoundBase> SwitchEventSound;
 
+	// Whether to wait for the SwitchEventSound to finish playing before playing the current event music
+	UPROPERTY(EditAnywhere, Category="Sound")
+	bool bWaitSwitchEventSoundEndBeforePlayingMusic = true;
+
 	/**
 	 * Sets the current music based on the active event and optionally plays the SwitchEventSound.
 	 * @param CurrentEventTag The tag of the current event for which the music should be played.

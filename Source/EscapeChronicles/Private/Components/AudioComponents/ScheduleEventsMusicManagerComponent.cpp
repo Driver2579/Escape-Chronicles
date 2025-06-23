@@ -141,11 +141,14 @@ void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<
 	USoundBase* LoadedMusic = CastChecked<USoundBase>(LoadObjectHandle->GetLoadedAsset());
 
 	/**
-	 * If we shouldn't play the SwitchEventSound or it isn't set, then play the loaded music immediately. Otherwise,
-	 * check if the SwitchEventSound has finished playing and don't play the music yet if it hasn't. We will play the
-	 * music once this sound has finished playing in that case.
+	 * If we either don't want to wait for the SwitchEventSound to be played or shouldn't play it or it isn't set, then
+	 * play the loaded music immediately. Otherwise, check if the SwitchEventSound has finished playing and don't play
+	 * the music yet if it hasn't. We will play the music once this sound has finished playing in that case.
 	 */
-	if (!bPlaySwitchEventSound || SwitchEventSound.IsNull() || bSwitchEventSoundPlayed)
+	const bool bPlayMusicImmediately = !bWaitSwitchEventSoundEndBeforePlayingMusic || !bPlaySwitchEventSound ||
+		SwitchEventSound.IsNull() || bSwitchEventSoundPlayed;
+
+	if (bPlayMusicImmediately)
 	{
 		SetSound(LoadedMusic);
 		Play();
