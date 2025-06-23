@@ -5,10 +5,12 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AttributeSets/SharedRelationshipAttributeSet.h"
 #include "AbilitySystem/AttributeSets/VitalAttributeSet.h"
+#include "Characters/EscapeChroniclesCharacter.h"
 #include "Controllers/PlayerControllers/EscapeChroniclesPlayerController.h"
 #include "GameFramework/PlayerState.h"
 #include "GameInstances/EscapeChroniclesGameInstance.h"
 #include "GameState/EscapeChroniclesGameState.h"
+#include "Objects/InventoryItemDefinition.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogCheat, All, All);
 
@@ -143,6 +145,64 @@ void UEscapeChroniclesCheatManager::EndHosting() const
 	GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
 }
 
+void UEscapeChroniclesCheatManager::Cheat_SetHealthBaseAttributeValue(const float NewBaseValue) const
+{
+	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
+		GetPlayerController());
+
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	// Try to get the UVitalAttributeSet from the AbilitySystemComponent to override its Health base value
+	const UVitalAttributeSet* VitalAttributeSet =
+		CastChecked<UVitalAttributeSet>(AbilitySystemComponent->GetAttributeSet(UVitalAttributeSet::StaticClass()),
+			ECastCheckedType::NullAllowed);
+
+	// Override the base value of the attribute if the attribute set was found 
+	if (ensureAlways(IsValid(VitalAttributeSet)))
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(VitalAttributeSet->GetHealthAttribute(), NewBaseValue);
+	}
+}
+
+void UEscapeChroniclesCheatManager::Cheat_SetEnergyBaseAttributeValue(const float NewBaseValue) const
+{
+	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
+		GetPlayerController());
+
+	if (!IsValid(PlayerController))
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+
+	// Try to get the UVitalAttributeSet from the AbilitySystemComponent to override its Energy base value
+	const UVitalAttributeSet* VitalAttributeSet =
+		CastChecked<UVitalAttributeSet>(AbilitySystemComponent->GetAttributeSet(UVitalAttributeSet::StaticClass()),
+			ECastCheckedType::NullAllowed);
+
+	// Override the base value of the attribute if the attribute set was found 
+	if (ensureAlways(IsValid(VitalAttributeSet)))
+	{
+		AbilitySystemComponent->SetNumericAttributeBase(VitalAttributeSet->GetEnergyAttribute(), NewBaseValue);
+	}
+}
+
 void UEscapeChroniclesCheatManager::Cheat_SetSuspicionBaseAttributeValue(const float NewBaseValue) const
 {
 	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
@@ -177,31 +237,63 @@ void UEscapeChroniclesCheatManager::Cheat_SetSuspicionBaseAttributeValue(const f
 	}
 }
 
-void UEscapeChroniclesCheatManager::Cheat_SetHealthBaseAttributeValue(const float NewBaseValue) const
+void UEscapeChroniclesCheatManager::Cheat_LoadAllItemClasses()
 {
-	const AEscapeChroniclesPlayerController* PlayerController = Cast<AEscapeChroniclesPlayerController>(
-		GetPlayerController());
+	for (const TSoftClassPtr<UInventoryItemDefinition>& ItemDefinition : ItemDefinitions)
+	{
+		const UClass* LoadedItemClass = ItemDefinition.LoadSynchronous();
+
+		if (IsValid(LoadedItemClass))
+		{
+			UE_LOG(LogCheat, Display,
+				TEXT("UEscapeChroniclesCheatManager::Cheat_LoadAllItemClasses: Loaded item class: %s"),
+				*LoadedItemClass->GetName());
+		}
+	}
+}
+
+void UEscapeChroniclesCheatManager::Cheat_EquipItem(const TSubclassOf<UInventoryItemDefinition>& ItemClass) const
+{
+	if (!IsValid(ItemClass))
+	{
+#if !NO_LOGGING
+		UE_LOG(LogCheat, Error,
+			TEXT("UEscapeChroniclesCheatManager::Cheat_EquipItem: Class with such name doesn't exists or isn't "
+				"loaded. Try to add \"_C\" to the end of class name if it's a BP class."));
+#endif
+
+		return;
+	}
+
+	const APlayerController* PlayerController = GetPlayerController();
 
 	if (!IsValid(PlayerController))
 	{
 		return;
 	}
 
-	UAbilitySystemComponent* AbilitySystemComponent = PlayerController->GetAbilitySystemComponent();
+	const AEscapeChroniclesCharacter* Character = PlayerController->GetPawn<AEscapeChroniclesCharacter>();
 
-	if (!IsValid(AbilitySystemComponent))
+	if (!IsValid(Character))
 	{
 		return;
 	}
 
-	// Try to get the UVitalAttributeSet from the AbilitySystemComponent to override its Suspicion base value
-	const UVitalAttributeSet* VitalAttributeSet =
-		CastChecked<UVitalAttributeSet>(AbilitySystemComponent->GetAttributeSet(UVitalAttributeSet::StaticClass()),
-			ECastCheckedType::NullAllowed);
+	UInventoryManagerComponent* InventoryManagerComponent = Character->GetInventoryManagerComponent();
 
-	// Override the base value of the attribute if the attribute set was found 
-	if (ensureAlways(IsValid(VitalAttributeSet)))
+	// Construct a new item instance and initialize it with the given item class
+	UInventoryItemInstance* ItemInstance = NewObject<UInventoryItemInstance>(InventoryManagerComponent);
+	ItemInstance->Initialize(ItemClass);
+
+	// Add the item instance to the inventory
+	const bool bResult = InventoryManagerComponent->AddItem(ItemInstance);
+
+#if !NO_LOGGING
+	if (!bResult)
 	{
-		AbilitySystemComponent->SetNumericAttributeBase(VitalAttributeSet->GetHealthAttribute(), NewBaseValue);
+		UE_LOG(LogCheat, Warning,
+			TEXT("UEscapeChroniclesCheatManager::Cheat_EquipItem: Failed to add an item %s to the inventory!"),
+			*ItemClass->GetName());
 	}
+#endif
 }

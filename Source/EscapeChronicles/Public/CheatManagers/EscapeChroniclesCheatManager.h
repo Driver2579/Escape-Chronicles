@@ -6,6 +6,8 @@
 #include "GameFramework/CheatManager.h"
 #include "EscapeChroniclesCheatManager.generated.h"
 
+class UInventoryItemDefinition;
+
 UCLASS()
 class ESCAPECHRONICLES_API UEscapeChroniclesCheatManager : public UCheatManager
 {
@@ -32,15 +34,34 @@ public:
 	UFUNCTION(Exec)
 	void EndHosting() const;
 
-	// Overrides the base value of the Suspicion attribute in the USharedRelationshipAttributeSet
-	UFUNCTION(Exec)
-	void Cheat_SetSuspicionBaseAttributeValue(const float NewBaseValue) const;
-
 	// Overrides the base value of the Health attribute in the UVitalAttributeSet
 	UFUNCTION(Exec)
 	void Cheat_SetHealthBaseAttributeValue(const float NewBaseValue) const;
 
+	// Overrides the base value of the Energy attribute in the UVitalAttributeSet
+	UFUNCTION(Exec)
+	void Cheat_SetEnergyBaseAttributeValue(const float NewBaseValue) const;
+
+	// Overrides the base value of the Suspicion attribute in the USharedRelationshipAttributeSet
+	UFUNCTION(Exec)
+	void Cheat_SetSuspicionBaseAttributeValue(const float NewBaseValue) const;
+
+	// Loads all item classes from the asset registry and logs them to the console
+	UFUNCTION(Exec)
+	void Cheat_LoadAllItemClasses();
+
+	/**
+	 * Equips an item into the first available slot of the player's inventory, if any. You should call
+	 * Cheat_LoadAllItemClasses before this function to be sure it will work.
+	 */
+	UFUNCTION(Exec)
+	void Cheat_EquipItem(const TSubclassOf<UInventoryItemDefinition>& ItemClass) const;
+
 private:
+	// List of all item definitions that can be used in the game
+	UPROPERTY(EditAnywhere)
+	TSet<TSoftClassPtr<UInventoryItemDefinition>> ItemDefinitions;
+
 	// Called from the HostLevel when the session is created
 	static void OnCreateSessionComplete(FName SessionName, bool bWasSuccessful);
 
