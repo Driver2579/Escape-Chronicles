@@ -87,8 +87,13 @@ void ULootingMenuWidget::UpdateLootingInventoryWidget() const
 
 	const int32 ClothesInventoryIndex = InventoryContent.IndexOfByTag(LootingClothesInventoryTypeTag);
 
-	if (ensureAlways(InventoryContent.GetItems().IsValidIndex(ClothesInventoryIndex)))
+	if (InventoryContent.GetItems().IsValidIndex(ClothesInventoryIndex))
 	{
+		ClothesWidget->SetVisibility(ESlateVisibility::Visible);
 		LootingClothesWidget->SetAssociate(&InventoryContent[ClothesInventoryIndex]);
+	}
+	else
+	{
+		ClothesWidget->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
