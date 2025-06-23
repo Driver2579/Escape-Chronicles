@@ -55,8 +55,7 @@ private:
 	UFUNCTION()
 	void OnRep_SelectedSlotIndex(int32 OldIndex);
 
-	void StartHolding(const int32 Index) const;
-	void StopHolding(const int32 Index) const;
+	void UpdateHolding() const;
 
 #if WITH_EDITORONLY_DATA
 	// Whether to log the CurrentSlotIndex when it changes

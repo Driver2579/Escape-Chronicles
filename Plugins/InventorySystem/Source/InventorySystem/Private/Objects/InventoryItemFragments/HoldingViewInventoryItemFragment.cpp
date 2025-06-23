@@ -5,16 +5,15 @@
 #include "Engine/AssetManager.h"
 #include "Objects/InventoryItemInstance.h"
 
-void UHoldingViewInventoryItemFragment::StartHolding(UInventoryItemInstance* ItemInstance)
+void UHoldingViewInventoryItemFragment::StartHolding(UInventoryItemInstance* ItemInstance) const
 {
 #if DO_CHECK
 	check(IsValid(ItemInstance));
 #endif
 
-	if (!ensureAlways(!HoldingViewData.Contains(ItemInstance)))
-	{
-		return;
-	}
+	// TODO: Client has no view when game loaded
+
+	if (!ensureAlways(!HoldingViewData.Contains(ItemInstance))) return;
 
 	const TSharedPtr<FStreamableHandle> LoadedHandle = UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(
 		ItemInstanceViewClass.ToSoftObjectPath(),
@@ -26,7 +25,7 @@ void UHoldingViewInventoryItemFragment::StartHolding(UInventoryItemInstance* Ite
 	HoldingViewData.Add(ItemInstance, HoldingViewDataItem);
 }
 
-void UHoldingViewInventoryItemFragment::ItemInstanceViewClassLoaded(UInventoryItemInstance* ItemInstance)
+void UHoldingViewInventoryItemFragment::ItemInstanceViewClassLoaded(UInventoryItemInstance* ItemInstance) const
 {
 #if DO_CHECK
 	check(IsValid(ItemInstance));
@@ -72,15 +71,17 @@ void UHoldingViewInventoryItemFragment::ItemInstanceViewClassLoaded(UInventoryIt
 #endif
 }
 
-void UHoldingViewInventoryItemFragment::StopHolding(UInventoryItemInstance* ItemInstance)
+void UHoldingViewInventoryItemFragment::StopHolding(UInventoryItemInstance* ItemInstance) const
 {
 #if DO_CHECK
 	check(IsValid(ItemInstance));
 #endif
 
+	if (!ensureAlways(HoldingViewData.Contains(ItemInstance))) return;
+
 	FHoldingViewDataItem& HoldingViewDataItem = HoldingViewData[ItemInstance];
 
-	if (ensureAlways(HoldingViewDataItem.SpawnedActor))
+	if (HoldingViewDataItem.SpawnedActor)
 	{
 		HoldingViewDataItem.SpawnedActor->Destroy();
 	}

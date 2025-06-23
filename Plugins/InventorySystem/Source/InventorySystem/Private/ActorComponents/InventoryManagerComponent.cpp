@@ -81,6 +81,13 @@ void UInventoryManagerComponent::BeginPlay()
 	}
 }
 
+void UInventoryManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetOwner()->HasAuthority()) ClearInventory();
+
+	Super::EndPlay(EndPlayReason);
+}
+
 void UInventoryManagerComponent::ReadyForReplication()
 {
 	Super::ReadyForReplication();
@@ -178,6 +185,8 @@ bool UInventoryManagerComponent::AddItem(const UInventoryItemInstance* ItemInsta
 	check(IsValid(ItemInstanceDuplicate))
 #endif
 
+	NetMulticast_PreAddItem(SlotIndex, SlotTypeTag);
+
 	// Assign the duplicated item instance to the target slot
 	InventoryContent.SetInstance(ItemInstanceDuplicate, SlotsArrayIndex, SlotIndex);
 
@@ -243,6 +252,8 @@ bool UInventoryManagerComponent::DeleteItem(const int32 SlotIndex, const FGamepl
 		return false;
 	}
 
+	NetMulticast_PreDeleteItem(SlotIndex, SlotTypeTag);
+
 	// Stop replication item instance if bReplicateUsingRegisteredSubObjectList is enabled
 	if (IsUsingRegisteredSubObjectList())
 	{
@@ -286,6 +297,16 @@ void UInventoryManagerComponent::OnRep_InventoryContent()
 {
 	InventoryContent.UpdateOwningRefs(this);
 	OnContentChanged.Broadcast();
+}
+
+void UInventoryManagerComponent::NetMulticast_PreDeleteItem_Implementation(int32 SlotIndex, const FGameplayTag& SlotTypeTag)
+{
+	OnPreDeleteItem.Broadcast(SlotIndex, SlotTypeTag);
+}
+
+void UInventoryManagerComponent::NetMulticast_PreAddItem_Implementation(int32 SlotIndex, const FGameplayTag& SlotTypeTag)
+{
+	OnPreAddItem.Broadcast(SlotIndex, SlotTypeTag);
 }
 
 bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,

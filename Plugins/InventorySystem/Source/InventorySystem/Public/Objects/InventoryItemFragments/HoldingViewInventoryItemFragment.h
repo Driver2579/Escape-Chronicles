@@ -24,6 +24,11 @@ class INVENTORYSYSTEM_API UHoldingViewInventoryItemFragment : public UInventoryI
 	GENERATED_BODY()
 
 public:
+	bool IsHoldingItem(const UInventoryItemInstance* ItemInstance) const
+	{
+		return HoldingViewData.Contains(ItemInstance);
+	}
+	
 	AActor* GetActor(const UInventoryItemInstance* ItemInstance) const
 	{
 		return HoldingViewData[ItemInstance].SpawnedActor;
@@ -34,8 +39,8 @@ public:
 		return HoldingViewData;
 	}
 
-	virtual void StartHolding(UInventoryItemInstance* ItemInstance);
-	virtual void StopHolding(UInventoryItemInstance* ItemInstance);
+	virtual void StartHolding(UInventoryItemInstance* ItemInstance) const;
+	virtual void StopHolding(UInventoryItemInstance* ItemInstance) const;
 
 private:
 	UPROPERTY(EditDefaultsOnly)
@@ -50,7 +55,7 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FTransform TransformToAttach;
 
-	TMap<TObjectPtr<UInventoryItemInstance>, FHoldingViewDataItem> HoldingViewData;
+	mutable TMap<TObjectPtr<UInventoryItemInstance>, FHoldingViewDataItem> HoldingViewData;
 
-	void ItemInstanceViewClassLoaded(UInventoryItemInstance* ItemInstance);
+	void ItemInstanceViewClassLoaded(UInventoryItemInstance* ItemInstance) const;
 };

@@ -4,6 +4,7 @@
 
 #include "Components/ActorComponents/ScheduleEventManagerComponent.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
+#include "HUDs/EscapeChroniclesHUD.h"
 #include "Net/UnrealNetwork.h"
 
 void AEscapeChroniclesGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -188,4 +189,15 @@ void AEscapeChroniclesGameState::OnPostLoadObject()
 
 	// Clear the memory
 	GameDateTimeBeforeLoading.Reset();
+}
+
+void AEscapeChroniclesGameState::NetMulticast_WinGame_Implementation()
+{
+	APlayerController* Controller = GetWorld()->GetFirstPlayerController();
+	if (!ensureAlways(IsValid(Controller))) return;
+
+	AEscapeChroniclesHUD* HUD = Controller->GetHUD<AEscapeChroniclesHUD>();
+	if (ensureAlways(IsValid(HUD))) HUD->GoTo(GameWonHudRouteTag);
+
+	Controller->SetPause(true);
 }

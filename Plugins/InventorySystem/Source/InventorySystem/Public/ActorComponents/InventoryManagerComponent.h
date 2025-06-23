@@ -17,7 +17,7 @@ class UInventoryManagerFragment;
  * - Replicated inventory state with notifications about the changes
  * - Extensible through fragment system
  */
-UCLASS(Blueprintable, Const, meta=(BlueprintSpawnableComponent))
+UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
 class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
 {
 	GENERATED_BODY()
@@ -79,8 +79,15 @@ public:
 	// Called when the contents of inventory slot changed
 	FOnContentChangedDelegate OnContentChanged;
 
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPreAddItemDelegate, int32 SlotIndex, const FGameplayTag& SlotTypeTag);
+	FOnPreAddItemDelegate OnPreAddItem;
+
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FOnPreDeleteItemDelegate, int32 SlotIndex, const FGameplayTag& SlotTypeTag);
+	FOnPreDeleteItemDelegate OnPreDeleteItem;
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void ReadyForReplication() override;
 
@@ -88,6 +95,12 @@ protected:
 	// Logs an information about the content of the inventory
 	void LogInventoryContent() const;
 #endif
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_PreAddItem(int32 SlotIndex, const FGameplayTag& SlotTypeTag);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_PreDeleteItem(int32 SlotIndex, const FGameplayTag& SlotTypeTag);
 
 private:
 	/**

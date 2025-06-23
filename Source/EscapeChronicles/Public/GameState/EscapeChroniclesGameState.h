@@ -48,6 +48,9 @@ public:
 	 */
 	FOnEventChangedDelegate OnCurrentActiveEventChanged;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_WinGame();
+
 protected:
 	// Adds a minute to	the current time
 	virtual void TickGameDateTime();
@@ -107,4 +110,7 @@ private:
 		const FScheduleEventData& NewEventData);
 
 	TSharedPtr<FGameplayDateTime> GameDateTimeBeforeLoading;
+
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag GameWonHudRouteTag;
 };
