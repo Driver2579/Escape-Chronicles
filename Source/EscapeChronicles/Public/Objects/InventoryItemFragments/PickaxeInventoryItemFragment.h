@@ -33,7 +33,7 @@ public:
 			TEXT("If bUseDurability is true, the definition must include UDurabilityInventoryItemFragment"));
 	}
 
-	virtual void EffectHit(UInventoryItemInstance* ItemInstance) override
+	virtual void EffectHit(UInventoryItemInstance* ItemInstance) const override
 	{
 #if DO_CHECK
 		check(ItemInstance)

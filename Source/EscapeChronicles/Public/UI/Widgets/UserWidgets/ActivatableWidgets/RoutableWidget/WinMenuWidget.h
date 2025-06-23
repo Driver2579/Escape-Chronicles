@@ -20,12 +20,23 @@ protected:
 
 		EndButton->OnClicked().AddWeakLambda(this, [this]
 		{
+			const UWorld* World = GetWorld();
+
 			UEscapeChroniclesGameInstance* GameInstance =
-				GetWorld()->GetGameInstanceChecked<UEscapeChroniclesGameInstance>();
+				World->GetGameInstanceChecked<UEscapeChroniclesGameInstance>();
 
 			if (!ensureAlways(IsValid(GameInstance))) return;
 
-			GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
+			// If the world is a server, destroy the session and travel to the main menu
+			if (World->GetNetMode() < NM_Client)
+			{
+				GameInstance->DestroyHostSession(FOnDestroySessionCompleteDelegate(), true);
+			}
+			// Otherwise, use the client travel to the main menu
+			else
+			{
+				GameInstance->ClientTravelToMainMenu(World->GetFirstPlayerController());
+			}
 		});
 	}
 
