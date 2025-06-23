@@ -1,21 +1,25 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-#include "Common/Structs/FastArraySerializers/InstanceStats.h"
 
-#include "InventoryManagerGeneratingContentData.generated.h"
+#include "Common/Structs/FastArraySerializers/InstanceStats.h"
+#include "InventoryContentGeneratingData.generated.h"
 
 class UInventoryItemDefinition;
 
 // Defines loot generation rules for inventory
 USTRUCT(BlueprintType)
-struct FInventoryManagerGeneratingContentData : public FTableRowBase
+struct FInventoryContentGeneratingData : public FTableRowBase
 {
 	GENERATED_BODY()
 
 	// Base item definition to spawn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UInventoryItemDefinition> ItemDefinition;
+
+	// The type of slot in which the item will be generated
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag SlotTypeTag = InventorySystemGameplayTags::Inventory_Slot_Type_Main;
 
 	// Initial stat overrides for spawned instances
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)

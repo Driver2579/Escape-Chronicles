@@ -1,3 +1,4 @@
+/*
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
@@ -17,7 +18,7 @@ public:
 	virtual void OnManagerInitialized() override;
 	
 private:
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly)/*#1#
 	TSoftObjectPtr<UDataTable> DataTable;
 
 	// Handle for async DataTable loading
@@ -26,3 +27,4 @@ private:
 	// Processes loot rules and populates inventory
 	void OnDataTableLoaded(UInventoryManagerComponent* Inventory);
 };
+*/
