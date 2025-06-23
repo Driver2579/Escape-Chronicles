@@ -16,7 +16,7 @@
 #include "Components/ActorComponents/InteractionManagerComponent.h"
 #include "Components/CharacterMoverComponents/EscapeChroniclesCharacterMoverComponent.h"
 #include "Components/InventoryManagerComponents/EscapeChroniclesInventoryManagerComponent.h"
-#include "DefaultMovementSet/NavMoverComponent.h"
+#include "Components/NavMoverComponents/EscapeChroniclesNavMoverComponent.h"
 #include "Engine/AssetManager.h"
 #include "Mover/Inputs/EscapeChroniclesCharacterExtendedDefaultInputs.h"
 #include "Navigation/CrowdManager.h"
@@ -115,7 +115,7 @@ AEscapeChroniclesCharacter::AEscapeChroniclesCharacter()
 	 * Create the NavMoverComponent for bots to being able to move on the NavMesh and for players to support being the
 	 * crowd agents.
 	 */
-	NavMoverComponent = CreateDefaultSubobject<UNavMoverComponent>(TEXT("Nav Mover Component"));
+	NavMoverComponent = CreateDefaultSubobject<UEscapeChroniclesNavMoverComponent>(TEXT("Nav Mover Component"));
 
 	// === Interaction ===
 

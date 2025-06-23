@@ -15,6 +15,7 @@
 #include "Objects/InventoryManagerFragments/InventoryManagerSelectorFragment.h"
 #include "EscapeChroniclesCharacter.generated.h"
 
+class UEscapeChroniclesNavMoverComponent;
 class UEscapeChroniclesInventoryManagerComponent;
 class UCarryCharacterComponent;
 class UInventoryManagerComponent;
@@ -24,7 +25,6 @@ class UEscapeChroniclesCharacterMoverComponent;
 class UCapsuleComponent;
 class USpringArmComponent;
 class UCameraComponent;
-class UNavMoverComponent;
 
 struct FGameplayEffectSpec;
 struct FOnAttributeChangeData;
@@ -69,7 +69,7 @@ public:
 	UEscapeChroniclesCharacterMoverComponent* GetCharacterMoverComponent() const { return CharacterMoverComponent; }
 
 	// Returns NavMoverComponent subobject
-	UNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
+	UEscapeChroniclesNavMoverComponent* GetNavMoverComponent() const { return NavMoverComponent; }
 
 	UInventoryManagerComponent* GetInventoryManagerComponent() const;
 
@@ -307,7 +307,7 @@ private:
 
 	// Holds functionality for nav movement data and functions
 	UPROPERTY(VisibleAnywhere, Transient, Category="Components|Movement|Nav Movement", meta=(AllowPrivateAccess="true"))
-	TObjectPtr<UNavMoverComponent> NavMoverComponent;
+	TObjectPtr<UEscapeChroniclesNavMoverComponent> NavMoverComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UEscapeChroniclesInventoryManagerComponent> InventoryManagerComponent;
