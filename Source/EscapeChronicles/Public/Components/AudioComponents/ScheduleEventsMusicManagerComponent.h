@@ -56,7 +56,7 @@ private:
 	TSharedPtr<FStreamableHandle> LoadSwitchEventSoundHandle;
 
 	// Plays the current event music once if the SwitchEventSound isn't set of has been played already
-	void OnCurrentEventMusicLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);
+	void OnCurrentEventMusicLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle, const bool bPlaySwitchEventSound);
 
 	// Plays the SwitchEventSound and plays the current event music once the SwitchEventSound has finished playing
 	void OnSwitchEventSoundLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle);

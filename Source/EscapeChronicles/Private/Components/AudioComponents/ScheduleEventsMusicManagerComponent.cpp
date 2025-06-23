@@ -25,23 +25,26 @@ void UScheduleEventsMusicManagerComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	AEscapeChroniclesGameState* GameState = GetWorld()->GetGameState<AEscapeChroniclesGameState>();
+	const UWorld* World = GetWorld();
+
+	// Don't run this component on dedicated servers because sounds won't work there anyway
+	if (World->GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+
+	AEscapeChroniclesGameState* GameState = World->GetGameState<AEscapeChroniclesGameState>();
 
 	if (!ensureAlways(IsValid(GameState)))
 	{
 		return;
 	}
 
-	const FScheduleEventData& CurrentActiveEvent = GameState->GetCurrentActiveEventData();
-
 	/**
 	 * If the current active event is valid already, then play the music for it but don't play the SwitchEventSound
 	 * because it's the first time the music is played.
 	 */
-	if (CurrentActiveEvent.IsValid())
-	{
-		PlayMusicAndSoundForEvent(GameState->GetCurrentActiveEventData().EventTag, false);
-	}
+	PlayMusicAndSoundForEvent(GameState->GetCurrentActiveEventData().EventTag, false);
 
 	GameState->OnCurrentActiveEventChanged.AddUObject(this, &ThisClass::OnCurrentActiveEventChanged);
 }
@@ -59,9 +62,10 @@ void UScheduleEventsMusicManagerComponent::OnCurrentActiveEventChanged(const FSc
 void UScheduleEventsMusicManagerComponent::PlayMusicAndSoundForEvent(const FGameplayTag& CurrentEventTag,
 	const bool bPlaySwitchEventSound)
 {
-#if DO_ENSURE
-	ensureAlways(CurrentEventTag.IsValid());
-#endif
+	if (!CurrentEventTag.IsValid())
+	{
+		return;
+	}
 
 	// Reset the flag because the new event has started
 	bSwitchEventSoundPlayed = false;
@@ -115,7 +119,8 @@ void UScheduleEventsMusicManagerComponent::PlayMusicAndSoundForEvent(const FGame
 	{
 		LoadCurrentEventMusicHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 			CurrentEventMusic->ToSoftObjectPath(),
-			FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnCurrentEventMusicLoaded));
+			FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnCurrentEventMusicLoaded,
+				bPlaySwitchEventSound));
 	}
 
 	// Remember that this function has been called at least once
@@ -123,7 +128,8 @@ void UScheduleEventsMusicManagerComponent::PlayMusicAndSoundForEvent(const FGame
 }
 
 // ReSharper disable once CppPassValueParameterByConstReference
-void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)
+void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle,
+	const bool bPlaySwitchEventSound)
 {
 #if DO_CHECK
 	check(LoadObjectHandle.IsValid());
@@ -135,11 +141,11 @@ void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<
 	USoundBase* LoadedMusic = CastChecked<USoundBase>(LoadObjectHandle->GetLoadedAsset());
 
 	/**
-	 * If the SwitchEventSound isn't set, then play the loaded music immediately. Otherwise, check if the
-	 * SwitchEventSound has finished playing and don't play the music yet if it hasn't. We will play the music once
-	 * this sound has finished playing in that case.
+	 * If we shouldn't play the SwitchEventSound or it isn't set, then play the loaded music immediately. Otherwise,
+	 * check if the SwitchEventSound has finished playing and don't play the music yet if it hasn't. We will play the
+	 * music once this sound has finished playing in that case.
 	 */
-	if (SwitchEventSound.IsNull() || bSwitchEventSoundPlayed)
+	if (!bPlaySwitchEventSound || SwitchEventSound.IsNull() || bSwitchEventSoundPlayed)
 	{
 		SetSound(LoadedMusic);
 		Play();
