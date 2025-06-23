@@ -162,7 +162,7 @@ bool ADoor::HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) c
 {
 	const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
 
-	if (!ensureAlways(IsValid(AbilitySystemComponent)))
+	if (!IsValid(AbilitySystemComponent))
 	{
 		return false;
 	}
