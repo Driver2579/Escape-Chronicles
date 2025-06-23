@@ -52,6 +52,8 @@ void AEscapeChroniclesHUD::BeginPlay()
 	{
 		SetInputMode(RootInputMode, bRootCursorVisible);
 	});
+
+	GoToRoot();
 }
 
 void AEscapeChroniclesHUD::GoTo(const FGameplayTag& RouteTag)
@@ -89,6 +91,8 @@ void AEscapeChroniclesHUD::GoToRoot() const
 	{
 		ContentStack->ClearWidgets();
 	}
+
+	SetInputMode(RootInputMode, bRootCursorVisible);
 }
 
 void AEscapeChroniclesHUD::SetInputMode(const ERouteInputMode NewInputMode, const bool bNewCursorVisible) const

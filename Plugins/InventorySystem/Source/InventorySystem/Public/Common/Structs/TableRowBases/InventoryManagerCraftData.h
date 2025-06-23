@@ -40,5 +40,5 @@ struct FInventoryManagerCraftData : public FTableRowBase
 	int32 ResultNumber = 1;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TArray<FCraftRequirement> MaterialsItemDefinition;
+	TArray<FCraftRequirement> ItemMaterials;
 };

@@ -21,7 +21,14 @@ class ESCAPECHRONICLES_API URootContainerWidget : public UCommonUserWidget
 public:
 	UCommonActivatableWidgetStack* GetContentStack() const { return ContentStack; }
 	UCommonActivatableWidgetStack* GetPromptStack() const { return PromptStack; }
-	
+
+protected:
+	virtual void NativeOnInitialized() override
+	{
+		ContentStack->OnDisplayedWidgetChanged().AddUObject(this, &ThisClass::OnDisplayedWidgetChanged);
+		PromptStack->OnDisplayedWidgetChanged().AddUObject(this, &ThisClass::OnDisplayedWidgetChanged);
+	}
+
 private:
 	// Stack managing persistent UI elements (menus, HUD)
 	UPROPERTY(meta=(BindWidget))
@@ -30,4 +37,16 @@ private:
 	// Stack managing temporary UI elements (popups, notifications)
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UCommonActivatableWidgetStack> PromptStack;
+
+	void OnDisplayedWidgetChanged(UCommonActivatableWidget* Widget) const
+	{
+		if (PromptStack->GetNumWidgets() > 0)
+		{
+			ContentStack->SetIsEnabled(false);
+		}
+		else
+		{
+			ContentStack->SetIsEnabled(true);
+		}
+	}
 };

@@ -28,6 +28,9 @@ private:
 	TObjectPtr<UItemSlotsWidget> LootingInventoryWidget;
 
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UItemSlotsWidget> LootingClothesWidget;
+
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UCommonButtonBase> ExitButton;
 
 	UPROPERTY(EditDefaultsOnly)
@@ -36,19 +39,12 @@ private:
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag LootingMainInventoryTypeTag;
 
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag LootingClothesInventoryTypeTag;
+
 	TWeakObjectPtr<UInventoryManagerComponent> OwningInventoryManager;
 	TWeakObjectPtr<UInventoryManagerComponent> LootingInventoryManager;
 
-	void OnOwningInventoryContentChanged() const
-	{
-		UpdateOwningInventoryWidget(OwningMainInventoryTypeTag);
-	}
-
-	void OnLootingInventoryContentChanged() const
-	{
-		UpdateLootingInventoryWidget(LootingMainInventoryTypeTag);
-	}
-
-	void UpdateOwningInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
-	void UpdateLootingInventoryWidget(const FGameplayTag& InventoryTypeTag) const;
+	void UpdateOwningInventoryWidget() const;
+	void UpdateLootingInventoryWidget() const;
 };

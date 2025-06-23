@@ -4,7 +4,6 @@
 
 #include "Interfaces/StoringItemInstances.h"
 #include "Net/UnrealNetwork.h"
-#include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragment.h"
 
 void UInventoryItemInstance::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

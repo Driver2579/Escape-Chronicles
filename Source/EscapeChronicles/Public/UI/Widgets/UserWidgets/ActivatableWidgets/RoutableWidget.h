@@ -75,7 +75,7 @@ public:
 	T* PushPrompt(const TSubclassOf<UPromptWidget> WidgetClass)
 	{
 		const URootContainerWidget* RootWidget = GetOwningRootWidget();
-		
+
 		if (!ensureAlways(IsValid(RootWidget)))
 		{
 			return nullptr;

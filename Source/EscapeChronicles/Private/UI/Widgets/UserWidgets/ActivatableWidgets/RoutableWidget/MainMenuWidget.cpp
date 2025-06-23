@@ -17,8 +17,13 @@ void UMainMenuWidget::NativeConstruct()
 	ExitButton->OnClicked().AddUObject(this, &ThisClass::OnExitButtonClicked);
 }
 
-void UMainMenuWidget::OnCreateGameButtonClicked() const
+void UMainMenuWidget::OnCreateGameButtonClicked()
 {
+	if (ensureAlways(IsValid(LoadingScreenWidgetClass)))
+	{
+		ensureAlways(IsValid(PushPrompt<UPromptWidget>(LoadingScreenWidgetClass)));
+	}
+
 	UEscapeChroniclesGameInstance* GameInstance = GetWorld()->GetGameInstanceChecked<UEscapeChroniclesGameInstance>();
 
 	const APlayerState* PlayerState = GetOwningPlayerState(true);

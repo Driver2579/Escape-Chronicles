@@ -108,6 +108,26 @@ struct INVENTORYSYSTEM_API FInstanceStats : public FFastArraySerializer
 		return *this;
 	}
 
+	bool HasMatchingStat(const FInstanceStatsItem& InStat) const
+	{
+		const FInstanceStatsItem* Stat = GetStat(InStat.Tag);
+
+		return Stat && Stat->Value == InStat.Value;
+	}
+
+	bool HasAllMatchingStats(const FInstanceStats& InStats) const
+	{
+		for (const FInstanceStatsItem& InItem : InStats.GetAllStats())
+		{
+			if (!HasMatchingStat(InItem))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParams)
 	{
 		return FastArrayDeltaSerialize<FInstanceStatsItem, FInstanceStats>(Array, DeltaParams, *this);

@@ -68,7 +68,7 @@ public:
 	 * @param NewInputMode Desired input mode.
 	 * @param bNewCursorVisible Whether the cursor should be visible.
 	 */
-		void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
+	void SetInputMode(ERouteInputMode NewInputMode, bool bNewCursorVisible) const;
 protected:
 	virtual void BeginPlay() override;
 	
