@@ -31,6 +31,9 @@ private:
 	TObjectPtr<UItemSlotsWidget> LootingClothesWidget;
 
 	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UWidget> ClothesWidget;
+
+	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UCommonButtonBase> ExitButton;
 
 	UPROPERTY(EditDefaultsOnly)
