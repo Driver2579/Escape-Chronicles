@@ -8,7 +8,7 @@
 #include "Common/Structs/SaveData/InventorySlotsSaveData.h"
 #include "EscapeChroniclesInventoryManagerComponent.generated.h"
 
-UCLASS()
+UCLASS(meta=(BlueprintSpawnableComponent))
 class ESCAPECHRONICLES_API UEscapeChroniclesInventoryManagerComponent : public UInventoryManagerComponent,
 	public ISaveable
 {

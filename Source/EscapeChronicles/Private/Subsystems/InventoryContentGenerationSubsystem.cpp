@@ -2,8 +2,10 @@
 
 #include "Subsystems/InventoryContentGenerationSubsystem.h"
 
+#include "EngineUtils.h"
 #include "Characters/EscapeChroniclesCharacter.h"
 #include "Common/DataAssets/InventoryContentGeneratingData.h"
+#include "Components/InventoryManagerComponents/EscapeChroniclesInventoryManagerComponent.h"
 #include "Engine/AssetManager.h"
 #include "GameModes/EscapeChroniclesGameMode.h"
 #include "GameState/EscapeChroniclesGameState.h"
@@ -17,6 +19,27 @@ bool UInventoryContentGenerationSubsystem::ShouldCreateSubsystem(UObject* Outer)
 void UInventoryContentGenerationSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 {
 	Super::OnWorldBeginPlay(InWorld);
+
+	if (InWorld.GetNetMode() >= NM_Client) return;
+	
+	for (const auto& Entries : ActorsGenerationEntries)
+	{
+		for (TActorIterator It(&InWorld, Entries.Key); It; ++It)
+		{
+			UEscapeChroniclesInventoryManagerComponent* Inventory =
+				It->FindComponentByClass<UEscapeChroniclesInventoryManagerComponent>();
+
+			if (!ensureAlways(IsValid(Inventory)))
+			{
+				return;
+			}
+
+			if (!Inventory->WasEverSaved())
+			{
+				GenerateInventoryContent(*It);
+			}
+		}
+	}
 
 	AEscapeChroniclesGameMode* GameMode = Cast<AEscapeChroniclesGameMode>(GetWorld()->GetAuthGameMode());
 
@@ -39,7 +62,7 @@ void UInventoryContentGenerationSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 	}
 
 	GameState->OnCurrentGameDateTimeUpdated.AddWeakLambda(this,
-		[this, GameState](const FGameplayDateTime& OldGameDateTime, const FGameplayDateTime& NewGameDateTime)
+		[this, GameState, &InWorld](const FGameplayDateTime& OldGameDateTime, const FGameplayDateTime& NewGameDateTime)
 		{
 			for (APlayerState* PlayerState : GameState->PlayerArray)
 			{
@@ -51,11 +74,21 @@ void UInventoryContentGenerationSubsystem::OnWorldBeginPlay(UWorld& InWorld)
 				if (!bContainsPlayerState) continue;
 
 				const TSoftObjectPtr<UDataTable>& DataTable = DataTableOwnerships[CastedPlayerState->GetUniquePlayerID()];
-				const FInventoryContentGenerationEntry& Entry = GenerationEntries[DataTable];
+				const FInventoryContentCharacterGenerationEntry& Entry = CharactersGenerationEntries[DataTable];
 
 				if (Entry.bRegenerate && Entry.ScheduleRegenerateTime == NewGameDateTime.Time)
 				{
 					GenerateInventoryContent(CastedPlayerState);
+				}
+			}
+
+			for (const auto& Entries : ActorsGenerationEntries)
+			{
+				if (!Entries.Value.bRegenerate || Entries.Value.ScheduleRegenerateTime != NewGameDateTime.Time) continue;
+
+ 				for (TActorIterator It(&InWorld, Entries.Key); It; ++It)
+				{
+ 					GenerateInventoryContent(*It);
 				}
 			}
 		});
@@ -82,7 +115,7 @@ void UInventoryContentGenerationSubsystem::AssignGeneratingData(const AEscapeChr
 		return;
 	}
 
-	for (const auto& Entry : GenerationEntries)
+	for (const auto& Entry : CharactersGenerationEntries)
 	{
 		const bool bSuitableEntry = Character->IsA(Entry.Value.AvailableOwner) &&
 			Entry.Value.AvailableNumber > GetCurrentDataTableOwnersNumber(Entry.Key);
@@ -114,7 +147,10 @@ void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AEscap
 		return;
 	}
 
-	Inventory->ClearInventory();
+	if (bClean)
+	{
+		Inventory->ClearInventory();
+	}
 
 	const FUniquePlayerID& UniquePlayerID = PlayerState->GetUniquePlayerID();
 
@@ -123,6 +159,31 @@ void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AEscap
 #endif
 
 	const TSoftObjectPtr<UDataTable> DataTable= DataTableOwnerships[UniquePlayerID];
+
+	UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(DataTable.ToSoftObjectPath(),
+		FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnDataTableLoaded, DataTable, Inventory));
+}
+
+void UInventoryContentGenerationSubsystem::GenerateInventoryContent(const AActor* Actor, bool bClear)
+{
+	if (!ensureAlways(ActorsGenerationEntries.Contains(Actor->GetClass())))
+	{
+		return;
+	}
+
+	UInventoryManagerComponent* Inventory = Actor->GetComponentByClass<UInventoryManagerComponent>();
+
+	if (!ensureAlways(IsValid(Inventory)))
+	{
+		return;
+	}
+
+	const TSoftObjectPtr<UDataTable> DataTable = ActorsGenerationEntries[Actor->GetClass()].DataTable;
+
+	if (bClear)
+	{
+		Inventory->ClearInventory();
+	}
 
 	UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(DataTable.ToSoftObjectPath(),
 		FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnDataTableLoaded, DataTable, Inventory));
@@ -139,7 +200,7 @@ void UInventoryContentGenerationSubsystem::OnDataTableLoaded(TSharedPtr<FStreama
 	for (const FInventoryContentGeneratingData* Row : GeneratingContent)
 	{
 		// Skip if probability check fails
-		if (FMath::Rand() < Row->Probability)
+		if (FMath::FRand() > Row->Probability)
 		{
 			continue;
 		}
