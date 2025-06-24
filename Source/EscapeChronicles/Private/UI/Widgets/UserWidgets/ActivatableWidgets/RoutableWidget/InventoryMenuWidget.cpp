@@ -3,7 +3,10 @@
 #include "EscapeChronicles/Public/UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget/InventoryMenuWidget.h"
 
 #include "CommonButtonBase.h"
+#include "CommonTextBlock.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "PlayerStates/EscapeChroniclesPlayerState.h"
+
 void UInventoryMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -12,6 +15,13 @@ void UInventoryMenuWidget::NativeConstruct()
 	{
 		DeactivateWidget();
 	});
+
+	APlayerState* PlayerState = GetOwningPlayerState();
+
+	if (IsValid(PlayerState))
+	{
+		NameTextBlock->SetText(FText::FromString(PlayerState->GetPlayerName()));
+	}
 
 	const AEscapeChroniclesCharacter* Character = GetOwningPlayerPawn<AEscapeChroniclesCharacter>();
 
