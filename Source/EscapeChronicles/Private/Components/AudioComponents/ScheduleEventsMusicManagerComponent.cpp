@@ -158,6 +158,7 @@ void UScheduleEventsMusicManagerComponent::OnCurrentEventMusicLoaded(TSharedPtr<
 void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)
 {
 #if DO_CHECK
+	check(LoadObjectHandle.IsValid());
 	check(SwitchEventSound.IsValid());
 #endif
 
@@ -170,9 +171,20 @@ void UScheduleEventsMusicManagerComponent::OnSwitchEventSoundLoaded(TSharedPtr<F
 	// Support sound virtualization to make sure it isn't destroyed when the game is paused or the sound volume is 0
 	SwitchEventAudioComponent->bIsVirtualized = true;
 
-	// Listen for the sound to finish playing
-	OnSwitchEventSoundFinishedPlayingDelegateHandle = SwitchEventAudioComponent->OnAudioFinishedNative.AddUObject(this,
-		&ThisClass::OnSwitchEventSoundFinishedPlaying, LoadObjectHandle);
+	/**
+	 * Listen for the sound to finish playing if we need to wait for it to finish before playing the music. This will
+	 * also release the handle once the sound has finished playing.
+	 */
+	if (bWaitSwitchEventSoundEndBeforePlayingMusic)
+	{
+		OnSwitchEventSoundFinishedPlayingDelegateHandle = SwitchEventAudioComponent->OnAudioFinishedNative.AddUObject(
+			this, &ThisClass::OnSwitchEventSoundFinishedPlaying, LoadObjectHandle);
+	}
+	// Otherwise, release the handle immediately because we don't need it anymore
+	else
+	{
+		LoadObjectHandle->ReleaseHandle();
+	}
 
 	SwitchEventAudioComponent->Play();
 }
