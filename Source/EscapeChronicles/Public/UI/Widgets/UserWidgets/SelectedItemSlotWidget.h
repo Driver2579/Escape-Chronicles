@@ -54,6 +54,12 @@ protected:
 			UpdateItemInstanceIcon();
 		});
 
+		Inventory->OnPreDeleteItem.AddWeakLambda(this,
+			[this](int32 SlotIndex, const FGameplayTag& SlotTypeTag)
+			{
+				UpdateItemInstanceIcon();
+			});
+
 		UpdateItemInstanceIcon();
 	}
 
@@ -97,7 +103,12 @@ private:
 		const UInventoryItemInstance* ItemInstance =
 			Inventory->GetItemInstance(SelectorFragment->GetCurrentSlotIndex(), SlotsTypeTag);
 
-		if (!IsValid(ItemInstance)) return;
+		if (!IsValid(ItemInstance))
+		{
+			ItemInstanceIcon->SetBrush(Data->EmptySlotBrush);
+
+			return;
+		}
 
 		const UIconInventoryItemFragment* IconFragment = ItemInstance->GetFragmentByClass<UIconInventoryItemFragment>();
 

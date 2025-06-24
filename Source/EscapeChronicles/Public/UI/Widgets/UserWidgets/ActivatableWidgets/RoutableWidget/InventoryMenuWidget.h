@@ -8,6 +8,7 @@
 #include "UI/Widgets/UserWidgets/ActivatableWidgets/RoutableWidget.h"
 #include "InventoryMenuWidget.generated.h"
 
+class UCommonTextBlock;
 class UCommonButtonBase;
 
 // Inventory menu screen widget
@@ -20,6 +21,9 @@ protected:
 	virtual void NativeConstruct() override;
 
 private:
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UCommonTextBlock> NameTextBlock;
+
 	UPROPERTY(meta=(BindWidget))
 	TObjectPtr<UItemSlotsWidget> MainInventoryWidget;
 
