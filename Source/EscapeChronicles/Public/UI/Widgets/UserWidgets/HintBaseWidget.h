@@ -30,6 +30,9 @@ public:
 		MainTextBlock->SetText(MainText);
 	}
 
+	UTextBlock* GetTitleTextBlock() { return TitleTextBlock; }
+	UTextBlock* GetMainTextBlock() {return MainTextBlock; }
+
 protected:
 	virtual void NativePreConstruct() override
 	{
