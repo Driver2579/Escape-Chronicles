@@ -4,6 +4,10 @@
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Blueprint/DragDropOperation.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Common/Enums/ItemClassification.h"
+#include "Objects/InventoryItemFragments/ClassificationInventoryItemFragment.h"
+#include "Objects/InventoryItemFragments/ContrabandBagInventoryItemFragment.h"
+#include "Objects/InventoryItemFragments/DurabilityInventoryItemFragment.h"
 #include "Objects/InventoryItemFragments/IconInventoryItemFragment.h"
 #include "Objects/InventoryManagerFragments/InventoryManagerTransferItemsFragment.h"
 
@@ -52,6 +56,16 @@ void UItemSlotWidget::SetSlotSelected(const bool bInSlotSelected)
 	bSlotSelected = bInSlotSelected;
 }
 
+void UItemSlotWidget::NativeOnInitialized()
+{
+	Super::NativeOnInitialized();
+
+	if (Data->ToolTipWidget)
+	{
+		SetToolTip(Data->ToolTipWidget);
+	}
+}
+
 void UItemSlotWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
@@ -73,6 +87,48 @@ void UItemSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPoi
 
 		bSlotSelectedOnHover = true;
 	}
+
+	UHintBaseWidget* ToolTip = Cast<UHintBaseWidget>(GetToolTip());
+
+	if (!IsValid(ToolTip))
+	{
+		return;
+	}
+
+	if (!IsValid(AssociatedInventorySlot->Instance))
+	{
+		ToolTip->SetVisibility(ESlateVisibility::Hidden);
+
+		return;
+	}
+
+	ToolTip->SetVisibility(ESlateVisibility::Visible);
+
+	const UClassificationInventoryItemFragment* ClassificationFragment =
+		AssociatedInventorySlot->Instance->GetFragmentByClass<UClassificationInventoryItemFragment>();
+	
+	if (IsValid(ClassificationFragment) && ClassificationFragment->GetItemClassification() == EItemClassification::Contraband)
+	{
+		ToolTip->GetTitleTextBlock()->SetColorAndOpacity(Data->ContrabandToolTipColor);
+	}
+	else
+	{
+		ToolTip->GetTitleTextBlock()->SetColorAndOpacity(Data->DefaultToolTipColor);
+	}
+
+	FText TitleText =
+		AssociatedInventorySlot->Instance->GetDefinition()->GetDefaultObject<UInventoryItemDefinition>()->GetName();
+
+	const FInstanceStatsItem* DurabilityStat =
+		AssociatedInventorySlot->Instance->GetInstanceStats_Mutable().GetStat(Data->DurabilityTag);
+
+	if (DurabilityStat)
+	{
+		TitleText = FText::Format(FText::FromString("{0} ({1})"), TitleText, DurabilityStat->Value);
+	}
+
+	ToolTip->SetTitleText(TitleText);
+	ToolTip->SetMainText(FText::GetEmpty());
 }
 
 void UItemSlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)

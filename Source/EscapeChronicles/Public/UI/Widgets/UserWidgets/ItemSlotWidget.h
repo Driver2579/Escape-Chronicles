@@ -30,6 +30,7 @@ public:
 	bool IsSlotSelected() const { return bSlotSelected; }
 
 protected:
+	virtual void NativeOnInitialized() override;
 	virtual void NativePreConstruct() override;
 
 	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
