@@ -205,7 +205,7 @@ void UCarryCharacterComponent::DropCharacter(AEscapeChroniclesCharacter* InCarri
 
 	// Enable physics and detach the mesh
 	CarriedCharacterMesh->SetSimulatePhysics(true);
-	CarriedCharacterMesh->DetachFromComponent(FDetachmentTransformRules::KeepRelativeTransform);
+	CarriedCharacterMesh->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
 
 	// Stop the carried character's animation
 	UAnimInstance* CarriedCharacterAnimInstance = CarriedCharacterMesh->GetAnimInstance();
