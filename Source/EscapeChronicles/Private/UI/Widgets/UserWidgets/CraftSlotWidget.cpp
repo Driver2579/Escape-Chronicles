@@ -97,8 +97,15 @@ void UCraftSlotWidget::NativeOnMouseEnter(const FGeometry& InGeometry, const FPo
 
 	ToolTip->SetTitleText(TitleText);
 
-	ToolTip->SetMainText(FText::Format(FText::FromString("{0}\nNot Consumed: {1}"), ConsumableText,
-		NonConsumableText));
+	if (NonConsumableText.IsEmpty())
+	{
+		ToolTip->SetMainText(ConsumableText);
+	}
+	else
+	{
+		ToolTip->SetMainText(FText::Format(FText::FromString("{0}\nNot Consumed: {1}"), ConsumableText,
+			NonConsumableText));
+	}
 }
 
 void UCraftSlotWidget::NativeOnClicked()

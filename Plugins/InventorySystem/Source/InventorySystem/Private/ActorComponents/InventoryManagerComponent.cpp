@@ -81,13 +81,6 @@ void UInventoryManagerComponent::BeginPlay()
 	}
 }
 
-void UInventoryManagerComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	if (GetOwner()->HasAuthority()) ClearInventory();
-
-	Super::EndPlay(EndPlayReason);
-}
-
 void UInventoryManagerComponent::ReadyForReplication()
 {
 	Super::ReadyForReplication();

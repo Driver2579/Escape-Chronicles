@@ -18,7 +18,22 @@ class AEscapeChroniclesCharacter;
 class AActivitySpot;
 
 USTRUCT(BlueprintType)
-struct FInventoryContentGenerationEntry
+struct FInventoryContentActorGenerationEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly)
+	TSoftObjectPtr<UDataTable> DataTable;
+
+	UPROPERTY(EditDefaultsOnly)
+	bool bRegenerate = false;
+
+	UPROPERTY(EditDefaultsOnly, meta=(EditCondition=bRegenerate))
+	FGameplayTime ScheduleRegenerateTime;
+};
+
+USTRUCT(BlueprintType)
+struct FInventoryContentCharacterGenerationEntry
 {
 	GENERATED_BODY()
 
@@ -53,13 +68,27 @@ public:
 	 */
 	void GenerateInventoryContent(const AEscapeChroniclesPlayerState* PlayerState, bool bClear = true);
 
+	/**
+	 * Gives items from the table assigned to the character
+	 * @param Actor Actor who needs to clear inventory
+	 * @param bClear If I true, first clear the inventory
+	 */
+	void GenerateInventoryContent(const AActor* Actor, bool bClear = true);
+
 private:
 	/**
 	 * @tparam KeyType Available owners by class
 	 * @tparam ValueType DataTable ownership information
 	 */
 	UPROPERTY(EditDefaultsOnly)
-	TMap<TSoftObjectPtr<UDataTable>, FInventoryContentGenerationEntry> GenerationEntries;
+	TMap<TSubclassOf<AActor>, FInventoryContentActorGenerationEntry> ActorsGenerationEntries;
+
+	/**
+	 * @tparam KeyType Available owners by class
+	 * @tparam ValueType DataTable ownership information
+	 */
+	UPROPERTY(EditDefaultsOnly)
+	TMap<TSoftObjectPtr<UDataTable>, FInventoryContentCharacterGenerationEntry> CharactersGenerationEntries;
 
 	UPROPERTY(Transient, SaveGame)
 	TMap<FUniquePlayerID, TSoftObjectPtr<UDataTable>> DataTableOwnerships;
