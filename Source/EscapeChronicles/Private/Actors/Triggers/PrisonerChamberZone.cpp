@@ -153,13 +153,11 @@ bool APrisonerChamberZone::IsOwningCharacterBedOccupied(bool& bOutHasBedWithSame
 		// We found a bed that overlaps this chamber and has the same owning player
 		bOutHasBedWithSameOwningCharacter = true;
 
-		// TODO: Uncomment this
-
-		/*// If the bed is occupied, then return true
-		if (Bed->IsOccupied())
+		// If the bed is occupied, then return true
+		if (CastedBed->IsOccupied())
 		{
 			return true;
-		}*/
+		}
 	}
 
 	/**

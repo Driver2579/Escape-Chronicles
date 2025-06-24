@@ -29,8 +29,7 @@ void FTryGetActivitySpotStateTreePropertyFunction::Execute(FStateTreeExecutionCo
 		return;
 	}
 
-	// TODO: Get the activity spot from the PlayerState
-	AActivitySpot* CurrentActivitySpot = /*PlayerState->GetCurrentActivitySpot()*/ nullptr;
+	AActivitySpot* CurrentActivitySpot = PlayerState->GetOccupyingActivitySpot();
 
 	// Return the current activity spot if it is valid
 	if (IsValid(CurrentActivitySpot))

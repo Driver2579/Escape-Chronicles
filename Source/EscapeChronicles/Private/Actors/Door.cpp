@@ -52,7 +52,10 @@ void ADoor::OnEnterBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedCompone
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character) || ConfirmedCharactersPool.Contains(Character) || EnteringCharactersPool.Contains(Character))
+	const bool bCanAdd = IsValid(Character) && OtherComp == Character->GetCapsuleComponent() &&
+		!ConfirmedCharactersPool.Contains(Character) && !EnteringCharactersPool.Contains(Character);
+
+	if (!bCanAdd)
 	{
 		return;
 	}
@@ -90,7 +93,10 @@ void ADoor::OnExitBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponen
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character) || ConfirmedCharactersPool.Contains(Character) || ExitingCharactersPool.Contains(Character))
+	const bool bCanAdd = IsValid(Character) && OtherComp == Character->GetCapsuleComponent() &&
+		!ConfirmedCharactersPool.Contains(Character) && !ExitingCharactersPool.Contains(Character);
+
+	if (!bCanAdd)
 	{
 		return;
 	}
@@ -128,7 +134,11 @@ void ADoor::OnDoorwayOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent,
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character) || EnterBox->IsOverlappingActor(Character) || ExitBox->IsOverlappingActor(Character))
+	const bool bCanRemove = IsValid(Character) &&
+		!EnterBox->IsOverlappingComponent(Character->GetCapsuleComponent()) &&
+			!ExitBox->IsOverlappingComponent(Character->GetCapsuleComponent());
+
+	if (!bCanRemove)
 	{
 		return;
 	}
