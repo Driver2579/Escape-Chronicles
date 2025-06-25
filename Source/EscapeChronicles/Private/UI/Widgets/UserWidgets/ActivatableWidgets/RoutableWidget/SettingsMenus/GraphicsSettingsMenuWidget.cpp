@@ -204,7 +204,12 @@ void UGraphicsSettingsMenuWidget::OnApplyButtonClicked() const
 		}
 	}
 
-	GameUserSettings->SetScreenResolution(Resolutions[ResolutionComboBox->GetComboBox()->GetSelectedIndex()]);
+	const int32 SelectedResolutionIndex = ResolutionComboBox->GetComboBox()->GetSelectedIndex();
+
+	if (Resolutions.IsValidIndex(SelectedResolutionIndex))
+	{
+		GameUserSettings->SetScreenResolution(Resolutions[SelectedResolutionIndex]);
+	}
 
 	const FString SelectedVSyncOption = VSyncComboBox->GetComboBox()->GetSelectedOption();
 
