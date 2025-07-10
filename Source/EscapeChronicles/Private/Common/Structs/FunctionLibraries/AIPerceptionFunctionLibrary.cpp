@@ -60,10 +60,27 @@ bool FAIPerceptionFunctionLibrary::IsBoxVisible(const UAIPerceptionComponent* AI
 		const FVector ToPointNormalized = ToPoint.GetSafeNormal();
 		const float Dot = FVector::DotProduct(AgentDirection, ToPointNormalized);
 
-		// Check if at least one point is within the FOV
+		/**
+		 * Check if the point is within the FOV. If it is, then check if there are no obstacles between the agent and
+		 * the point.
+		 */
 		if (Dot >= CosHalfFOV)
 		{
-			return true;
+			FHitResult HitResult;
+
+			// Ignore the agent
+			FCollisionQueryParams QueryParams;
+			QueryParams.AddIgnoredActor(AIPerceptionComponent->GetOwner());
+
+			// Perform the line trace from the agent to the point to check if there are any obstacles between them
+			const bool bTraceResult = AIPerceptionComponent->GetWorld()->LineTraceSingleByChannel(HitResult,
+				AgentLocation, Point, ECC_Visibility, QueryParams);
+
+			// Return true if the trace didn't hit anything or hit the point itself
+			if (!bTraceResult || HitResult.ImpactPoint == Point)
+			{
+				return true;
+			}
 		}
 	}
 
