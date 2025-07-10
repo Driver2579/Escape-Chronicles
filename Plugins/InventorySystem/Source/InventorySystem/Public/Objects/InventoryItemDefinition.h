@@ -26,7 +26,8 @@ public:
 		// Check if the fragments are configured validly
 		for (UInventoryItemFragment* Fragment : Fragments)
 		{
-			ensureAlwaysMsgf(Fragment->IsValidConfiguration(this), TEXT("The Fragment has invalid properties!"));
+			ensureAlwaysMsgf(Fragment->IsValidConfiguration(this),
+				TEXT("The Fragment has invalid properties!"));
 		}
 	}
 #endif

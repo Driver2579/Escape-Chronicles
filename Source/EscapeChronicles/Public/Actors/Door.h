@@ -125,7 +125,7 @@ private:
 	bool IsRequiresKey(const AEscapeChroniclesCharacter* Character) const;
 	
 	// Sets whether a character can pass through a door
-	void SetLockDoorway(const AEscapeChroniclesCharacter* Character, bool IsLock) const;
+	void SetLockDoorway(AEscapeChroniclesCharacter* Character, bool IsLock) const;
 	
 	// Removes 1 unit of durability if needed
 	void UseKey(const AEscapeChroniclesCharacter* Character) const;

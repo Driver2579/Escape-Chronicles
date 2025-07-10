@@ -25,6 +25,7 @@ public:
 	AInventoryPickupItem();
 
 	UInventoryItemInstance* GetItemInstance() const { return ItemInstance; }
+
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

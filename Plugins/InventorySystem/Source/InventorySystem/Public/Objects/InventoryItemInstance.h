@@ -38,6 +38,7 @@ public:
 	void Initialize(const TSubclassOf<UInventoryItemDefinition>& InDefinition = nullptr);
 
 	TSubclassOf<UInventoryItemDefinition> GetDefinition() const { return Definition; }
+
 	FInstanceStats& GetInstanceStats_Mutable() { return InstanceStats; }
 	
 	// Gathers all fragments of the specified class type and writes them into the provided array.

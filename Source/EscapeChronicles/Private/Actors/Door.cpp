@@ -65,15 +65,13 @@ void ADoor::OnDoorwayBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedCompo
 void ADoor::OnDoorwayBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	const AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	if (!IsValid(Character))
+	if (IsValid(Character))
 	{
-		return;
+		// Close the door after passing through
+		SetLockDoorway(Character, true);
 	}
-
-	// Close the door after passing through
-	SetLockDoorway(Character, true);
 }
 
 void ADoor::OnEnterOrExitBoxOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
@@ -107,20 +105,14 @@ bool ADoor::IsRequiresKey(const AEscapeChroniclesCharacter* Character) const
 	return ensureAlwaysMsgf(true, TEXT("During this check, the character must be in one of the direction boxes."));
 }
 
-void ADoor::SetLockDoorway(const AEscapeChroniclesCharacter* Character, const bool IsLock) const
+void ADoor::SetLockDoorway(AEscapeChroniclesCharacter* Character, const bool IsLock) const
 {
 	UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
 
 	if (ensureAlways(IsValid(CharacterCapsule)))
 	{
 		CharacterCapsule->IgnoreComponentWhenMoving(DoorwayBoxBlock, !IsLock);
-	}
-	
-	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
-	
-	if (ensureAlways(IsValid(CharacterMesh)))
-	{
-		DoorwayBoxBlock->IgnoreComponentWhenMoving(CharacterMesh, !IsLock);
+		DoorwayBoxBlock->IgnoreActorWhenMoving(Character, !IsLock);
 	}
 }
 
@@ -140,10 +132,7 @@ bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character)
 {
 	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
 
-	if (!ensureAlways(IsValid(Inventory)))
-	{
-		return false;
-	}
+	if (!ensureAlways(IsValid(Inventory))) return false;
 
 	bool bResult = false;
 	
@@ -152,12 +141,7 @@ bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character)
 		const UDoorKeyInventoryItemFragment* DoorKeyFragment =
 			ItemInstance->GetFragmentByClass<UDoorKeyInventoryItemFragment>();
 
-		if (!IsValid(DoorKeyFragment))
-		{
-			return;
-		}
-		
-		if (DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
+		if (IsValid(DoorKeyFragment) && DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
 		{
 			bResult = true;
 		}
@@ -189,27 +173,18 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 	Inventory->ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
 	{
 		// Do not continue the search if there is already unbreakable key.
-		if (bHasUnbreakableKey)
-		{
-			return;
-		}
+		if (bHasUnbreakableKey) return;
 		
 		const UDoorKeyInventoryItemFragment* DoorKeyFragment =
 			ItemInstance->GetFragmentByClass<UDoorKeyInventoryItemFragment>();
 
-		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
-		{
-			return; 
-		}
+		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag)) return;
 		
 		bHasUnbreakableKey = !DoorKeyFragment->IsUseDurability();
 
 		// If the key is not unbreakable, it must have a durability fragment
-		if (IsValid(CachedDurabilityFragment) || bHasUnbreakableKey)
-		{
-			return; 
-		}
-		
+		if (IsValid(CachedDurabilityFragment) || bHasUnbreakableKey) return;
+
 		const UDurabilityInventoryItemFragment* DurabilityKeyFragment =
 			ItemInstance->GetFragmentByClass<UDurabilityInventoryItemFragment>();
 		
@@ -228,6 +203,8 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 
 void ADoor::UpdateConfirmedCharactersPool()
 {
+	// TODO: Update the implementation of this method for the new door logic
+
 	TArray<AActor*> OverlappingActors;
 	DoorwayBoxOverlap->GetOverlappingActors(OverlappingActors);
 
@@ -240,7 +217,6 @@ void ADoor::UpdateConfirmedCharactersPool()
 			TryAddCharacterToPool(Character);
 		}
 	}
-	
 }
 
 void ADoor::TryAddCharacterToPool(AEscapeChroniclesCharacter* Character)

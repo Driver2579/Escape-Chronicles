@@ -70,10 +70,8 @@ void UInventoryItemInstance::Break()
 {
 	IStoringItemInstances* Outer = Cast<IStoringItemInstances>(GetOuter());
 
-	if (!ensureAlways(Outer))
+	if (ensureAlways(Outer))
 	{
-		return;
+		Outer->BreakItemInstance(this);
 	}
-
-	Outer->BreakItemInstance(this);
 }
