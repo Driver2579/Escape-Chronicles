@@ -1014,18 +1014,18 @@ void AEscapeChroniclesCharacter::SetMesh(USkeletalMesh* NewMesh)
 
 void AEscapeChroniclesCharacter::SetMesh_Internal(USkeletalMesh* NewMesh) const
 {
-	UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance();
+	const UAnimInstance* OldAnimInstance = MeshComponent->GetAnimInstance();
 
 	// Remember the current animation montage if any and use its position to restore it later
-	UAnimMontage* CurrentAnimMontage = AnimInstance->GetCurrentActiveMontage();
-	const float CurrentAnimMontagePosition = AnimInstance->Montage_GetPosition(CurrentAnimMontage);
+	UAnimMontage* CurrentAnimMontage = OldAnimInstance->GetCurrentActiveMontage();
+	const float CurrentAnimMontagePosition = OldAnimInstance->Montage_GetPosition(CurrentAnimMontage);
 
 	// Set the new mesh and reset the animation
 	MeshComponent->SetSkeletalMesh(NewMesh);
 
-	// Restore the animation montage if it was playing
-	AnimInstance->Montage_Play(CurrentAnimMontage, 1, EMontagePlayReturnType::MontageLength,
-		CurrentAnimMontagePosition);
+	// Restore the animation montage in the new AnimInstance if it was playing
+	MeshComponent->GetAnimInstance()->Montage_Play(CurrentAnimMontage, 1,
+		EMontagePlayReturnType::MontageLength, CurrentAnimMontagePosition);
 }
 
 void AEscapeChroniclesCharacter::ResetMesh()
