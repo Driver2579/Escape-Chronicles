@@ -2,6 +2,7 @@
 
 #include "Objects/InventoryItemInstance.h"
 
+#include "Interfaces/StoringItemInstances.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragment.h"
@@ -54,13 +55,23 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 	check(IsValid(NewItemInstance));
 #endif
 
+	NewItemInstance->Initialize(GetDefinition());
+	
 	// Copy FInstanceStats
 	for (const FInstanceStatsItem& Item : InstanceStats.GetAllStats())
 	{
 		NewItemInstance->InstanceStats.SetStat(Item);
 	}
 
-	NewItemInstance->Initialize(GetDefinition());
-
 	return NewItemInstance;
+}
+
+void UInventoryItemInstance::Break()
+{
+	IStoringItemInstances* Outer = Cast<IStoringItemInstances>(GetOuter());
+
+	if (ensureAlways(Outer))
+	{
+		Outer->BreakItemInstance(this);
+	}
 }

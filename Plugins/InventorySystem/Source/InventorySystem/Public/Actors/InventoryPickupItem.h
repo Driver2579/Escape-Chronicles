@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/StoringItemInstances.h"
 #include "Objects/InventoryItemInstance.h"
 #include "InventoryPickupItem.generated.h"
 
@@ -16,7 +17,7 @@ class UInventoryManagerComponent;
  * - Handles pickup interaction and inventory transfer.
  */
 UCLASS()
-class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor
+class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
 {
 	GENERATED_BODY()
 
@@ -28,7 +29,6 @@ public:
 	UStaticMeshComponent* GetMesh() const { return MeshComponent; }
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual bool ReplicateSubobjects(class UActorChannel* Channel, class FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 
@@ -46,6 +46,8 @@ public:
 	// Transfers item to inventory and destroys actor
 	void Pickup(UInventoryManagerComponent* InventoryManagerComponent);
 
+	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstancee) override;
+	
 protected:
 	virtual void BeginPlay() override;
 
@@ -54,13 +56,13 @@ protected:
 	 * overriden).
 	 * @return True if all settings are applied correctly.
 	 */
-	virtual bool ApplyChangesFromItemInstance() const;
+	virtual bool ApplyChangesFromItemInstance();
 
 	// Reverts settings to CDO (opposite of ApplyChangesFromItemInstance)
-	virtual void SetDefaultSettings() const;
+	virtual void SetDefaultSettings();
 
 	// Like ApplyChangesFromItemInstance, but at false additionally applies SetDefaultSettings
-	void TryApplyChangesFromItemInstance() const;
+	void TryApplyChangesFromItemInstance();
 
 private:
 	// An item instance this actor is associated with
