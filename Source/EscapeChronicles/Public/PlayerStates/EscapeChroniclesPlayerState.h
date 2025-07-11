@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "Actors/ActivitySpot.h"
 #include "Components/AbilitySystemComponents/EscapeChroniclesAbilitySystemComponent.h"
 #include "Common/Structs/UniquePlayerID.h"
 #include "EscapeChroniclesPlayerState.generated.h"
@@ -31,6 +32,13 @@ public:
 	}
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	AActivitySpot* GetOccupyingActivitySpot() const { return OccupyingActivitySpot.Get(); }
+
+	void SetOccupyingActivitySpot(AActivitySpot* InOccupyingActivitySpot)
+	{
+		OccupyingActivitySpot = InOccupyingActivitySpot;
+	}
 
 	// The same as AController::InitPlayerState() but with a custom PlayerState class
 	static void InitPlayerStateForController(AController* OwnerController,
@@ -78,4 +86,6 @@ private:
 
 	UPROPERTY(Transient, Replicated)
 	FUniquePlayerID UniquePlayerID;
+
+	TWeakObjectPtr<AActivitySpot> OccupyingActivitySpot;
 };

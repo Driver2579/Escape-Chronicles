@@ -20,6 +20,8 @@ class ESCAPECHRONICLES_API AEscapeChroniclesPlayerController : public APlayerCon
 	GENERATED_BODY()
 
 public:
+	AEscapeChroniclesPlayerController();
+
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override final;
 	UEscapeChroniclesAbilitySystemComponent* GetEscapeChroniclesAbilitySystemComponent() const;
 

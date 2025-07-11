@@ -7,9 +7,15 @@
 #include "InputMappingContext.h"
 #include "EscapeChroniclesGameplayTags.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "CheatManagers/EscapeChroniclesCheatManager.h"
 #include "Common/DataAssets/InputConfig.h"
 #include "PlayerStates/EscapeChroniclesPlayerState.h"
 #include "Subsystems/SaveGameSubsystem.h"
+
+AEscapeChroniclesPlayerController::AEscapeChroniclesPlayerController()
+{
+	CheatClass = UEscapeChroniclesCheatManager::StaticClass();
+}
 
 UAbilitySystemComponent* AEscapeChroniclesPlayerController::GetAbilitySystemComponent() const
 {

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "InventoryItemFragment.h"
 #include "InventoryItemDefinition.generated.h"
 
 class UInventoryItemFragment;
@@ -18,6 +19,18 @@ public:
 
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
 
+
+#if WITH_EDITOR
+	virtual void PostCDOCompiled(const FPostCDOCompiledContext& Context) override
+	{
+		// Check if the fragments are configured validly
+		for (UInventoryItemFragment* Fragment : Fragments)
+		{
+			ensureAlwaysMsgf(Fragment->IsValidConfiguration(this), TEXT("The Fragment has invalid properties!"));
+		}
+	}
+#endif
+	
 private:
 	UPROPERTY(EditDefaultsOnly)
 	FText DisplayName;

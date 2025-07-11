@@ -167,7 +167,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 
 	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
-	if (IsValid(AbilitySystemComponent) && AbilitySystemComponent->HasAnyMatchingGameplayTags(BlockTurningTags))
+	if (IsValid(AbilitySystemComponent) && AbilitySystemComponent->HasAnyMatchingGameplayTags(MeshControllingStateTags))
 	{
 		return;
 	}
@@ -177,7 +177,7 @@ void AEscapeChroniclesCharacter::Tick(float DeltaSeconds)
 
 	ActorAndViewDelta = MeshRotation - ActorRotation;
 	ActorAndViewDelta.Normalize();
-	
+
 	const float AbsoluteYawDelta = FMath::Abs(ActorAndViewDelta.Yaw);
 
 	// Check if we have to rotate the actor
@@ -203,6 +203,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 {
 	Super::OnPlayerStateChanged(NewPlayerState, OldPlayerState);
 
+	OnPlayerStateChangedDelegate.Broadcast(NewPlayerState, OldPlayerState);
+
 	UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 
 	if (!IsValid(AbilitySystemComponent))
@@ -215,6 +217,8 @@ void AEscapeChroniclesCharacter::OnPlayerStateChanged(APlayerState* NewPlayerSta
 
 	// Apply all active gameplay tags from the CharacterMoverComponent to the AbilitySystemComponent
 	SyncCharacterMoverComponentTagsWithAbilitySystem();
+
+	AbilitySystemComponent->RegisterGenericGameplayTagEvent().AddUObject(this, &ThisClass::UpdateMeshControllingState);
 
 	// === Subscribe to changes in the health attribute ===
 
@@ -729,12 +733,7 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 
 	if (bFainted)
 	{
-		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
-		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
-
 		MeshComponent->WakeAllRigidBodies();
-
-		CharacterMoverComponent->DisableMovement();
 
 		if (!ensureAlways(!FaintedGameplayEffectClass.IsNull()))
 		{
@@ -745,21 +744,16 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 		{
 			LoadFaintedGameplayEffectClassHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
 				FaintedGameplayEffectClass.ToSoftObjectPath(),
-				FStreamableDelegate::CreateUObject(this, &ThisClass::OnFaintedGameplayEffectClassLoaded));
+				FStreamableDelegateWithHandle::CreateUObject(this, &ThisClass::OnFaintedGameplayEffectClassLoaded));
 		}
 		else if (FaintedGameplayEffectClass.IsValid())
 		{
-			OnFaintedGameplayEffectClassLoaded();
+			OnFaintedGameplayEffectClassLoaded(LoadFaintedGameplayEffectClassHandle);
 		}
 	}
 	else
 	{
-		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
-		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
-
 		MeshComponent->PutAllRigidBodiesToSleep();
-
-		CharacterMoverComponent->SetDefaultMovementMode();
 
 		if (FaintedGameplayEffectHandle.IsValid())
 		{
@@ -769,11 +763,11 @@ void AEscapeChroniclesCharacter::UpdateFaintedState()
 	}
 }
 
-void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded()
+void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded(TSharedPtr<FStreamableHandle> LoadObjectHandle)
 {
 #if DO_CHECK
 	check(FaintedGameplayEffectClass.IsValid());
-	check(LoadFaintedGameplayEffectClassHandle.IsValid());
+	check(LoadObjectHandle.IsValid());
 #endif
 
 	// Avoid re-applying the gameplay effect
@@ -788,6 +782,38 @@ void AEscapeChroniclesCharacter::OnFaintedGameplayEffectClassLoaded()
 		}
 	}
 
-	LoadFaintedGameplayEffectClassHandle->ReleaseHandle();
-	LoadFaintedGameplayEffectClassHandle.Reset();
+	LoadObjectHandle->ReleaseHandle();
+	LoadObjectHandle.Reset();
+}
+
+bool AEscapeChroniclesCharacter::HasAnyMeshControllingStateTags() const
+{
+	const UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return false;
+	}
+
+	return AbilitySystemComponent->HasAnyMatchingGameplayTags(MeshControllingStateTags);
+}
+
+void AEscapeChroniclesCharacter::UpdateMeshControllingState(const FGameplayTag GameplayTag, int32 Count) const
+{
+	const FName MovementModeName = CharacterMoverComponent->GetMovementModeName();
+
+	if (HasAnyMeshControllingStateTags())
+	{
+		CharacterMoverComponent->DisableMovement();
+
+		MeshComponent->SetCollisionProfileName(FName("Ragdoll"));
+		CapsuleComponent->SetCollisionProfileName(FName("NoCollision"));
+	}
+	else if (MovementModeName == UEscapeChroniclesCharacterMoverComponent::NullModeName)
+	{
+		CharacterMoverComponent->SetDefaultMovementMode();
+
+		CapsuleComponent->SetCollisionProfileName(DefaultCapsuleCollisionProfileName);
+		MeshComponent->SetCollisionProfileName(DefaultMeshCollisionProfileName);
+	}
 }

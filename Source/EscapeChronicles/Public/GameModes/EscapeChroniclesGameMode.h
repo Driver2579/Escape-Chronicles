@@ -9,6 +9,9 @@
 #include "EscapeChroniclesGameMode.generated.h"
 
 class AEscapeChroniclesPlayerState;
+class UScheduleEventManagerComponent;
+
+struct FScheduleEventData;
 
 UCLASS(MinimalAPI)
 class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
@@ -18,15 +21,29 @@ class AEscapeChroniclesGameMode : public AGameModeBase, public ISaveable
 public:
 	AEscapeChroniclesGameMode();
 
+	UScheduleEventManagerComponent* GetScheduleEventManagerComponent() const
+	{
+		return ScheduleEventManagerComponent;
+	}
+
 	FUniquePlayerIdManager& GetUniquePlayerIdManager() { return UniquePlayerIdManager; }
 
 	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 
 	/**
-	 * Initializes the player or bot after he's loaded.
+	 * Initializes the player or bot after he's loaded or failed to be loaded.
 	 * @remark Bots must call this manually after they are spawned and loaded (or if failed to load)!
 	 */
 	virtual void PostLoadInitPlayerOrBot(AEscapeChroniclesPlayerState* PlayerState);
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerOrBotInitializedOrLogoutDelegate,
+		AEscapeChroniclesPlayerState* PlayerState)
+
+	// Called when the player or bot is fully initialized
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotInitialized;
+
+	// Called when the player or bot logs out
+	FOnPlayerOrBotInitializedOrLogoutDelegate OnPlayerOrBotLogout;
 
 protected:
 	virtual void OnLoadGameCalled();
@@ -34,9 +51,14 @@ protected:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = L"") override;
 
+	virtual void Logout(AController* Exiting) override;
+
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UScheduleEventManagerComponent> ScheduleEventManagerComponent;
+
 	// A global FUniquePlayerIdManager for generating FUniquePlayerIDs in PlayerState
 	UPROPERTY(Transient, SaveGame)
 	FUniquePlayerIdManager UniquePlayerIdManager;
