@@ -116,8 +116,15 @@ void AApplyGameplayEffectZone::OnCharacterPlayerStateChanged(APlayerState* NewPl
 	 * character anymore. We can be sure the character is valid here because this function is called by the delegate
 	 * that was broadcast from this character.
 	 */
-	OnPlayerStateChangedDelegateHandles.Remove(
-		CastChecked<AEscapeChroniclesCharacter>(NewPlayerState->GetPawn()));
+
+	AEscapeChroniclesCharacter* Character = CastChecked<AEscapeChroniclesCharacter>(NewPlayerState->GetPawn());
+
+#if DO_CHECK
+	check(OnPlayerStateChangedDelegateHandles.Contains(Character));
+#endif
+
+	Character->OnPlayerStateChangedDelegate.Remove(OnPlayerStateChangedDelegateHandles.FindChecked(Character));
+	OnPlayerStateChangedDelegateHandles.Remove(Character);
 }
 
 void AApplyGameplayEffectZone::ApplyGameplayEffectChecked(UAbilitySystemComponent* AbilitySystemComponent)
