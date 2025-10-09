@@ -2,7 +2,7 @@
 
 #include "Objects/InventoryItemInstance.h"
 
-#include "Interfaces/StoringItemInstances.h"
+#include "Interfaces/ItemInstancesStorage.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemDefinition.h"
 #include "Objects/InventoryItemFragment.h"
@@ -68,7 +68,7 @@ UInventoryItemInstance* UInventoryItemInstance::Duplicate(UObject* Outer) const
 
 void UInventoryItemInstance::Break()
 {
-	IStoringItemInstances* Outer = Cast<IStoringItemInstances>(GetOuter());
+	IItemInstancesStorage* Outer = Cast<IItemInstancesStorage>(GetOuter());
 
 	if (ensureAlways(Outer))
 	{

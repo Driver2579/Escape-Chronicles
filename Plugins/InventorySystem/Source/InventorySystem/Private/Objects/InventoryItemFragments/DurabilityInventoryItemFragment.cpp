@@ -7,13 +7,27 @@ void UDurabilityInventoryItemFragment::OnItemInstanceInitialized(UInventoryItemI
 {
 	Super::OnItemInstanceInitialized(Instance);
 
+#if DO_CHECK
+	check(IsValid(Instance))
+#endif
+
 	// Initialize the durability value
 	Instance->GetInstanceStats_Mutable().SetStat(DurabilityStatTag, InitialDurability);
 }
 
 void UDurabilityInventoryItemFragment::ReduceDurability(UInventoryItemInstance* Instance, int32 Amount) const
 {
-	const float CurrentDurability = Instance->GetInstanceStats_Mutable().GetStat(DurabilityStatTag)->Value;
+#if DO_CHECK
+	check(IsValid(Instance))
+#endif
+
+	const FInstanceStatsItem* DurabilityStat = Instance->GetInstanceStats_Mutable().GetStat(DurabilityStatTag);
+	
+#if DO_CHECK
+	check(DurabilityStat)
+#endif
+
+	const float CurrentDurability = DurabilityStat->Value;
 
 	const float NewDurability = CurrentDurability - Amount;
 	

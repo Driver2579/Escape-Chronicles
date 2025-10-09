@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interfaces/StoringItemInstances.h"
+#include "Interfaces/ItemInstancesStorage.h"
 #include "Objects/InventoryItemInstance.h"
 #include "InventoryPickupItem.generated.h"
 
@@ -17,7 +17,7 @@ class UInventoryManagerComponent;
  * - Handles pickup interaction and inventory transfer.
  */
 UCLASS()
-class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IStoringItemInstances
+class INVENTORYSYSTEM_API AInventoryPickupItem : public AActor, public IItemInstancesStorage
 {
 	GENERATED_BODY()
 

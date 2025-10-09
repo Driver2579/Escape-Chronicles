@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "Objects/InventoryItemFragment.h"
+#include "GameplayTagContainer.h"
 #include "DurabilityInventoryItemFragment.generated.h"
 
 // Item fragment class responsible for durability system functionality
@@ -25,10 +25,10 @@ public:
 	
 private:
 	// Initial durability value for items of this type
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	int32 InitialDurability;
 
 	// Gameplay tag identifying the durability stat in its stats
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
 	FGameplayTag DurabilityStatTag;
 };
