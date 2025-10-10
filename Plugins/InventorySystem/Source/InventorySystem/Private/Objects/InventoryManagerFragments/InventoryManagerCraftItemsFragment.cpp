@@ -27,6 +27,8 @@ bool UInventoryManagerCraftItemsFragment::IsCraftPossible(const FName& CraftName
 	Inventory->ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
 	{
 		InventoryItemInstances.Add(ItemInstance);
+
+		return true;
 	});
 
 	for (const FCraftRequirement& CraftRequirement : InventoryManagerCraftData->ItemMaterials)
@@ -112,7 +114,7 @@ void UInventoryManagerCraftItemsFragment::Server_Craft_Implementation(const FNam
 
 		FGameplayTag OutSlotsType;
 		int32 OutSlotIndex;
-		Inventory->GetItemInstanceContainerAndIndex(OutSlotsType, OutSlotIndex, ItemInstance);
+		Inventory->FindItemSlot(ItemInstance, OutSlotsType, OutSlotIndex);
 
 		ensureAlways(Inventory->DeleteItem(OutSlotIndex, OutSlotsType));
 	}
