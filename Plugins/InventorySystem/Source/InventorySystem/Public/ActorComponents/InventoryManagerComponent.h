@@ -5,7 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "InventorySystemGameplayTags.h"
 #include "Common/Structs/FastArraySerializers/InventorySlotsTypedArrayContainer.h"
-#include "Interfaces/StoringItemInstances.h"
+#include "Interfaces/ItemInstancesStorage.h"
 #include "InventoryManagerComponent.generated.h"
 
 class UInventoryManagerFragment;
@@ -18,7 +18,7 @@ class UInventoryManagerFragment;
  * - Extensible through fragment system
  */
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
-class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IStoringItemInstances
+class INVENTORYSYSTEM_API UInventoryManagerComponent : public UActorComponent, public IItemInstancesStorage
 {
 	GENERATED_BODY()
 	
@@ -63,16 +63,20 @@ public:
 	void ClearInventory();
 
 	/**
-	 * Method for obtaining data on item location in inventory
-	 * @return true if the search was successful
+	 * Method for obtaining data on item location in inventory.
+	 * @return True if the search was successful.
 	 */
-	bool GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
-		UInventoryItemInstance* ItemInstance) const;
+	bool FindItemSlot(UInventoryItemInstance* ItemInstance, FGameplayTag& OutSlotsType, int32& OutSlotIndex) const;
 
 	virtual void BreakItemInstance(UInventoryItemInstance* ItemInstance) override;
 
-	// Executes Action for each valid item instance in inventory
-	void ForEachInventoryItemInstance(const TFunctionRef<void(UInventoryItemInstance*)>& Action) const;
+	/**
+	 * Executes Action for each valid item instance in the inventory.
+	 * The Action function must return a bool indicating whether iteration should continue:
+	 *  - return true to keep iterating over the next items,
+	 *  - return false to stop the iteration early.
+	 */
+	void ForEachInventoryItemInstance(const TFunctionRef<bool(UInventoryItemInstance*)>& Action) const;
 
 	DECLARE_MULTICAST_DELEGATE(FOnContentChangedDelegate);
 

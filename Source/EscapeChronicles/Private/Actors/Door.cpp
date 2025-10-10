@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "ActorComponents/InventoryManagerComponent.h"
 #include "Characters/EscapeChroniclesCharacter.h"
+#include "Components/BoxComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Objects/InventoryItemFragments/DoorKeyInventoryItemFragment.h"
@@ -16,14 +17,17 @@ ADoor::ADoor()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
-	EnterBox = CreateDefaultSubobject<UBoxComponent>(TEXT("EnterBox"));
-	EnterBox->SetupAttachment(RootComponent);
+	EnterBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Enter Box Component"));
+	EnterBoxComponent->SetupAttachment(RootComponent);
 
-	ExitBox = CreateDefaultSubobject<UBoxComponent>(TEXT("ExitBox"));
-	ExitBox->SetupAttachment(RootComponent);
+	ExitBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Exit Box Component"));
+	ExitBoxComponent->SetupAttachment(RootComponent);
 
-	DoorwayBoxBlock = CreateDefaultSubobject<UBoxComponent>(TEXT("DoorwayBoxBlock"));
-	DoorwayBoxBlock->SetupAttachment(RootComponent);
+	DoorwayBlockingComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Doorway Blocking Component"));
+	DoorwayBlockingComponent->SetupAttachment(RootComponent);
+
+	DoorwayBoxZoneComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("Doorway Box Zone Component"));
+	DoorwayBoxZoneComponent->SetupAttachment(RootComponent);
 
 	bReplicates = true;
 }
@@ -40,139 +44,76 @@ void ADoor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	EnterBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnEnterBoxOverlapBeginOverlap);
-	ExitBox->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnExitBoxOverlapBeginOverlap);
+	DoorwayBoxZoneComponent->OnComponentBeginOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxZoneComponentBeginOverlap);
+	DoorwayBoxZoneComponent->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDoorwayBoxZoneComponentEndOverlap);
 
-	EnterBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDoorwayOverlapEndOverlap);
-	ExitBox->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnDoorwayOverlapEndOverlap);
+	EnterBoxComponent->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterOrExitBoxComponentEndOverlap);
+	ExitBoxComponent->OnComponentEndOverlap.AddDynamic(this, &ThisClass::OnEnterOrExitBoxComponentEndOverlap);
 }
 
-void ADoor::OnEnterBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
+void ADoor::OnDoorwayBoxZoneComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	const bool bCanAdd = IsValid(Character) && OtherComp == Character->GetCapsuleComponent() &&
-		!ConfirmedCharactersPool.Contains(Character) && !EnteringCharactersPool.Contains(Character);
-
-	if (!bCanAdd)
+	if (IsValid(Character) && OtherComp == Character->GetCapsuleComponent())
 	{
-		return;
-	}
-
-	if (ExitingCharactersPool.Contains(Character))
-	{
-		if (bExitRequiresKey && !HasCharacterAccessTag(Character))
-		{
-			if (!HasCharacterMatchingKey(Character))
-			{
-				SetLockDoorway(Character, true);
-
-				return;
-			}
-
-			UseKey(Character);
-		}
-
-		ConfirmedCharactersPool.Add(Character);
-	}
-	else if (HasCharacterEnterAccess(Character))
-	{
-		EnteringCharactersPool.Add(Character);
-
-		SetLockDoorway(Character, false);
-	}
-	else
-	{
-		SetLockDoorway(Character, true);
+		TryAddCharacterToPool(Character);
 	}
 }
 
-void ADoor::OnExitBoxOverlapBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
-{
-	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
-
-	const bool bCanAdd = IsValid(Character) && OtherComp == Character->GetCapsuleComponent() &&
-		!ConfirmedCharactersPool.Contains(Character) && !ExitingCharactersPool.Contains(Character);
-
-	if (!bCanAdd)
-	{
-		return;
-	}
-
-	if (EnteringCharactersPool.Contains(Character))
-	{
-		if (bEnterRequiresKey && !HasCharacterAccessTag(Character))
-		{
-			if (!HasCharacterMatchingKey(Character))
-			{
-				SetLockDoorway(Character, true);
-
-				return;
-			}
-
-			UseKey(Character);
-		}
-
-		ConfirmedCharactersPool.Add(Character);
-	}
-	else if (HasCharacterExitAccess(Character))
-	{
-		ExitingCharactersPool.Add(Character);
-
-		SetLockDoorway(Character, false);
-	}
-	else
-	{
-		SetLockDoorway(Character, true);
-	}
-}
-
-void ADoor::OnDoorwayOverlapEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+void ADoor::OnDoorwayBoxZoneComponentEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
 	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
 
-	const bool bCanRemove = IsValid(Character) &&
-		!EnterBox->IsOverlappingComponent(Character->GetCapsuleComponent()) &&
-			!ExitBox->IsOverlappingComponent(Character->GetCapsuleComponent());
+	if (IsValid(Character) && OtherComp == Character->GetCapsuleComponent())
+	{
+		// Close the door after passing through
+		SetLockDoorway(Character, true);
+	}
+}
 
-	if (!bCanRemove)
+void ADoor::OnEnterOrExitBoxComponentEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(OtherActor);
+
+	if (!IsValid(Character))
 	{
 		return;
 	}
 
-	EnteringCharactersPool.Remove(Character);
-	ExitingCharactersPool.Remove(Character);
-	ConfirmedCharactersPool.Remove(Character);
+	const UCapsuleComponent* CharactersCapsule = Character->GetCapsuleComponent();
 
-	// Close the door after passing through
-	SetLockDoorway(Character, true);
+#if DO_ENSURE
+	ensureAlways(CharactersCapsule);
+#endif
+	
+	// Remove the character's pass when he has completely passed through the door
+	if (!DoorwayBoxZoneComponent->IsOverlappingComponent(CharactersCapsule))
+	{
+		ConfirmedCharactersPool.Remove(Character);
+	}
 }
 
-void ADoor::SetLockDoorway(const AEscapeChroniclesCharacter* Character, const bool IsLock) const
+void ADoor::SetLockDoorway(AEscapeChroniclesCharacter* Character, const bool IsLock) const
 {
 	UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
 
 	if (ensureAlways(IsValid(CharacterCapsule)))
 	{
-		CharacterCapsule->IgnoreComponentWhenMoving(DoorwayBoxBlock, !IsLock);
-	}
-	
-	USkeletalMeshComponent* CharacterMesh = Character->GetMesh();
-	
-	if (ensureAlways(IsValid(CharacterMesh)))
-	{
-		DoorwayBoxBlock->IgnoreComponentWhenMoving(CharacterMesh, !IsLock);
+		CharacterCapsule->IgnoreComponentWhenMoving(DoorwayBlockingComponent, !IsLock);
+		DoorwayBlockingComponent->IgnoreActorWhenMoving(Character, !IsLock);
 	}
 }
 
-bool ADoor::HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) const
+bool ADoor::DoesCharacterHaveAccessTag(const AEscapeChroniclesCharacter* Character) const
 {
 	const UAbilitySystemComponent* AbilitySystemComponent = Character->GetAbilitySystemComponent();
 
-	if (!IsValid(AbilitySystemComponent))
+	if (!ensureAlways(IsValid(AbilitySystemComponent)))
 	{
 		return false;
 	}
@@ -180,31 +121,25 @@ bool ADoor::HasCharacterAccessTag(const AEscapeChroniclesCharacter* Character) c
 	return AbilitySystemComponent->HasAnyMatchingGameplayTags(CharacterAccessTags);
 }
 
-bool ADoor::HasCharacterMatchingKey(const AEscapeChroniclesCharacter* Character) const
+bool ADoor::DoesCharacterHaveMatchingKey(const AEscapeChroniclesCharacter* Character) const
 {
 	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
 
-	if (!ensureAlways(IsValid(Inventory)))
-	{
-		return false;
-	}
+	if (!ensureAlways(IsValid(Inventory))) return false;
 
 	bool bResult = false;
 	
-	Inventory->ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
+	Inventory->ForEachInventoryItemInstance([this, &bResult](UInventoryItemInstance* ItemInstance)
 	{
 		const UDoorKeyInventoryItemFragment* DoorKeyFragment =
 			ItemInstance->GetFragmentByClass<UDoorKeyInventoryItemFragment>();
 
-		if (!IsValid(DoorKeyFragment))
-		{
-			return;
-		}
-		
-		if (DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
+		if (IsValid(DoorKeyFragment) && DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
 		{
 			bResult = true;
 		}
+		
+		return true;
 	});
 	
 	return bResult;
@@ -216,7 +151,7 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 	{
 		return;
 	}
-
+	
 	const UInventoryManagerComponent* Inventory = Character->GetInventoryManagerComponent();
 
 	if (!ensureAlways(IsValid(Inventory)))
@@ -224,48 +159,103 @@ void ADoor::UseKey(const AEscapeChroniclesCharacter* Character) const
 		return;
 	}
 
-	// Cache data to reduce durability from a suitable key if necessary
-	UInventoryItemInstance* CachedItemInstance = nullptr;
-	const UDurabilityInventoryItemFragment* CachedDurabilityFragment = nullptr;
-
-	bool bHasUnbreakableKey = false;
-	
-	Inventory->ForEachInventoryItemInstance([&](UInventoryItemInstance* ItemInstance)
+	Inventory->ForEachInventoryItemInstance([this](UInventoryItemInstance* ItemInstance)
 	{
-		// Do not continue the search if there is already unbreakable key.
-		if (bHasUnbreakableKey)
-		{
-			return;
-		}
-		
 		const UDoorKeyInventoryItemFragment* DoorKeyFragment =
 			ItemInstance->GetFragmentByClass<UDoorKeyInventoryItemFragment>();
 
-		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag))
-		{
-			return; 
-		}
-		
-		bHasUnbreakableKey = !DoorKeyFragment->IsUseDurability();
+		// Skip non-key items and keys without a matching access tag
+		if (!IsValid(DoorKeyFragment) || !DoorKeyFragment->GetCompatibleAccessTags().HasTag(KeyAccessTag)) return true;
 
-		// If the key is not unbreakable, it must have a durability fragment
-		if (IsValid(CachedDurabilityFragment) || bHasUnbreakableKey)
-		{
-			return; 
-		}
-		
 		const UDurabilityInventoryItemFragment* DurabilityKeyFragment =
 			ItemInstance->GetFragmentByClass<UDurabilityInventoryItemFragment>();
-		
-		if (IsValid(DurabilityKeyFragment))
-		{
-			CachedItemInstance = ItemInstance;
-			CachedDurabilityFragment = DurabilityKeyFragment;
-		}
-	});
 
-	if (!bHasUnbreakableKey)
+		// Use durability if the key requires it
+		if (DoorKeyFragment->IsUsingDurability() && ensureAlways(IsValid(DurabilityKeyFragment)))
+		{
+			DurabilityKeyFragment->ReduceDurability(ItemInstance, 1);
+		}
+
+		// Stop iteration
+		return false;
+	});
+}
+
+void ADoor::UpdateConfirmedCharactersPool()
+{
+	// TODO: Update the implementation of this method for the new door logic
+
+	TArray<AActor*> OverlappingActors;
+	DoorwayBoxZoneComponent->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* Actor : OverlappingActors)
 	{
-		CachedDurabilityFragment->ReduceDurability(CachedItemInstance, 1);
+		AEscapeChroniclesCharacter* Character = Cast<AEscapeChroniclesCharacter>(Actor);
+
+		if (IsValid(Character))
+		{
+			TryAddCharacterToPool(Character);
+		}
+	}
+}
+
+void ADoor::TryAddCharacterToPool(AEscapeChroniclesCharacter* Character)
+{
+#if DO_CHECK
+	check(IsValid(Character));
+#endif
+
+	// Open the door for the character if we have already determined that he has an access
+	if (ConfirmedCharactersPool.Contains(Character))
+	{
+		SetLockDoorway(Character, false);
+
+		return;
+	}
+
+	// Determine whether character needs a key in the current conditions
+	bool bRequiresKey = true;
+
+	const UCapsuleComponent* CharacterCapsule = Character->GetCapsuleComponent();
+
+	if (ensureAlways(IsValid(CharacterCapsule)))
+	{
+		/**
+		 * Determines whether the given character currently requires a key to pass through the doorway, based on their
+		 * position (enter/exit side) and the door's access settings.
+		 */
+		if (EnterBoxComponent->IsOverlappingComponent(CharacterCapsule))
+		{
+			bRequiresKey = bEnterRequiresKey;
+		}
+		else if (ExitBoxComponent->IsOverlappingComponent(CharacterCapsule))
+		{
+			bRequiresKey = bExitRequiresKey;
+		}
+		else
+		{
+			ensureAlwaysMsgf(false, TEXT("During this check, the character must overlap either EnterBoxComponent or ExitBoxComponent."));
+			return;
+		}
+	}
+	
+	// Unlock the door if the key is not required or the character has an access tag
+	if (!bRequiresKey || DoesCharacterHaveAccessTag(Character))
+	{
+		SetLockDoorway(Character, false);
+
+		ConfirmedCharactersPool.Add(Character);
+		
+		return;
+	}
+
+	// If character has the required key, use it
+	if (DoesCharacterHaveMatchingKey(Character))
+	{
+		UseKey(Character);
+
+		SetLockDoorway(Character, false);
+
+		ConfirmedCharactersPool.Add(Character);
 	}
 }

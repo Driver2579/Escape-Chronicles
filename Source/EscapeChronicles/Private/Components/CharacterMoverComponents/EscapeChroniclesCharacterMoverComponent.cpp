@@ -87,6 +87,18 @@ void UEscapeChroniclesCharacterMoverComponent::SetDefaultMovementMode()
 	OwningPawn->bUseControllerRotationRoll = bUseControllerRotationRoll;
 }
 
+float UEscapeChroniclesCharacterMoverComponent::GetMaxSpeed() const
+{
+	const UCommonLegacyMovementSettings* CommonLegacyMovementSettings = FindSharedSettings_Mutable<UCommonLegacyMovementSettings>();
+
+	if (ensureAlways(IsValid(CommonLegacyMovementSettings)))
+	{
+		return CommonLegacyMovementSettings->MaxSpeed;
+	}
+
+	return -1.f;
+}
+
 bool UEscapeChroniclesCharacterMoverComponent::DoesMaxSpeedWantToBeOverriden() const
 {
 	// We use cons_cast here because CanCrouch should be const, BUT EPIC GAMES FOR SOME FUCKING REASON MADE IT NON-CONST
@@ -133,18 +145,6 @@ void UEscapeChroniclesCharacterMoverComponent::ResetGroundSpeedMode() const
 	}
 }
 
-float UEscapeChroniclesCharacterMoverComponent::GetMaxSpeed() const
-{
-	const UGroundSpeedModeSettings* GroundSpeedModeSettings = FindSharedSettings_Mutable<UGroundSpeedModeSettings>();
-
-	if (ensureAlways(IsValid(GroundSpeedModeSettings)))
-	{
-		return GroundSpeedModeSettings->GetSelectedMaxSpeed();
-	}
-
-	return -1.f;
-}
-
 void UEscapeChroniclesCharacterMoverComponent::OnMoverPreSimulationTick(const FMoverTimeStep& TimeStep,
 	const FMoverInputCmdContext& InputCmd)
 {
@@ -179,82 +179,65 @@ void UEscapeChroniclesCharacterMoverComponent::OnHandleImpact(const FMoverOnImpa
 
 	const AEscapeChroniclesCharacter* CharacterOwner = GetOwner<AEscapeChroniclesCharacter>();
 
-	if (!ensureAlways(IsValid(CharacterOwner)))
-	{
-		return;
-	}
-	
-	if (bEnablePhysicsInteraction)
-	{
-		const FVector FallingAcceleration =
-			-CharacterOwner->GetGravityDirection() * CharacterOwner->GetGravityTransform().Z;
+	if (!ensureAlways(IsValid(CharacterOwner)) || !bEnablePhysicsInteraction) return;
 
-		const FVector ForceAccel =
-			ImpactParams.AttemptedMoveDelta + (IsFalling() ? FallingAcceleration : FVector::ZeroVector);
+	const FVector FallingAcceleration = -CharacterOwner->GetGravityDirection() *
+		CharacterOwner->GetGravityTransform().Z;
+
+	const FVector ForceAccel = ImpactParams.AttemptedMoveDelta +
+		(IsFalling() ? FallingAcceleration : FVector::ZeroVector);
 		
-		ApplyImpactPhysicsForces(ImpactParams.HitResult, ForceAccel, GetVelocity());
-	}
+	ApplyImpactPhysicsForces(ImpactParams.HitResult, ForceAccel, GetVelocity());
 }
 
 void UEscapeChroniclesCharacterMoverComponent::ApplyImpactPhysicsForces(const FHitResult& Impact,
 	const FVector& ImpactAcceleration, const FVector& ImpactVelocity)
 {
-	if (bEnablePhysicsInteraction && Impact.bBlockingHit )
+	if (!bEnablePhysicsInteraction || !Impact.bBlockingHit) return;
+
+	UPrimitiveComponent* ImpactComponent = Impact.GetComponent();
+	
+	if (!IsValid(ImpactComponent)) return;
+
+	// Set to 1 as this is used as a multiplier
+	float BodyMass; 
+	
+	const FBodyInstance* BodyInstance = ImpactComponent->GetBodyInstance(Impact.BoneName);
+	
+	if (BodyInstance != nullptr && BodyInstance->IsInstanceSimulatingPhysics())
 	{
-		if (UPrimitiveComponent* ImpactComponent = Impact.GetComponent())
+		BodyMass = FMath::Max(BodyInstance->GetBodyMass(), 1.0f);
+	}
+	else
+	{
+		return;
+	}
+
+	FVector Force = Impact.ImpactNormal * -1.0f;
+
+	float PushForceModificator = 1.0f;
+
+	const FVector ComponentVelocity = ImpactComponent->GetPhysicsLinearVelocity();
+	const FVector VirtualVelocity = ImpactAcceleration.IsZero() ?
+		ImpactVelocity : ImpactAcceleration.GetSafeNormal() * GetMaxSpeed();
+
+	if (bScalePushForceToVelocity && !ComponentVelocity.IsNearlyZero())
+	{
+		const float Dot = ComponentVelocity | VirtualVelocity;
+
+		if (Dot > 0.0f && Dot < 1.0f)
 		{
-			FVector ForcePoint = Impact.ImpactPoint;
-			float BodyMass = 1.0f; // set to 1 as this is used as a multiplier
-
-			bool bCanBePushed = false;
-			FBodyInstance* BI = ImpactComponent->GetBodyInstance(Impact.BoneName);
-			if(BI != nullptr && BI->IsInstanceSimulatingPhysics())
-			{
-				BodyMass = FMath::Max(BI->GetBodyMass(), 1.0f);
-
-				bCanBePushed = true;
-			}
-
-			if (bCanBePushed)
-			{
-				FVector Force = Impact.ImpactNormal * -1.0f;
-
-				float PushForceModificator = 1.0f;
-
-				const FVector ComponentVelocity = ImpactComponent->GetPhysicsLinearVelocity();
-				const FVector VirtualVelocity =
-					ImpactAcceleration.IsZero() ? ImpactVelocity : ImpactAcceleration.GetSafeNormal() * GetMaxSpeed();
-
-				if (bScalePushForceToVelocity && !ComponentVelocity.IsNearlyZero())
-				{
-					float Dot = 0.0f;
-					
-					Dot = ComponentVelocity | VirtualVelocity;
-
-					if (Dot > 0.0f && Dot < 1.0f)
-					{
-						PushForceModificator *= Dot;
-					}
-				}
-
-				if (bPushForceScaledToMass)
-				{
-					PushForceModificator *= BodyMass;
-				}
-				
-				Force *= PushForceModificator;
-
-				if (ComponentVelocity.IsNearlyZero(1.0f))
-				{
-					Force *= InitialPushForceFactor;
-					ImpactComponent->AddImpulseAtLocation(Force, ForcePoint, Impact.BoneName);
-				}
-				else
-				{
-					Force *= PushForceFactor;
-					ImpactComponent->AddForceAtLocation(Force, ForcePoint, Impact.BoneName);
-				}
-			}
+			PushForceModificator *= Dot;
 		}
 	}
+
+	if (bPushForceScaledToMass)
+	{
+		PushForceModificator *= BodyMass;
+	}
+				
+	Force *= PushForceModificator;
+	Force *= ComponentVelocity.IsNearlyZero(1.0f) ? InitialPushForceFactor : PushForceFactor;
+
+	ImpactComponent->AddImpulseAtLocation(Force, Impact.ImpactPoint, Impact.BoneName);
 }

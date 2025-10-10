@@ -93,6 +93,8 @@ void UInventoryManagerComponent::ReadyForReplication()
 	ForEachInventoryItemInstance([this](UInventoryItemInstance* ItemInstance)
 	{
 		AddReplicatedSubObject(ItemInstance);
+
+		return true;
 	});
 
 	for (UInventoryManagerFragment* Fragment : Fragments)
@@ -115,7 +117,7 @@ UInventoryItemInstance* UInventoryManagerComponent::GetItemInstance(const int32 
 }
 
 void UInventoryManagerComponent::ForEachInventoryItemInstance(
-	const TFunctionRef<void(UInventoryItemInstance*)>& Action) const
+	const TFunctionRef<bool(UInventoryItemInstance*)>& Action) const
 {
 	for (const FInventorySlotsTypedArray& TypedArray : InventoryContent.GetItems())
 	{
@@ -125,7 +127,7 @@ void UInventoryManagerComponent::ForEachInventoryItemInstance(
 			
 			if (IsValid(Instance))
 			{
-				Action(Instance);
+				if (!Action(Instance)) return;
 			}
 		}
 	}
@@ -302,17 +304,17 @@ void UInventoryManagerComponent::NetMulticast_PreAddItem_Implementation(int32 Sl
 	OnPreAddItem.Broadcast(SlotIndex, SlotTypeTag);
 }
 
-bool UInventoryManagerComponent::GetItemInstanceContainerAndIndex(FGameplayTag& OutSlotsType, int32& OutSlotIndex,
-	UInventoryItemInstance* ItemInstance) const
+bool UInventoryManagerComponent::FindItemSlot(UInventoryItemInstance* ItemInstance, FGameplayTag& OutSlotsType,
+	int32& OutSlotIndex) const
 {
-	for (const FInventorySlotsTypedArray& TypedArray : InventoryContent.GetItems())
+	for (const FInventorySlotsTypedArray& Slots : InventoryContent.GetItems())
 	{
-		for (int32 Index = 0; Index <= TypedArray.Array.GetItems().Num(); Index++)
+		for (int32 i = 0; i <= Slots.Array.GetItems().Num(); i++)
 		{
-			if (ItemInstance == TypedArray.Array[Index].Instance)
+			if (ItemInstance == Slots.Array[i].Instance)
 			{
-				OutSlotsType = TypedArray.TypeTag;
-				OutSlotIndex = Index;
+				OutSlotsType = Slots.TypeTag;
+				OutSlotIndex = i;
 
 				return true;
 			}
@@ -328,7 +330,7 @@ void UInventoryManagerComponent::BreakItemInstance(UInventoryItemInstance* ItemI
 	int32 SlotIndex;
 
 	// Find the location of the breaking item instance and remove it from the slot
-	if (ensureAlways(GetItemInstanceContainerAndIndex(SlotsType, SlotIndex, ItemInstance)))
+	if (ensureAlways(FindItemSlot(ItemInstance, SlotsType, SlotIndex)))
 	{
 		DeleteItem(SlotIndex, SlotsType);
 	}

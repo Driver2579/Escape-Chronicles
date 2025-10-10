@@ -3,18 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "StoringItemInstances.generated.h"
+#include "ItemInstancesStorage.generated.h"
 
 class UInventoryItemInstance;
 
 UINTERFACE()
-class INVENTORYSYSTEM_API UStoringItemInstances : public UInterface
+class INVENTORYSYSTEM_API UItemInstancesStorage : public UInterface
 {
 	GENERATED_BODY()
 };
 
 // Interface for objects that can store and manage inventory item instances
-class IStoringItemInstances
+class IItemInstancesStorage
 {
 	GENERATED_BODY()
 

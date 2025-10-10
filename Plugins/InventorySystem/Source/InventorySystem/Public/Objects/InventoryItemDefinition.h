@@ -19,8 +19,6 @@ public:
 
 	const TArray<UInventoryItemFragment*>& GetFragments() const { return Fragments; }
 
-	
-
 #if WITH_EDITOR
 	virtual void PostCDOCompiled(const FPostCDOCompiledContext& Context) override
 	{
