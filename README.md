@@ -10,10 +10,6 @@ Welcome to the repository of Escape Chronicles — a three-dimensional prison es
 
 You are a prisoner who must adhere to the prison schedule, interact with NPCs (inmates, guards, medics), gather resources, craft tools, and find paths to freedom while avoiding suspicion. NPCs are controlled by advanced AI based on State Trees and Smart Objects, ensuring realistic behavior.
 
-## ⚠️ Important
-
-Escape Chronicles is still in active development.The current version of the game may contain bugs and incomplete features. The visual component, certain gameplay elements, and other aspects of the game may significantly change in the final version.The gameplay video below showcases one of the intermediate versions and may not reflect the current state of the game.The latest version can always be downloaded from the releases page.
-
 ## ▶️ Gameplay Video
 Watch gameplay: [Link](https://www.youtube.com/watch?v=SWOnRBJJU0c)
 
